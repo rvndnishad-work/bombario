@@ -2,12 +2,17 @@ import 'dart:math' as math;
 import 'dart:ui' show Color;
 
 import 'package:bombario_core/bombario_core.dart' as core;
+import 'package:bombario_net/bombario_net.dart' show GameMode;
 import 'package:flame/components.dart';
 import 'package:flame/game.dart';
 import 'package:flutter/foundation.dart';
 
 import '../net/room_session.dart';
+import '../progress/achievements.dart';
+import '../settings/settings.dart';
+import 'game_hud.dart';
 import 'input_controller.dart';
+import 'sprite_atlas.dart';
 import 'world_renderer.dart';
 
 /// Networked match: sends this player's input and renders the server's
@@ -18,7 +23,14 @@ import 'world_renderer.dart';
 /// is interpolated between the last two snapshots so 15 Hz updates still look
 /// like smooth 60 fps movement.
 class NetworkGame extends FlameGame {
-  NetworkGame(this.session);
+  NetworkGame(this.session, {AppSettings? settings, Achievements? achievements})
+    : settings = settings ?? AppSettings.memory(),
+      achievements = achievements ?? Achievements.memory();
+
+  final AppSettings settings;
+  final Achievements achievements;
+  final GameHud hud = GameHud();
+  final GameMessages messages = GameMessages();
 
   static const double tileSize = 32;
 
@@ -46,7 +58,7 @@ class NetworkGame extends FlameGame {
   final math.Random _rng = math.Random();
 
   @override
-  Color backgroundColor() => const Color(0xFF1B1B1B);
+  Color backgroundColor() => const Color(0xFF0D1120);
 
   core.WorldSnapshot get _snapshot =>
       _view ?? session.snapshot ?? _last ?? _emptySnapshot;
@@ -65,7 +77,24 @@ class NetworkGame extends FlameGame {
   @override
   Future<void> onLoad() async {
     await super.onLoad();
-    world.add(WorldRenderer(() => _snapshot, tileSize: tileSize));
+    world.add(
+      WorldRenderer(
+        () => _snapshot,
+        tileSize: tileSize,
+        atlas: await SpriteAtlas.load(),
+        highContrast: () => settings.highContrastFlames,
+      ),
+    );
+    final name = session.stageName;
+    if (name != null) {
+      messages.show(
+        GameMessage(
+          title: 'Stage ${session.stageId}: $name',
+          body: session.stageTip ?? '',
+          sprite: 'p${_mySlot + 1}',
+        ),
+      );
+    }
     camera.viewfinder.anchor = Anchor.center;
     _fitCamera();
   }
@@ -101,13 +130,25 @@ class NetworkGame extends FlameGame {
           ? null
           : snap.player(session.myPlayerId!);
       actionLabel.value = me?.actionLabel;
+      _announce(snap, me);
+      _unlocked(achievements.recordRoomChange(_meBefore, me));
+      _meBefore = me;
+      hud.updateFrom(
+        snap,
+        myId: session.myPlayerId,
+        stage: session.stageId ?? '',
+        lives: session.mode == GameMode.coop ? snap.livesLeft : null,
+      );
     }
+    messages.tick(dt);
 
     // Send input at the simulation rate.
     _accumulator += math.min(dt, 0.25);
     while (_accumulator >= core.World.tickDt) {
       _accumulator -= core.World.tickDt;
-      session.sendInput(input.consume());
+      final sent = input.consume();
+      if (sent.placeBomb) achievements.recordRoomBomb();
+      session.sendInput(sent);
     }
 
     _view = _smoothed();
@@ -169,10 +210,97 @@ class NetworkGame extends FlameGame {
     var y = (me?.y ?? snap.grid.height / 2) * tileSize;
     x = mazeW <= halfW * 2 ? mazeW / 2 : x.clamp(halfW, mazeW - halfW);
     y = mazeH <= halfH * 2 ? mazeH / 2 : y.clamp(halfH, mazeH - halfH);
-    if (_shake > 0) {
+    if (_shake > 0 && settings.shake > 0) {
       x += (_rng.nextDouble() - 0.5) * 6;
       y += (_rng.nextDouble() - 0.5) * 6;
     }
     camera.viewfinder.position = Vector2(x, y);
   }
+
+  int get _mySlot {
+    final snap = session.snapshot;
+    final id = session.myPlayerId;
+    if (snap == null || id == null) return 0;
+    return math.max(0, snap.players.indexWhere((p) => p.id == id)) % 4;
+  }
+
+  core.PlayerState? _meBefore;
+
+  void _unlocked(List<AchievementDef> unlocked) {
+    for (final a in unlocked) {
+      messages.show(
+        GameMessage(
+          title: 'Achievement: ${a.title}',
+          body: a.description,
+          sprite: a.sprite,
+          seconds: 4,
+        ),
+      );
+    }
+  }
+
+  /// Called once when the match ends.
+  void recordResult() {
+    final stage = session.stageId;
+    if (session.lastCleared && stage != null) {
+      _unlocked(achievements.recordStageCleared(stage));
+    } else if (session.mode == GameMode.versus &&
+        session.lastWinner != null &&
+        session.lastWinner == session.myPlayerId) {
+      _unlocked(achievements.recordVersusWin());
+    }
+  }
+
+  final Set<(int, core.PingKind, int, int)> _seenPings = {};
+  bool _wasGhost = false;
+
+  /// Turns snapshot changes into popups: teammates' pings and becoming a
+  /// ghost.
+  void _announce(core.WorldSnapshot snap, core.PlayerState? me) {
+    final live = <(int, core.PingKind, int, int)>{};
+    for (final ping in snap.pings) {
+      final key = (ping.playerId, ping.kind, ping.x, ping.y);
+      live.add(key);
+      if (_seenPings.contains(key) || ping.playerId == session.myPlayerId) {
+        continue;
+      }
+      final slot = snap.players.indexWhere((p) => p.id == ping.playerId);
+      final who = snap.player(ping.playerId)?.name ?? 'Teammate';
+      messages.show(
+        GameMessage(
+          title: '$who: ${pingText[ping.kind]}',
+          body: 'Pinged on the map.',
+          sprite: 'p${math.max(0, slot) % 4 + 1}',
+          seconds: 4,
+        ),
+      );
+    }
+    _seenPings
+      ..clear()
+      ..addAll(live);
+
+    final ghost = me?.ghost ?? false;
+    if (ghost && !_wasGhost) {
+      messages.show(
+        GameMessage(
+          title: "You're a ghost",
+          body: snap.livesLeft > 0
+              ? 'Ping your team, haunt an enemy once, and wait by your '
+                    'tombstone for a revive.'
+              : 'No revives left. Ping to help your team.',
+          sprite: 'spirit-p${_mySlot + 1}',
+          seconds: null,
+        ),
+      );
+    }
+    _wasGhost = ghost;
+  }
+
+  static const pingText = {
+    core.PingKind.exitHere: 'Exit is here!',
+    core.PingKind.powerUp: 'Power-up here!',
+    core.PingKind.help: 'Help!',
+    core.PingKind.run: 'Run!',
+    core.PingKind.none: '',
+  };
 }

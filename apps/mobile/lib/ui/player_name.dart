@@ -36,11 +36,10 @@ class _PlayerNameFieldState extends State<PlayerNameField> {
     return TextField(
       controller: _controller,
       maxLength: 12,
-      textAlign: TextAlign.center,
+
       decoration: const InputDecoration(
         labelText: 'Your name',
         counterText: '',
-        border: OutlineInputBorder(),
         isDense: true,
       ),
       onChanged: (v) => PlayerName.value.value = v,

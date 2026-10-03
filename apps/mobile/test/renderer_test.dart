@@ -1,11 +1,15 @@
 import 'dart:ui';
 
+import 'package:bombario/game/sprite_atlas.dart';
 import 'package:bombario/game/world_renderer.dart';
 import 'package:bombario_core/bombario_core.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  test('draws every Phase 3 tile, enemy, state and marker without errors', () {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
+  test('draws every tile, enemy, state and marker without errors', () async {
+    final atlas = await SpriteAtlas.load();
     final level = LevelData.parse(
       '''
 ###############
@@ -45,17 +49,41 @@ void main() {
       for (final t in ItemType.values) FloorItem(x: 9, y: 5, type: t),
     ]);
 
-    final renderer = WorldRenderer(() => WorldSnapshot.of(w), tileSize: 32);
+    final renderer = WorldRenderer(
+      () => WorldSnapshot.of(w),
+      tileSize: 32,
+      atlas: atlas,
+      highContrast: () => true,
+    );
     final recorder = PictureRecorder();
     renderer.update(0.2);
     renderer.render(Canvas(recorder));
     recorder.endRecording().dispose();
   });
 
-  test('every item has a glyph', () {
+  test('every item, enemy, player and ping has a sprite', () {
     for (final t in ItemType.values) {
-      if (t == ItemType.exit) continue;
-      expect(WorldRenderer.itemGlyph(t), isNotEmpty);
+      expect(
+        SpriteAtlas.has(WorldRenderer.itemSprite(t)),
+        isTrue,
+        reason: '$t',
+      );
+    }
+    for (final k in EnemyKind.all) {
+      final name = WorldRenderer.enemySprites[k.name];
+      expect(name, isNotNull, reason: '${k.name} has no sprite');
+      expect(SpriteAtlas.has(name!), isTrue, reason: name);
+    }
+    for (var slot = 1; slot <= 4; slot++) {
+      expect(SpriteAtlas.has('p$slot'), isTrue);
+      expect(SpriteAtlas.has('spirit-p$slot'), isTrue);
+    }
+    for (final name in WorldRenderer.pingSprites.values) {
+      expect(SpriteAtlas.has(name), isTrue, reason: name);
+    }
+    for (final shape in ['fc', 'fh', 'fv', 'fl', 'fr', 'fu', 'fd']) {
+      expect(SpriteAtlas.has(shape), isTrue);
+      expect(SpriteAtlas.has('$shape-frost'), isTrue);
     }
   });
 }

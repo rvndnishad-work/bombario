@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import 'game/sprite_atlas.dart';
+import 'progress/achievements.dart';
+import 'settings/settings.dart';
 import 'ui/home_screen.dart';
+import 'ui/kit/pixel_theme.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -11,23 +15,33 @@ Future<void> main() async {
     DeviceOrientation.landscapeRight,
   ]);
   await SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
-  runApp(const BlastPartyApp());
+  final (settings, achievements, _) = await (
+    AppSettings.load(),
+    Achievements.load(),
+    SpriteAtlas.load(),
+  ).wait;
+  runApp(BombarioApp(settings: settings, achievements: achievements));
 }
 
-class BlastPartyApp extends StatelessWidget {
-  const BlastPartyApp({super.key});
+class BombarioApp extends StatelessWidget {
+  const BombarioApp({super.key, this.settings, this.achievements});
+
+  final AppSettings? settings;
+  final Achievements? achievements;
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Bombario',
-      debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        brightness: Brightness.dark,
-        colorSchemeSeed: const Color(0xFF3FA34D),
-        useMaterial3: true,
+    return Settings(
+      settings: settings ?? AppSettings.memory(),
+      child: AchievementsScope(
+        achievements: achievements ?? Achievements.memory(),
+        child: MaterialApp(
+          title: 'Bombario',
+          debugShowCheckedModeBanner: false,
+          theme: Px.theme(),
+          home: const HomeScreen(),
+        ),
       ),
-      home: const HomeScreen(),
     );
   }
 }
