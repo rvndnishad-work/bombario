@@ -7,7 +7,7 @@ COPY packages/bombario_core packages/bombario_core
 COPY packages/bombario_net packages/bombario_net
 COPY apps/server apps/server
 WORKDIR /src/apps/server
-RUN dart pub get && dart compile exe bin/server.dart -o /out/server
+RUN mkdir -p /out && dart pub get && dart compile exe bin/server.dart -o /out/server
 
 FROM scratch
 COPY --from=build /runtime/ /

@@ -1,0 +1,36 @@
+# The room server behind Caddy, which gets a free HTTPS certificate on its
+# own. Phones refuse plain http, so the app needs the HTTPS address.
+# setup.sh writes DOMAIN into .env next to this file.
+services:
+  server:
+    build:
+      context: ../..
+      dockerfile: apps/server/Dockerfile
+    restart: unless-stopped
+    environment:
+      PORT: "8080"
+      DATA_DIR: /data
+    volumes:
+      - bombario_data:/data
+    expose:
+      - "8080"
+
+  caddy:
+    image: caddy:2
+    restart: unless-stopped
+    depends_on:
+      - server
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      DOMAIN: ${DOMAIN:?set DOMAIN in .env}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+
+volumes:
+  bombario_data: # leaderboards and analytics
+  caddy_data: # certificates
+  caddy_config:
