@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:bombario_core/bombario_core.dart' as core;
 import 'package:flame/game.dart';
 import 'package:flutter/material.dart';
@@ -194,8 +196,28 @@ class ExtraLifeButton extends StatefulWidget {
 }
 
 class _ExtraLifeButtonState extends State<ExtraLifeButton> {
+  /// How long the button stays disarmed after the card appears, so a tap
+  /// still landing from play (the bomb button) never starts an ad.
+  static const armDelay = Duration(milliseconds: 1200);
+
   bool _busy = false;
+  bool _armed = false;
   String? _note;
+  Timer? _arm;
+
+  @override
+  void initState() {
+    super.initState();
+    _arm = Timer(armDelay, () {
+      if (mounted) setState(() => _armed = true);
+    });
+  }
+
+  @override
+  void dispose() {
+    _arm?.cancel();
+    super.dispose();
+  }
 
   Future<void> _watch() async {
     setState(() {
@@ -228,7 +250,7 @@ class _ExtraLifeButtonState extends State<ExtraLifeButton> {
           style: FilledButton.styleFrom(
             backgroundColor: const Color(0xFF3FC062),
           ),
-          onPressed: _busy ? null : _watch,
+          onPressed: _busy || !_armed ? null : _watch,
           icon: const Icon(Icons.play_circle_outline),
           label: Text(_busy ? 'Loading ad...' : 'Watch ad: +1 life'),
         ),

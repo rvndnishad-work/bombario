@@ -132,6 +132,12 @@ void main() {
     expect(game.overlays.isActive(Overlays.gameOver), isTrue);
     await tester.pump();
 
+    // A tap still landing from play can't start an ad.
+    await tester.tap(find.byKey(const Key('extra-life-ad')));
+    await tester.pump();
+    expect(ads.shown, 0);
+    await tester.pump(const Duration(milliseconds: 1300));
+
     // A skipped ad gives nothing.
     ads.reward = false;
     await tester.tap(find.byKey(const Key('extra-life-ad')));

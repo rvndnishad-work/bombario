@@ -695,7 +695,7 @@ class BlastGame extends FlameGame {
         title: 'Back in!',
         body: 'One extra life. Make it count.',
         sprite: 'pu-life',
-        seconds: 2.5,
+        seconds: 4,
       ),
     );
     _refreshHud();
