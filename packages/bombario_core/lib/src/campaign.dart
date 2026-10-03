@@ -26,6 +26,16 @@ class StageDef {
     this.boss,
     this.stalactites = 0,
     this.tip = '',
+    this.conveyors = 0,
+    this.vents = 0,
+    this.ventInterval = 5,
+    this.iceTiles = 0,
+    this.warpPairs = 0,
+    this.possessed = 0,
+    this.darkness = 0,
+    this.wind = 0,
+    this.cannons = 0,
+    this.big = false,
   });
 
   /// "world-stage", e.g. `1-4`.
@@ -54,6 +64,31 @@ class StageDef {
 
   /// One line shown before the stage starts.
   final String tip;
+
+  // ---- World 3-5 terrain (§8.1). Counts are for generated stages.
+  /// Conveyor belt runs.
+  final int conveyors;
+
+  /// Steam vents, and the seconds per vent cycle.
+  final int vents;
+  final double ventInterval;
+  final int iceTiles;
+  final int warpPairs;
+
+  /// Fraction of bricks that are possessed (grow back after 20 s).
+  final double possessed;
+
+  /// Vision radius on dark stages, 0 when lit.
+  final int darkness;
+
+  /// Seconds per wind gust, 0 for calm.
+  final double wind;
+
+  /// Seconds between cannon shots, 0 for none.
+  final double cannons;
+
+  /// Always the large 41 × 17 field, whatever the team size.
+  final bool big;
 
   int get world => int.parse(id.split('-').first);
   int get number => int.parse(id.split('-').last);
@@ -97,16 +132,21 @@ class StageDef {
             for (final (kind, count) in enemies)
               for (var i = 0; i < scaleCount(count, n); i++) kind,
           ];
-    final big = n > 2;
+    final large = big || n > 2;
     return LevelData.generate(
       seed: seed,
-      width: big ? 41 : 31,
-      height: big ? 17 : 13,
+      width: large ? 41 : 31,
+      height: large ? 17 : 13,
       players: n,
       brickDensity: brickDensity,
       enemyMix: mix,
       itemList: hidden,
       crackedTiles: crackedTiles,
+      conveyors: conveyors,
+      vents: vents,
+      iceTiles: iceTiles,
+      warpPairs: warpPairs,
+      possessed: possessed,
       timeLimit: timeLimit,
       name: '$id $name',
     );
@@ -115,7 +155,7 @@ class StageDef {
   LevelData _bossArena(EnemyKind b, int seed, int players) {
     const w = 15, h = 13;
     final Grid grid;
-    if (b.style == MoveStyle.bounce) {
+    if (b.style == MoveStyle.bounce || b.style == MoveStyle.stationary) {
       // A big floating boss needs an open arena: walls only.
       grid = Grid(w, h);
       for (var y = 0; y < h; y++) {
@@ -136,6 +176,18 @@ class StageDef {
         itemList: const [],
       );
       grid = base.grid;
+    }
+    // Power-ups for the fight sit under bricks near the spawns.
+    const stash = [
+      GridPos(3, 3),
+      GridPos(w - 4, h - 4),
+      GridPos(w - 4, 3),
+      GridPos(3, h - 4),
+    ];
+    for (var i = 0; i < items.length && i < stash.length; i++) {
+      final s = stash[i];
+      grid.set(s.x, s.y, TileType.brick);
+      grid.hide(s.x, s.y, items[i]);
     }
     final spawns = [
       const GridPos(1, 1),
@@ -172,11 +224,32 @@ class StageDef {
         bonusEnemies: bonus ? scaleCount(8, players) : 0,
         bossStage: isBoss,
         exitGuardCount: scaleCount(4, players),
+        ventInterval:
+            vents > 0 || layout?.contains('V') == true ? ventInterval : 0,
+        darkness: darkness,
+        windInterval: wind,
+        cannonInterval: cannons,
       );
 }
 
-/// Worlds 1 and 2 of the co-op campaign (Phase 3).
+/// The co-op campaign: five worlds of ten stages (§8.2).
 abstract final class Campaign {
+  /// 3-3 "Assembly Line" from §8.3: conveyors carry kicked bombs, and the
+  /// power-up room opens when someone finds the plate under a brick.
+  static const _assemblyLine = '''
+#####################
+#P.+.+..>>>>>..+.+.P#
+#.#+#.#+#.#.#+#.#+#.#
+#+..+..V+.e.+...+..+#
+#.#.#+#.#####.#+#.#.#
+#+.+..+.#.U.#.+..p.+#
+#.#+#.#.#GGG#.#.#+#.#
+#..e.+..+...+..+.e..#
+#.#.#+#.#+#.#+#.#.#.#
+#P.+.<<<<<..+.E+.+.P#
+#####################
+''';
+
   static const _firstSpark = '''
 ###############
 #P.+.+...+.+.P#
@@ -414,6 +487,448 @@ abstract final class Campaign {
       brickDensity: 0.15,
       timeLimit: 180,
       tip: 'Dust and rumble mark where it surfaces. Have a bomb waiting.',
+    ),
+
+    // --------------------------------------------------- World 3: Factory
+    StageDef(
+      id: '3-1',
+      name: 'Rust Belt',
+      enemies: [(EnemyKind.mimic, 4), (EnemyKind.barrelhop, 3)],
+      items: [ItemType.sonar, ItemType.bombUp],
+      brickDensity: 0.5,
+      conveyors: 3,
+      timeLimit: 210,
+      tip: 'Some power-ups shimmer. Those ones bite. Sonar shows Mimics.',
+    ),
+    StageDef(
+      id: '3-2',
+      name: 'Steam Works',
+      enemies: [
+        (EnemyKind.mimic, 3),
+        (EnemyKind.grinface, 3),
+        (EnemyKind.splitter, 2),
+      ],
+      items: [ItemType.fireUp, ItemType.kick],
+      brickDensity: 0.5,
+      conveyors: 2,
+      vents: 4,
+      timeLimit: 210,
+      tip: 'Vents hiss before they blast. Conveyors carry you and your bombs.',
+    ),
+    StageDef(
+      id: '3-3',
+      name: 'Assembly Line',
+      layout: _assemblyLine,
+      layoutEnemies: [
+        EnemyKind.grinface,
+        EnemyKind.mimic,
+        EnemyKind.splitter,
+      ],
+      items: [ItemType.kick],
+      ventInterval: 5,
+      timeLimit: 210,
+      tip: 'A pressure plate hides under a brick. It opens the locked room.',
+    ),
+    StageDef(
+      id: '3-4',
+      name: 'Goblin Workshop',
+      enemies: [
+        (EnemyKind.bombGoblin, 4),
+        (EnemyKind.shellback, 2),
+        (EnemyKind.mimic, 2),
+      ],
+      items: [ItemType.bombPass, ItemType.fireUp],
+      brickDensity: 0.52,
+      conveyors: 2,
+      vents: 3,
+      timeLimit: 210,
+      tip: 'Bomb Goblins plant bombs and run. Their bombs chain yours.',
+    ),
+    StageDef(
+      id: '3-5',
+      name: 'Treasure Trove',
+      bonus: true,
+      bonusKind: EnemyKind.mimic,
+      items: [
+        ItemType.bombUp,
+        ItemType.fireUp,
+        ItemType.speedUp,
+        ItemType.fireUp,
+        ItemType.remote,
+        ItemType.mystery,
+      ],
+      brickDensity: 0.3,
+      conveyors: 3,
+      timeLimit: 60,
+      tip: 'Bonus! Every shiny thing is a Mimic. Bomb as many as you can.',
+    ),
+    StageDef(
+      id: '3-6',
+      name: 'Hot Pipes',
+      enemies: [
+        (EnemyKind.bombGoblin, 3),
+        (EnemyKind.tigerclaw, 2),
+        (EnemyKind.splitter, 3),
+      ],
+      items: [ItemType.remote, ItemType.heart],
+      brickDensity: 0.52,
+      conveyors: 3,
+      vents: 6,
+      ventInterval: 4,
+      timeLimit: 210,
+      tip: 'Tigerclaws hunt you down and step around your bombs.',
+    ),
+    StageDef(
+      id: '3-7',
+      name: 'Crab Line',
+      enemies: [
+        (EnemyKind.kickerCrab, 4),
+        (EnemyKind.bombGoblin, 2),
+        (EnemyKind.mimic, 2),
+      ],
+      items: [ItemType.remote, ItemType.fireUp],
+      brickDensity: 0.53,
+      conveyors: 4,
+      vents: 3,
+      timeLimit: 210,
+      tip: 'Kicker Crabs boot bombs back at you. Remote bombs beat them.',
+    ),
+    StageDef(
+      id: '3-8',
+      name: 'Overtime',
+      enemies: [
+        (EnemyKind.tigerclaw, 3),
+        (EnemyKind.kickerCrab, 3),
+        (EnemyKind.shellback, 2),
+      ],
+      items: [ItemType.teamBoost, ItemType.bombUp],
+      brickDensity: 0.54,
+      conveyors: 3,
+      vents: 5,
+      timeLimit: 210,
+    ),
+    StageDef(
+      id: '3-9',
+      name: 'Factory Gauntlet',
+      enemies: [
+        (EnemyKind.tigerclaw, 3),
+        (EnemyKind.kickerCrab, 3),
+        (EnemyKind.bombGoblin, 3),
+        (EnemyKind.mimic, 2),
+      ],
+      items: [ItemType.heart, ItemType.tether, ItemType.fireUp],
+      brickDensity: 0.55,
+      conveyors: 4,
+      vents: 6,
+      ventInterval: 4,
+      timeLimit: 210,
+    ),
+    StageDef(
+      id: '3-10',
+      name: 'Bomb-O-Tron',
+      boss: EnemyKind.bombOTron,
+      items: [ItemType.kick, ItemType.kick],
+      timeLimit: 180,
+      tip: 'Its core opens after each volley. Kick its bombs back at it!',
+    ),
+
+    // --------------------------------------------- World 4: Haunted Manor
+    StageDef(
+      id: '4-1',
+      name: 'Lights Out',
+      enemies: [(EnemyKind.shade, 4), (EnemyKind.wisp, 3)],
+      items: [ItemType.sonar, ItemType.bombUp],
+      brickDensity: 0.55,
+      darkness: 4,
+      possessed: 0.15,
+      warpPairs: 1,
+      timeLimit: 200,
+      tip: 'Shades are invisible until they are close. Flames light them up.',
+    ),
+    StageDef(
+      id: '4-2',
+      name: 'Creaky Halls',
+      enemies: [
+        (EnemyKind.shade, 4),
+        (EnemyKind.slimeSage, 2),
+        (EnemyKind.mimic, 2),
+      ],
+      items: [ItemType.flamePass, ItemType.fireUp],
+      brickDensity: 0.56,
+      darkness: 4,
+      possessed: 0.2,
+      warpPairs: 1,
+      timeLimit: 200,
+      tip: 'Possessed bricks grow back. Warp doors come in pairs.',
+    ),
+    StageDef(
+      id: '4-3',
+      name: 'The Nursery',
+      enemies: [
+        (EnemyKind.moleNest, 2),
+        (EnemyKind.shade, 3),
+        (EnemyKind.wisp, 2),
+      ],
+      items: [ItemType.frost, ItemType.bombUp],
+      brickDensity: 0.57,
+      darkness: 4,
+      possessed: 0.2,
+      warpPairs: 2,
+      timeLimit: 200,
+      tip: 'Pebbles keep coming from nests under the bricks. Find them first.',
+    ),
+    StageDef(
+      id: '4-4',
+      name: 'Hall of Doors',
+      enemies: [
+        (EnemyKind.shade, 4),
+        (EnemyKind.tigerclaw, 2),
+        (EnemyKind.moleNest, 1),
+      ],
+      items: [ItemType.tether, ItemType.sonar],
+      brickDensity: 0.57,
+      darkness: 4,
+      possessed: 0.2,
+      warpPairs: 3,
+      timeLimit: 200,
+    ),
+    StageDef(
+      id: '4-5',
+      name: 'Shade Hunt',
+      bonus: true,
+      bonusKind: EnemyKind.shade,
+      items: [
+        ItemType.bombUp,
+        ItemType.fireUp,
+        ItemType.fireUp,
+        ItemType.speedUp,
+        ItemType.sonar,
+        ItemType.mystery,
+      ],
+      brickDensity: 0.3,
+      darkness: 4,
+      timeLimit: 60,
+      tip: 'Bonus! Catch Shades in the dark. Explosions light the way.',
+    ),
+    StageDef(
+      id: '4-6',
+      name: 'Mirror Gallery',
+      enemies: [
+        (EnemyKind.mirrorKnight, 3),
+        (EnemyKind.shade, 3),
+        (EnemyKind.moleNest, 1),
+      ],
+      items: [ItemType.fireUp, ItemType.heart],
+      brickDensity: 0.58,
+      darkness: 4,
+      possessed: 0.25,
+      warpPairs: 2,
+      timeLimit: 200,
+      tip: 'Mirror Knights copy you, left and right swapped. Lead them in.',
+    ),
+    StageDef(
+      id: '4-7',
+      name: 'Haunted Library',
+      enemies: [
+        (EnemyKind.mirrorKnight, 3),
+        (EnemyKind.shellback, 3),
+        (EnemyKind.shade, 3),
+      ],
+      items: [ItemType.remote, ItemType.frost],
+      brickDensity: 0.58,
+      darkness: 4,
+      possessed: 0.25,
+      warpPairs: 2,
+      timeLimit: 200,
+    ),
+    StageDef(
+      id: '4-8',
+      name: 'Ballroom',
+      enemies: [
+        (EnemyKind.mirrorKnight, 3),
+        (EnemyKind.tigerclaw, 3),
+        (EnemyKind.moleNest, 2),
+      ],
+      items: [ItemType.teamBoost, ItemType.flamePass],
+      brickDensity: 0.6,
+      darkness: 4,
+      possessed: 0.25,
+      warpPairs: 2,
+      timeLimit: 200,
+    ),
+    StageDef(
+      id: '4-9',
+      name: 'Manor Gauntlet',
+      enemies: [
+        (EnemyKind.mirrorKnight, 3),
+        (EnemyKind.shade, 4),
+        (EnemyKind.moleNest, 2),
+        (EnemyKind.tigerclaw, 2),
+      ],
+      items: [ItemType.heart, ItemType.tether, ItemType.sonar],
+      brickDensity: 0.6,
+      darkness: 4,
+      possessed: 0.3,
+      warpPairs: 3,
+      timeLimit: 200,
+    ),
+    StageDef(
+      id: '4-10',
+      name: 'The Lantern Witch',
+      boss: EnemyKind.lanternWitch,
+      items: [ItemType.fireUp, ItemType.bombUp],
+      brickDensity: 0.15,
+      darkness: 4,
+      timeLimit: 180,
+      tip: 'If she curses a friend, bomb the Curse Orb to set them free.',
+    ),
+
+    // ---------------------------------------------- World 5: Sky Fortress
+    StageDef(
+      id: '5-1',
+      name: 'Cloud Steps',
+      enemies: [(EnemyKind.fuseEater, 4), (EnemyKind.grinface, 3)],
+      items: [ItemType.remote, ItemType.speedUp],
+      brickDensity: 0.6,
+      iceTiles: 8,
+      wind: 8,
+      timeLimit: 180,
+      tip: 'Fuse Eaters swallow bombs. Blow them up mid-meal with Remote.',
+    ),
+    StageDef(
+      id: '5-2',
+      name: 'Updraft',
+      enemies: [(EnemyKind.fuseEater, 3), (EnemyKind.tigerclaw, 3)],
+      items: [ItemType.bombUp, ItemType.kick],
+      brickDensity: 0.6,
+      iceTiles: 10,
+      wind: 8,
+      cannons: 12,
+      timeLimit: 180,
+      tip: 'Walking into the wind is slow. Cannons mark their row first.',
+    ),
+    StageDef(
+      id: '5-3',
+      name: 'Frozen Ramparts',
+      enemies: [
+        (EnemyKind.fuseEater, 3),
+        (EnemyKind.mirrorKnight, 2),
+        (EnemyKind.splitter, 3),
+      ],
+      items: [ItemType.frost, ItemType.fireUp],
+      brickDensity: 0.61,
+      iceTiles: 16,
+      cannons: 12,
+      timeLimit: 180,
+      tip: 'On ice you keep sliding until something stops you.',
+    ),
+    StageDef(
+      id: '5-4',
+      name: 'Wraith Watch',
+      enemies: [(EnemyKind.phaseWraith, 3), (EnemyKind.fuseEater, 3)],
+      items: [ItemType.flamePass, ItemType.heart],
+      brickDensity: 0.62,
+      iceTiles: 10,
+      wind: 8,
+      cannons: 11,
+      timeLimit: 180,
+      tip: 'Phase Wraiths flicker before they teleport next to you.',
+    ),
+    StageDef(
+      id: '5-5',
+      name: 'Snack Time',
+      bonus: true,
+      bonusKind: EnemyKind.fuseEater,
+      items: [
+        ItemType.bombUp,
+        ItemType.bombUp,
+        ItemType.fireUp,
+        ItemType.remote,
+        ItemType.speedUp,
+        ItemType.mystery,
+      ],
+      brickDensity: 0.3,
+      wind: 8,
+      timeLimit: 60,
+      tip: 'Bonus! Feed the Fuse Eaters... remote bombs.',
+    ),
+    StageDef(
+      id: '5-6',
+      name: 'The Herd',
+      enemies: [
+        (EnemyKind.herder, 1),
+        (EnemyKind.phaseWraith, 2),
+        (EnemyKind.grinface, 4),
+        (EnemyKind.tigerclaw, 2),
+      ],
+      items: [ItemType.teamBoost, ItemType.fireUp],
+      brickDensity: 0.62,
+      iceTiles: 10,
+      wind: 8,
+      cannons: 10,
+      timeLimit: 180,
+      tip: 'The Herder speeds up everything near it. Take it out first.',
+    ),
+    StageDef(
+      id: '5-7',
+      name: 'Gale Gauntlet',
+      enemies: [
+        (EnemyKind.herder, 2),
+        (EnemyKind.tigerclaw, 3),
+        (EnemyKind.phaseWraith, 2),
+        (EnemyKind.fuseEater, 3),
+        (EnemyKind.kickerCrab, 2),
+      ],
+      items: [ItemType.heart, ItemType.remote, ItemType.bombUp],
+      brickDensity: 0.65,
+      possessed: 0.1,
+      iceTiles: 8,
+      wind: 8,
+      cannons: 10,
+      big: true,
+      timeLimit: 120,
+      tip: 'Split up: some of you keep the Herders busy, the rest dig.',
+    ),
+    StageDef(
+      id: '5-8',
+      name: "Hunter's Moon",
+      enemies: [
+        (EnemyKind.hunterCoin, 1),
+        (EnemyKind.phaseWraith, 3),
+        (EnemyKind.herder, 1),
+        (EnemyKind.mirrorKnight, 2),
+      ],
+      items: [ItemType.heart, ItemType.tether],
+      brickDensity: 0.64,
+      iceTiles: 12,
+      wind: 8,
+      cannons: 9,
+      timeLimit: 180,
+    ),
+    StageDef(
+      id: '5-9',
+      name: 'Sky Gauntlet',
+      enemies: [
+        (EnemyKind.hunterCoin, 1),
+        (EnemyKind.herder, 2),
+        (EnemyKind.phaseWraith, 3),
+        (EnemyKind.fuseEater, 2),
+        (EnemyKind.tigerclaw, 2),
+      ],
+      items: [ItemType.heart, ItemType.remote, ItemType.sonar],
+      brickDensity: 0.65,
+      iceTiles: 12,
+      wind: 8,
+      cannons: 9,
+      timeLimit: 180,
+    ),
+    StageDef(
+      id: '5-10',
+      name: 'Overlord Pontan',
+      boss: EnemyKind.overlordPontan,
+      items: [ItemType.bombUp, ItemType.fireUp],
+      timeLimit: 180,
+      tip: 'He copies your power-ups. When he is hurt, the walls close in.',
     ),
   ];
 

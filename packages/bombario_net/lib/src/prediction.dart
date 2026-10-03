@@ -63,11 +63,20 @@ class LocalPredictor {
       return;
     }
     if (!b.alive) return;
+    if (b.cursedFor > 0) b.cursedFor -= World.tickDt;
     if (b.frozenFor > 0) {
       b.frozenFor -= World.tickDt;
       return;
     }
-    _movement.move(b, input.direction, World.tickDt);
+    // Same terrain rules as the server: curse, ice, wind and conveyors.
+    final snap = _snapshot;
+    _movement.step(
+      b,
+      input.direction,
+      World.tickDt,
+      grid: snap?.grid,
+      wind: snap?.wind ?? Direction.none,
+    );
   }
 
   /// Reconciles with an authoritative snapshot.

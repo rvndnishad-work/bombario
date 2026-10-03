@@ -1,3 +1,4 @@
+import 'direction.dart';
 import 'entities.dart';
 
 /// Things that happened during a tick. The renderer, audio and the network
@@ -159,4 +160,104 @@ class EnemyStunned extends GameEvent {
 class BossDamaged extends GameEvent {
   const BossDamaged(this.enemy);
   final Enemy enemy;
+}
+
+// ------------------------------------------------------- Worlds 3 to 5
+
+/// A Mimic dropped its disguise (Sonar, or it bit someone).
+class EnemyRevealed extends GameEvent {
+  const EnemyRevealed(this.enemy);
+  final Enemy enemy;
+}
+
+/// A Kicker Crab kicked a bomb.
+class EnemyKickedBomb extends GameEvent {
+  const EnemyKickedBomb(this.enemy, this.x, this.y);
+  final Enemy enemy;
+  final int x;
+  final int y;
+}
+
+/// A Fuse Eater swallowed a bomb.
+class BombEaten extends GameEvent {
+  const BombEaten(this.enemy, this.x, this.y);
+  final Enemy enemy;
+  final int x;
+  final int y;
+}
+
+/// An enemy or boss blinked from one tile to another.
+class EnemyTeleported extends GameEvent {
+  const EnemyTeleported(this.enemy, this.fromX, this.fromY);
+  final Enemy enemy;
+  final int fromX;
+  final int fromY;
+}
+
+/// A player went through a warp door.
+class PlayerWarped extends GameEvent {
+  const PlayerWarped(this.playerId, this.fromX, this.fromY, this.toX, this.toY);
+  final int playerId;
+  final int fromX;
+  final int fromY;
+  final int toX;
+  final int toY;
+}
+
+/// Steam vents fired their jets (World 3).
+class VentsFired extends GameEvent {
+  const VentsFired();
+}
+
+/// A pressure plate opened the gates (World 3).
+class GatesOpened extends GameEvent {
+  const GatesOpened(this.x, this.y);
+  final int x;
+  final int y;
+}
+
+/// A possessed brick grew back (World 4).
+class BrickRegrew extends GameEvent {
+  const BrickRegrew(this.x, this.y);
+  final int x;
+  final int y;
+}
+
+/// A cannon shot swept row [y] (World 5).
+class CannonFired extends GameEvent {
+  const CannonFired(this.y, {required this.fromLeft});
+  final int y;
+  final bool fromLeft;
+}
+
+/// The wind changed; [Direction.none] means calm.
+class WindChanged extends GameEvent {
+  const WindChanged(this.direction);
+  final Direction direction;
+}
+
+/// The Lantern Witch possessed a player: controls reversed.
+class PlayerCursed extends GameEvent {
+  const PlayerCursed(this.playerId);
+  final int playerId;
+}
+
+class CurseLifted extends GameEvent {
+  const CurseLifted(this.playerId);
+  final int playerId;
+}
+
+/// Overlord Pontan's arena closed in on this tile.
+class ArenaShrank extends GameEvent {
+  const ArenaShrank(this.x, this.y);
+  final int x;
+  final int y;
+}
+
+/// A boss starts an attack; [attack] is a short name: `ring`, `lines`,
+/// `summon`, `curse`, `split`, `dive`, `blink`.
+class BossAttack extends GameEvent {
+  const BossAttack(this.enemy, this.attack);
+  final Enemy enemy;
+  final String attack;
 }

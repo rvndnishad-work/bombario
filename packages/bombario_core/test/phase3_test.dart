@@ -477,14 +477,13 @@ void main() {
   });
 
   group('campaign', () {
-    test('has worlds 1 and 2, ten stages each, with bosses at 10', () {
-      expect(Campaign.stages, hasLength(20));
+    test('worlds 1 and 2 have ten stages each, with bosses at 10', () {
       expect(Campaign.byId('1-10')!.isBoss, isTrue);
       expect(Campaign.byId('2-10')!.isBoss, isTrue);
       expect(Campaign.byId('1-5')!.bonus, isTrue);
       expect(Campaign.byId('2-5')!.bonus, isTrue);
       expect(Campaign.next('1-10')!.id, '2-1');
-      expect(Campaign.next('2-10'), isNull);
+      expect(Campaign.next('2-10')!.id, '3-1');
     });
 
     test('every stage builds and runs for 1 to 4 players', () {
@@ -507,7 +506,8 @@ void main() {
             final expected = [
               for (final (_, c) in stage.enemies) StageDef.scaleCount(c, n),
             ].fold(0, (a, b) => a + b);
-            expect(w.enemies.length, stage.layout == null ? expected : 6,
+            expect(w.enemies.length,
+                stage.layout == null ? expected : level.enemySpawns.length,
                 reason: stage.id);
           }
           for (final item in stage.items) {
