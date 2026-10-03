@@ -1,47 +1,25 @@
 import 'dart:math' as math;
-import 'dart:ui' show Color;
 
 import 'package:bombario_core/bombario_core.dart' as core;
 import 'package:flame/components.dart';
 import 'package:flame/game.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 
+import '../audio/game_audio.dart';
+import '../progress/achievements.dart';
+import '../settings/settings.dart';
+import 'game_hud.dart';
 import 'input_controller.dart';
+import 'sprite_atlas.dart';
 import 'world_renderer.dart';
 
 /// Overlay ids used with [GameWidget.overlayBuilderMap].
 abstract final class Overlays {
-  static const hud = 'hud';
   static const controls = 'controls';
+  static const pause = 'pause';
   static const stageCleared = 'stageCleared';
   static const gameOver = 'gameOver';
-}
-
-/// What the HUD shows. Updated a few times a second from the simulation.
-class HudState extends ChangeNotifier {
-  int lives = 3;
-  int score = 0;
-  int timeLeft = 0;
-  int bombs = 1;
-  int fire = 1;
-  String stage = '1-1';
-  int enemiesLeft = 0;
-
-  void updateFrom(
-    core.World world,
-    core.Player player, {
-    required int lives,
-    required String stage,
-  }) {
-    this.lives = lives;
-    this.stage = stage;
-    score = player.score;
-    timeLeft = world.timeLeft.ceil();
-    bombs = player.maxBombs;
-    fire = player.fireRange;
-    enemiesLeft = world.enemies.where((e) => e.alive).length;
-    notifyListeners();
-  }
 }
 
 /// Solo campaign: the co-op stages played alone (§4.3 "Solo Campaign"),
@@ -50,20 +28,24 @@ class HudState extends ChangeNotifier {
 /// The simulation lives entirely in `bombario_core`; this class only steps it at
 /// a fixed 30 Hz, feeds it input, moves the camera and reacts to events.
 class BlastGame extends FlameGame {
-  BlastGame({int seed = 1}) : _seed = seed;
+  BlastGame({int seed = 1, AppSettings? settings, Achievements? achievements})
+    : _seed = seed,
+      settings = settings ?? AppSettings.memory(),
+      achievements = achievements ?? Achievements.memory();
+
+  final AppSettings settings;
+  final Achievements achievements;
 
   static const double tileSize = 32;
   static const int startingLives = 3;
   static const double respawnDelay = 1.5;
 
   final InputController input = InputController();
-  final HudState hud = HudState();
+  final GameHud hud = GameHud();
+  final GameMessages messages = GameMessages();
 
   /// What the Action button does right now.
   final ValueNotifier<String?> actionLabel = ValueNotifier(null);
-
-  /// The stage's name and tip, shown briefly when it starts.
-  final ValueNotifier<String?> banner = ValueNotifier(null);
 
   int _seed;
 
@@ -76,6 +58,7 @@ class BlastGame extends FlameGame {
 
   late core.World sim;
   late core.Player player;
+  late SpriteAtlas _atlas;
   WorldRenderer? _renderer;
   bool _hasPlayer = false;
 
@@ -83,16 +66,17 @@ class BlastGame extends FlameGame {
   double _respawnTimer = 0;
   double _hudTimer = 0;
   double _shake = 0;
+  bool _hurry = false;
   final math.Random _shakeRng = math.Random();
 
   @override
-  Color backgroundColor() => const Color(0xFF1B1B1B);
+  Color backgroundColor() => const Color(0xFF0D1120);
 
   @override
   Future<void> onLoad() async {
     await super.onLoad();
+    _atlas = await SpriteAtlas.load();
     _startStage();
-    overlays.add(Overlays.hud);
     overlays.add(Overlays.controls);
   }
 
@@ -106,10 +90,19 @@ class BlastGame extends FlameGame {
       seed: seed,
       config: def.config(players: 1, coop: false),
     );
-    banner.value = def.tip.isEmpty
-        ? 'Stage ${def.id}: ${def.name}'
-        : 'Stage ${def.id}: ${def.name}\n${def.tip}';
+    messages
+      ..clear()
+      ..show(
+        GameMessage(
+          title: 'Stage ${def.id}: ${def.name}',
+          body: def.tip,
+          sprite: 'p1',
+        ),
+      );
     player = sim.addPlayer(name: 'You');
+    achievements.startStage();
+    _hurry = false;
+    GameAudio.instance.playMusic(def.world);
     _hasPlayer = true;
     carryOver?.call(player);
 
@@ -118,6 +111,8 @@ class BlastGame extends FlameGame {
     final renderer = WorldRenderer(
       () => core.WorldSnapshot.of(sim),
       tileSize: tileSize,
+      atlas: _atlas,
+      highContrast: () => settings.highContrastFlames,
     );
     _renderer = renderer;
     world.add(renderer);
@@ -126,7 +121,19 @@ class BlastGame extends FlameGame {
     _fitCamera();
     _accumulator = 0;
     _respawnTimer = 0;
-    hud.updateFrom(sim, player, lives: lives, stage: stage.id);
+    _refreshHud();
+  }
+
+  void _refreshHud() {
+    final snap = core.WorldSnapshot.of(sim);
+    hud.updateFrom(
+      snap,
+      myId: player.id,
+      stage: stage.id,
+      lives: lives,
+      showPlayers: false,
+    );
+    actionLabel.value = snap.player(player.id)?.actionLabel;
   }
 
   /// Power-ups carry over between stages, as in the original.
@@ -168,7 +175,7 @@ class BlastGame extends FlameGame {
     // Clamp so the camera never shows outside the maze (when it fits).
     x = mazeW <= halfW * 2 ? mazeW / 2 : x.clamp(halfW, mazeW - halfW);
     y = mazeH <= halfH * 2 ? mazeH / 2 : y.clamp(halfH, mazeH - halfH);
-    if (_shake > 0) {
+    if (_shake > 0 && settings.shake > 0) {
       x += (_shakeRng.nextDouble() - 0.5) * 6;
       y += (_shakeRng.nextDouble() - 0.5) * 6;
     }
@@ -181,11 +188,19 @@ class BlastGame extends FlameGame {
     if (sim.cleared || (sim.failed && lives == 0)) return;
 
     // Fixed-step simulation so the rules behave identically everywhere.
-    _accumulator += math.min(dt, 0.25);
+    _accumulator += math.min(dt, 0.25) * settings.soloSpeed;
     while (_accumulator >= core.World.tickDt) {
       _accumulator -= core.World.tickDt;
       sim.tick({player.id: input.consume()});
       _handleEvents();
+      _announce(
+        achievements.recordEvents(
+          sim.events,
+          myId: player.id,
+          stageId: stage.id,
+          coop: false,
+        ),
+      );
     }
 
     if (!player.alive) {
@@ -195,7 +210,10 @@ class BlastGame extends FlameGame {
         if (lives > 0) {
           sim.respawn(player);
           sim.clearFailure();
-        } else {
+        } else if (!overlays.isActive(Overlays.gameOver)) {
+          GameAudio.instance
+            ..stopMusic()
+            ..play(Sfx.gameOver);
           overlays.add(Overlays.gameOver);
         }
       }
@@ -204,24 +222,80 @@ class BlastGame extends FlameGame {
     _shake = math.max(0, _shake - dt);
     _followPlayer();
 
+    messages.tick(dt);
+    if (!_hurry && sim.timeLeft <= 30 && sim.timeLeft > 0) {
+      _hurry = true;
+      GameAudio.instance.playMusic(stage.world, hurry: true);
+    }
     _hudTimer += dt;
     if (_hudTimer >= 0.1) {
       _hudTimer = 0;
-      hud.updateFrom(sim, player, lives: lives, stage: stage.id);
-      actionLabel.value = core.PlayerState.of(player).actionLabel;
-      if (sim.elapsed > 4) banner.value = null;
+      _refreshHud();
     }
   }
 
+  void _buzz(Future<void> Function() f) {
+    if (settings.haptics) f();
+  }
+
   void _handleEvents() {
+    final audio = GameAudio.instance;
     for (final event in sim.events) {
       switch (event) {
-        case core.BombExploded():
+        case core.BombPlaced(:final bomb):
+          audio.play(
+            bomb.ownerId == player.id ? Sfx.bombPlace : Sfx.bombPlaceOther,
+          );
+        case core.ItemPicked(:final playerId) when playerId == player.id:
+          audio.play(Sfx.pickup);
+          _buzz(HapticFeedback.selectionClick);
+        case core.BombKicked():
+          audio.play(Sfx.kick);
+        case core.EnemyFrozen() || core.PlayerFrozen():
+          audio.play(Sfx.freeze);
+        case core.BossDamaged():
+          audio.play(Sfx.bossHit);
+        default:
+          break;
+      }
+      switch (event) {
+        case core.BombExploded(:final x, :final y):
           _shake = 0.15;
+          final near = (player.x - x).abs() + (player.y - y).abs() < 6;
+          audio.play(near ? Sfx.explode : Sfx.explodeFar);
+          if (near) _buzz(HapticFeedback.heavyImpact);
         case core.PlayerDied():
           lives--;
           _shake = 0.3;
+          audio.play(Sfx.death);
+          _buzz(HapticFeedback.vibrate);
+          messages.show(
+            GameMessage(
+              title: lives > 0 ? 'Ouch!' : 'Out of lives',
+              body: lives == 1
+                  ? '1 life left.'
+                  : lives > 1
+                  ? '$lives lives left.'
+                  : '',
+              sprite: 'tomb',
+              seconds: 3,
+            ),
+          );
+        case core.ExitBombed():
+          _shake = 0.4;
+          audio.play(Sfx.exitAngry);
+          messages.show(
+            GameMessage(
+              title: 'The exit is angry!',
+              body: 'Door Wardens are pouring out. Run!',
+              sprite: 'doorWarden',
+              seconds: 4,
+            ),
+          );
         case core.StageCleared():
+          audio
+            ..stopMusic()
+            ..play(Sfx.stageClear);
           overlays.add(Overlays.stageCleared);
         case core.StageFailed():
           break; // handled by the respawn timer
@@ -229,6 +303,32 @@ class BlastGame extends FlameGame {
           break;
       }
     }
+  }
+
+  void _announce(List<AchievementDef> unlocked) {
+    for (final a in unlocked) {
+      messages.show(
+        GameMessage(
+          title: 'Achievement: ${a.title}',
+          body: a.description,
+          sprite: a.sprite,
+          seconds: 4,
+        ),
+      );
+    }
+  }
+
+  /// Freezes the simulation behind the pause menu.
+  void pause() {
+    if (paused) return;
+    input.release();
+    pauseEngine();
+    overlays.add(Overlays.pause);
+  }
+
+  void resume() {
+    overlays.remove(Overlays.pause);
+    resumeEngine();
   }
 
   void nextStage() {
