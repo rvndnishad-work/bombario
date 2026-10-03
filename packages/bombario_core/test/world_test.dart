@@ -251,6 +251,12 @@ void main() {
       final events = run(w, Bomb.defaultFuse + 0.05);
       expect(events.whereType<ExitBombed>(), isNotEmpty);
       expect(w.enemies.length, before + 3);
+      // The flame that summoned the wave doesn't kill it.
+      run(w, Flame.duration + 0.2);
+      final wave = w.enemies.where((e) => e.kind == EnemyKind.doorWarden);
+      expect(wave, hasLength(3));
+      expect(wave.first.hp, 2);
+      expect(EnemyKind.doorWarden.speed, greaterThan(Player.baseSpeed));
     });
   });
 

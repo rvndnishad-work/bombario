@@ -36,6 +36,7 @@ class WorldRenderer extends PositionComponent {
     'Slime Sage': Color(0xFF81C784),
     'Wisp': Color(0xFFE1F5FE),
     'Hunter Coin': Color(0xFFD32F2F),
+    'Door Warden': Color(0xFF5E35B1),
     'Pebble': Color(0xFF9E9E9E),
     'Hopper': Color(0xFFAED581),
     'Splitter': Color(0xFFBA68C8),

@@ -18,7 +18,7 @@ class WorldConfig {
     this.friendlyFire = true,
     this.hunterInterval = 10,
     this.hunterKind = EnemyKind.hunterCoin,
-    this.exitGuardKind = EnemyKind.blueDrop,
+    this.exitGuardKind = EnemyKind.doorWarden,
     this.exitGuardCount = 3,
     this.versusMode = false,
     this.ghosts = false,
@@ -709,10 +709,12 @@ class World {
     for (final item in floorItems.toList()) {
       if (item.x != x || item.y != y) continue;
       if (item.type == ItemType.exit) {
-        // Bombing the exit angers it, as in the original.
+        // Bombing the exit angers it, as in the original. The wave is
+        // spared by the flame that summoned it.
         events.add(const ExitBombed());
         for (var i = 0; i < config.exitGuardCount; i++) {
-          spawnEnemy(GridPos(x, y), config.exitGuardKind);
+          spawnEnemy(GridPos(x, y), config.exitGuardKind).hitCooldown =
+              Flame.duration + 0.1;
         }
       } else {
         floorItems.remove(item);

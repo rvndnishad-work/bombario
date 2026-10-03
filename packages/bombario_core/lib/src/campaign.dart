@@ -171,6 +171,7 @@ class StageDef {
         bonusKind: bonusKind,
         bonusEnemies: bonus ? scaleCount(8, players) : 0,
         bossStage: isBoss,
+        exitGuardCount: scaleCount(4, players),
       );
 }
 

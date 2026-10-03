@@ -455,6 +455,18 @@ class EnemyKind {
     points: 8000,
   );
 
+  /// The wave that pours out when a flame hits the revealed exit: faster
+  /// than an unboosted player, takes two hits, and steps around bombs.
+  static const doorWarden = EnemyKind(
+    name: 'Door Warden',
+    speed: 4,
+    style: MoveStyle.chase,
+    sightRange: 8,
+    bombAware: true,
+    hp: 2,
+    points: 1000,
+  );
+
   // ---- New enemies (§6.3).
   static const pebble = EnemyKind(
     name: 'Pebble',
@@ -522,6 +534,7 @@ class EnemyKind {
     slimeSage,
     wisp,
     hunterCoin,
+    doorWarden,
     pebble,
     hopper,
     splitter,
@@ -538,6 +551,7 @@ class EnemyKind {
     'blueDrop': blueDrop,
     'slimeSage': slimeSage,
     'hunterCoin': hunterCoin,
+    'doorWarden': doorWarden,
   };
 }
 
