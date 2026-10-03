@@ -10,7 +10,9 @@ import 'package:flame/components.dart';
 /// little vertically instead. On a tall (portrait) screen the zoom is capped
 /// so at least [minColumns] fit across. The camera eases after the
 /// player with a small dead zone, so it doesn't jitter on every step, and
-/// stops at the maze walls.
+/// stops at the maze walls. It also looks ahead: walking up shifts the view
+/// so the player sits low and the rows above come into sight early (and
+/// the other way round), so an enemy is on screen well before you meet it.
 class FollowCamera {
   /// Never zoom in so far that fewer columns than this are visible.
   static const int minColumns = 9;
@@ -23,7 +25,20 @@ class FollowCamera {
   /// How quickly the camera catches up (per second).
   static const double stiffness = 8;
 
+  /// Look-ahead: this share of the visible rows or columns, at most
+  /// [maxLead] tiles, in the direction the player last walked.
+  static const double leadShare = 0.3;
+  static const double maxLead = 4;
+
+  /// How quickly the look-ahead swings round when the player turns.
+  static const double leadStiffness = 3;
+
   Vector2? _pos;
+  Vector2? _lastTarget;
+  final Vector2 _lead = Vector2.zero();
+
+  /// The current look-ahead offset in world units (for tests).
+  Vector2 get lead => _lead.clone();
 
   static double zoomFor(
     Vector2 view,
@@ -38,7 +53,11 @@ class FollowCamera {
   }
 
   /// Jumps straight to the next target instead of easing (new stage).
-  void reset() => _pos = null;
+  void reset() {
+    _pos = null;
+    _lastTarget = null;
+    _lead.setZero();
+  }
 
   /// Where the camera centre should be this frame.
   Vector2 follow({
@@ -53,6 +72,25 @@ class FollowCamera {
   }) {
     final halfW = view.x / zoom / 2;
     final halfH = view.y / zoom / 2;
+    // Which way the player is walking, from how the target moved. A jump
+    // (respawn, warp) or standing still keeps the last look-ahead.
+    final last = _lastTarget;
+    _lastTarget = Vector2(targetX, targetY);
+    if (last != null && dt > 0) {
+      final dx = targetX - last.x, dy = targetY - last.y;
+      final step = math.max(dx.abs(), dy.abs());
+      if (step > 1e-3 && step < tileSize) {
+        final leadX = math.min(halfW * 2 * leadShare, maxLead * tileSize);
+        final leadY = math.min(halfH * 2 * leadShare, maxLead * tileSize);
+        final want = dx.abs() >= dy.abs()
+            ? Vector2(dx.sign * leadX, 0)
+            : Vector2(0, dy.sign * leadY);
+        final k = 1 - math.exp(-leadStiffness * dt);
+        _lead.add((want - _lead)..scale(k));
+      }
+    }
+    targetX += _lead.x;
+    targetY += _lead.y;
     var pos = _pos;
     if (pos == null) {
       pos = Vector2(targetX, targetY);
