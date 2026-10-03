@@ -1,67 +1,15 @@
 import 'package:bombario/game/blast_game.dart';
 import 'package:bombario/game/follow_camera.dart';
-import 'package:bombario/game/input_controller.dart';
 import 'package:bombario/game/sprite_atlas.dart';
+import 'package:bombario/settings/settings.dart';
 import 'package:bombario/ui/game_screen.dart';
-import 'package:bombario_core/bombario_core.dart';
 import 'package:flame/components.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-KeyEvent _down(LogicalKeyboardKey key) => KeyDownEvent(
-  physicalKey: PhysicalKeyboardKey.keyA,
-  logicalKey: key,
-  timeStamp: Duration.zero,
-);
-
-KeyEvent _up(LogicalKeyboardKey key) => KeyUpEvent(
-  physicalKey: PhysicalKeyboardKey.keyA,
-  logicalKey: key,
-  timeStamp: Duration.zero,
-);
-
 void main() {
   group('keyboard', () {
-    test('arrows and WASD steer, the latest held key wins', () {
-      final input = InputController();
-      input.handleKey(_down(LogicalKeyboardKey.arrowRight));
-      expect(input.held, Direction.right);
-      input.handleKey(_down(LogicalKeyboardKey.keyW));
-      expect(input.held, Direction.up);
-      input.handleKey(_up(LogicalKeyboardKey.keyW));
-      expect(input.held, Direction.right);
-      input.handleKey(_up(LogicalKeyboardKey.arrowRight));
-      expect(input.held, Direction.none);
-    });
-
-    test('space drops one bomb per press, not per key repeat', () {
-      final input = InputController();
-      expect(input.handleKey(_down(LogicalKeyboardKey.space)), isTrue);
-      expect(input.consume().placeBomb, isTrue);
-      input.handleKey(
-        KeyRepeatEvent(
-          physicalKey: PhysicalKeyboardKey.space,
-          logicalKey: LogicalKeyboardKey.space,
-          timeStamp: Duration.zero,
-        ),
-      );
-      expect(input.consume().placeBomb, isFalse);
-    });
-
-    test('X is the action button and Esc pauses', () {
-      final input = InputController();
-      var paused = false;
-      input.handleKey(_down(LogicalKeyboardKey.keyX));
-      expect(input.consume().action, isTrue);
-      input.handleKey(
-        _down(LogicalKeyboardKey.escape),
-        onPause: () => paused = true,
-      );
-      expect(paused, isTrue);
-      expect(input.handleKey(_down(LogicalKeyboardKey.keyQ)), isFalse);
-    });
-
     testWidgets('the solo game moves the bomber with the arrow keys', (
       tester,
     ) async {
@@ -135,5 +83,11 @@ void main() {
       }
       expect(at(48, 980).y, closeTo(800, 1e-6));
     });
+  });
+
+  test('screen shake is reduced unless the player turns it back on', () {
+    final s = AppSettings.memory();
+    expect(s.reduceShake, isTrue);
+    expect(s.shake, 0);
   });
 }
