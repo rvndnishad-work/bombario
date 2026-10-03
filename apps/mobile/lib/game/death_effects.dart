@@ -72,15 +72,18 @@ class DeathEffects {
       for (final e in sim.enemies)
         if (e.alive) e.id: e,
     };
+    // Several enemies in one blast score double each, as the rules do.
+    var caught = 0;
     for (final MapEntry(key: id, value: e) in _alive.entries) {
       if (newMaze || alive.containsKey(id)) continue;
+      final points = e.kindData?.points ?? 0;
       _enemies.add(
         _EnemyDeath(
           x: e.x,
           y: e.y,
           sprite: spriteFor(e),
           size: (e.kindData?.size ?? 0.4) * 2.5,
-          points: e.kindData?.points ?? 0,
+          points: points > 0 ? core.World.multiKillPoints(points, caught++) : 0,
           flip: e.facing == core.Direction.left,
           born: now,
         ),

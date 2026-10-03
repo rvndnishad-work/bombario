@@ -42,11 +42,15 @@ void main() {
       ),
     );
     await tester.tap(find.text('go'));
-    for (var i = 0; i < 40; i++) {
+    for (var i = 0; i < 10; i++) {
       await tester.pump(const Duration(milliseconds: 50));
     }
     final game =
         (tester.state(find.byType(GameScreen)) as dynamic).game as BlastGame;
+    game.skipIntro();
+    for (var i = 0; i < 40; i++) {
+      await tester.pump(const Duration(milliseconds: 50));
+    }
     expect(game.stage.id, 'daily-2026-10-03');
     expect(game.sim.level.name, contains(daily.stage.name));
     expect(game.stageTimeMs, greaterThan(500));

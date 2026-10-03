@@ -210,6 +210,11 @@ class World {
   static const double herdBoost = 1.3;
   static const int shadeSight = 3;
 
+  /// How far a player and an enemy may overlap, in tiles, before the touch
+  /// counts. The original forgives a brush of the sprites; only a real
+  /// overlap kills.
+  static const double contactGrace = 0.2;
+
   static const double tickRate = 30;
   static const double tickDt = 1 / tickRate;
 
@@ -238,6 +243,13 @@ class World {
   bool timeUp = false;
   double _hunterTimer = 0;
   double _exitHold = 0;
+
+  /// Enemies each player has killed this tick, for the multi-kill bonus.
+  final Map<int, int> _killsThisTick = {};
+
+  /// Points for a kill: each further enemy caught in the same blast (chain
+  /// reactions included) is worth double the one before, as in the original.
+  static int multiKillPoints(int base, int nth) => base << min(nth, 10);
   bool cleared = false;
   bool failed = false;
   double _rockTimer = 0;
@@ -378,6 +390,7 @@ class World {
     events.clear();
     if (over) return;
     elapsed += dt;
+    _killsThisTick.clear();
 
     _tickTimer(dt);
     _tickWeather(dt);
@@ -1082,7 +1095,12 @@ class World {
 
   void _killEnemy(Enemy e, int killerId) {
     e.alive = false;
-    playerById(killerId)?.score += e.kind.points;
+    final killer = playerById(killerId);
+    if (killer != null) {
+      final nth = _killsThisTick[killerId] ?? 0;
+      _killsThisTick[killerId] = nth + 1;
+      killer.score += multiKillPoints(e.kind.points, nth);
+    }
     events.add(EnemyDied(e, killerId));
     if (e.linkedPlayer != 0) {
       final cursed = playerById(e.linkedPlayer);
@@ -1158,6 +1176,16 @@ class World {
           continue;
         default:
           break;
+      }
+      // A bomb dropped (or a brick regrown) on the tile an enemy is walking
+      // into turns it around on the spot, as in the original: that's how
+      // you herd enemies with bombs.
+      final heading = e.target;
+      if (heading != null && !_enemyCanEnter(e, heading.x, heading.y)) {
+        final back = heading.step(-e.direction.dx, -e.direction.dy);
+        if (!_enemyCanEnter(e, back.x, back.y)) continue; // boxed in, wait
+        e.direction = e.direction.opposite;
+        e.target = back;
       }
       var remaining = e.kind.speed * pace * dt;
       while (remaining > 1e-9) {
@@ -2356,7 +2384,7 @@ class World {
       if (!p.alive || p.invincible) continue;
       for (final e in enemies) {
         if (!e.harmful) continue;
-        final reach = e.kind.size + Player.halfBox;
+        final reach = e.kind.size + Player.halfBox - contactGrace;
         if ((e.x - p.x).abs() < reach && (e.y - p.y).abs() < reach) {
           _hurtPlayer(p, -1);
           break;

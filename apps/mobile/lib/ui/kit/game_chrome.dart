@@ -1,4 +1,5 @@
 import 'package:bombario_core/bombario_core.dart' as core;
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../../game/game_hud.dart';
@@ -341,6 +342,49 @@ class MenuCard extends StatelessWidget {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// The black "Stage N" card that covers the board before play starts, like
+/// the original's stage screen. Tapping it skips straight to play.
+class StageIntroCard extends StatelessWidget {
+  const StageIntroCard({super.key, required this.intro, required this.onSkip});
+
+  final ValueListenable<StageIntro?> intro;
+  final VoidCallback onSkip;
+
+  @override
+  Widget build(BuildContext context) {
+    return ValueListenableBuilder<StageIntro?>(
+      valueListenable: intro,
+      builder: (context, card, _) => AnimatedSwitcher(
+        duration: const Duration(milliseconds: 250),
+        child: card == null
+            ? const SizedBox.shrink()
+            : GestureDetector(
+                key: ValueKey(card),
+                behavior: HitTestBehavior.opaque,
+                onTap: onSkip,
+                child: ColoredBox(
+                  color: Px.ink,
+                  child: Center(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(card.title, style: Px.title(22)),
+                        const SizedBox(height: 14),
+                        Text(
+                          card.subtitle,
+                          style: Px.title(10, color: Px.fuse),
+                          textAlign: TextAlign.center,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
       ),
     );
   }

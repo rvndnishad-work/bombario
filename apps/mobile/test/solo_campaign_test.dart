@@ -11,11 +11,17 @@ void main() {
     addTearDown(tester.view.reset);
     await tester.runAsync(SpriteAtlas.load);
     await tester.pumpWidget(const MaterialApp(home: GameScreen(seed: 3)));
-    for (var i = 0; i < 60; i++) {
-      await tester.pump(const Duration(milliseconds: 50));
-    }
+    await tester.pump(const Duration(milliseconds: 50));
     final state = tester.state(find.byType(GameScreen));
     final game = (state as dynamic).game as BlastGame;
+
+    // The stage card holds the board still, then play starts on its own.
+    expect(find.text('STAGE 1-1'), findsOneWidget);
+    expect(game.sim.elapsed, 0);
+    for (var i = 0; i < 100; i++) {
+      await tester.pump(const Duration(milliseconds: 50));
+    }
+    expect(find.text('STAGE 1-1'), findsNothing);
     expect(game.stage.id, '1-1');
     expect(game.sim.elapsed, greaterThan(1));
     expect(find.textContaining('First Spark'), findsOneWidget);

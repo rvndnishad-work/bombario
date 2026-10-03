@@ -21,6 +21,7 @@ void main() {
       await tester.pump(const Duration(milliseconds: 50));
       final game =
           (tester.state(find.byType(GameScreen)) as dynamic).game as BlastGame;
+      game.skipIntro();
       final startX = game.player.x;
       final startY = game.player.y;
       // Spawn is the top-left corner: one of right or down is open.
