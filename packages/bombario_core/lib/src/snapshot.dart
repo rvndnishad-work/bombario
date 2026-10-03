@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'direction.dart';
 import 'entities.dart';
 import 'grid.dart';
@@ -33,6 +35,7 @@ class WorldSnapshot {
     this.ventTimeLeft = 0,
     this.darkness = 0,
     this.regrowing = const [],
+    this.chest,
   });
 
   final int tick;
@@ -73,6 +76,9 @@ class WorldSnapshot {
   /// Possessed bricks waiting to grow back: x, y and seconds left.
   final List<HazardState> regrowing;
 
+  /// The closed treasure chest on a treasure stage: x, y and hits left.
+  final (int, int, int)? chest;
+
   bool get over => cleared || failed || winnerId != null;
 
   WorldSnapshot copyWith({
@@ -102,6 +108,7 @@ class WorldSnapshot {
         ventTimeLeft: ventTimeLeft,
         darkness: darkness,
         regrowing: regrowing,
+        chest: chest,
       );
 
   bool bombAt(int x, int y) => bombs.any((b) => b.x == x && b.y == y);
@@ -167,6 +174,10 @@ class WorldSnapshot {
           for (final r in w.regrowing.entries)
             HazardState(r.key.x, r.key.y, r.value),
         ],
+        chest: switch (w.treasure) {
+          final t? => (t.x, t.y, t.hp),
+          null => null,
+        },
       );
 
   Map<String, dynamic> toJson() => {
@@ -219,6 +230,7 @@ class WorldSnapshot {
           'rg': [
             for (final r in regrowing) [r.x, r.y, r.warn],
           ],
+        if (chest case (final x, final y, final hp)) 'chest': [x, y, hp],
       };
 
   static WorldSnapshot fromJson(Map<String, dynamic> j) => WorldSnapshot(
@@ -295,6 +307,10 @@ class WorldSnapshot {
           for (final r in (j['rg'] as List?) ?? const [])
             HazardState(r[0] as int, r[1] as int, (r[2] as num).toDouble()),
         ],
+        chest: switch (j['chest']) {
+          [final int x, final int y, final int hp] => (x, y, hp),
+          _ => null,
+        },
       );
 
   // Grid as one character per tile. Hidden items stay secret: the server
@@ -380,10 +396,18 @@ class PlayerState {
     this.cursedFor = 0,
     this.momentum = Direction.none,
     this.skin = Player.defaultSkin,
+    this.pipe = 0,
+    this.onPipe = false,
   });
 
   final int id;
   final String name;
+
+  /// How far through a pipe trip, 0 to 1, or 0 when not in one.
+  final double pipe;
+
+  /// Standing on a warp pipe: Action enters it.
+  final bool onPipe;
 
   /// Cosmetic look, `classic` unless the player picked another.
   final String skin;
@@ -427,7 +451,8 @@ class PlayerState {
   /// What the Action button does right now, or null when it does nothing.
   String? get actionLabel {
     if (ghost) return hauntUsed ? null : 'haunt';
-    if (!alive) return null;
+    if (!alive || pipe > 0) return null;
+    if (onPipe) return 'pipe';
     return switch (active) {
       ActiveItem.remote => 'detonate',
       ActiveItem.tether => 'tether',
@@ -463,6 +488,8 @@ class PlayerState {
         cursedFor: p.cursedFor,
         momentum: p.momentum,
         skin: p.skin,
+        pipe: p.inPipe ? max(0.001, 1 - p.pipeFor / World.pipeTotal) : 0,
+        onPipe: p.onPipe,
       );
 
   PlayerState copyWith({double? x, double? y, Direction? facing}) =>
@@ -494,6 +521,8 @@ class PlayerState {
         cursedFor: cursedFor,
         momentum: momentum,
         skin: skin,
+        pipe: pipe,
+        onPipe: onPipe,
       );
 
   /// A mutable [Player] body with this state, for client-side prediction.
@@ -506,7 +535,9 @@ class PlayerState {
     ..ghost = ghost
     ..frozenFor = frozenFor
     ..cursedFor = cursedFor
-    ..momentum = momentum;
+    ..momentum = momentum
+    ..pipeFor = pipe > 0 ? (1 - pipe) * World.pipeTotal : 0
+    ..onPipe = onPipe;
 
   Map<String, dynamic> toJson() => {
         'id': id,
@@ -536,6 +567,8 @@ class PlayerState {
         if (cursedFor > 0) 'cu': cursedFor,
         if (momentum != Direction.none) 'mo': momentum.index,
         if (skin != Player.defaultSkin) 'sk': skin,
+        if (pipe > 0) 'pi': pipe,
+        if (onPipe) 'op': true,
       };
 
   static PlayerState fromJson(Map<String, dynamic> j) {
@@ -568,6 +601,8 @@ class PlayerState {
       cursedFor: (j['cu'] as num?)?.toDouble() ?? 0,
       momentum: Direction.values[j['mo'] as int? ?? 0],
       skin: j['sk'] as String? ?? Player.defaultSkin,
+      pipe: (j['pi'] as num?)?.toDouble() ?? 0,
+      onPipe: j['op'] as bool? ?? false,
     );
   }
 }

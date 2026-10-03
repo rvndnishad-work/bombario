@@ -65,6 +65,58 @@ class ExitBombed extends GameEvent {
   const ExitBombed();
 }
 
+/// A bomb hit the treasure chest; [hp] hits are left.
+class TreasureHit extends GameEvent {
+  const TreasureHit(this.x, this.y, this.hp);
+  final int x;
+  final int y;
+  final int hp;
+}
+
+/// The chest broke open and dropped [item].
+class TreasureOpened extends GameEvent {
+  const TreasureOpened(this.x, this.y, this.item);
+  final int x;
+  final int y;
+  final ItemType item;
+}
+
+/// The mini-boss is down and dropped [item].
+class MiniBossDefeated extends GameEvent {
+  const MiniBossDefeated(this.x, this.y, this.item);
+  final int x;
+  final int y;
+  final ItemType item;
+}
+
+/// Someone got hit on a challenge stage: no reward this time.
+class ChallengeFailed extends GameEvent {
+  const ChallengeFailed();
+}
+
+/// The stage cleared with nobody hit: points and a life.
+class ChallengeComplete extends GameEvent {
+  const ChallengeComplete();
+}
+
+/// A player sank into the pipe at (x, y), heading for (toX, toY).
+class PipeEntered extends GameEvent {
+  const PipeEntered(this.playerId, this.x, this.y, this.toX, this.toY);
+  final int playerId;
+  final int x;
+  final int y;
+  final int toX;
+  final int toY;
+}
+
+/// A player is rising out of the pipe at (x, y).
+class PipeExited extends GameEvent {
+  const PipeExited(this.playerId, this.x, this.y);
+  final int playerId;
+  final int x;
+  final int y;
+}
+
 class TimeUp extends GameEvent {
   const TimeUp();
 }

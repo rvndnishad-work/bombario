@@ -2,6 +2,7 @@ import 'dart:ui';
 
 import 'package:bombario/game/death_effects.dart';
 import 'package:bombario/game/sprite_atlas.dart';
+import 'package:bombario/game/world_renderer.dart';
 import 'package:bombario_core/bombario_core.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -57,8 +58,7 @@ void main() {
     final w = makeWorld();
     final fx = DeathEffects();
     String? sprite(EnemyState e) => 'puff';
-    ({List<String> sprites, Color tint}) look(int slot, PlayerState p) =>
-        (sprites: ['p1', 'hat-cap'], tint: const Color(0xFF3D7BFF));
+    List<String> look(int slot, PlayerState p) => ['p1', 'hat-cap'];
 
     fx.observe(WorldSnapshot.of(w), 0, sprite, playerSprites: look);
     expect(fx.activePlayers, 0);
@@ -103,5 +103,32 @@ void main() {
     fx.observe(WorldSnapshot.of(next), 0.1, sprite);
     expect(fx.activeBricks, 0);
     expect(fx.activeEnemies, 0);
+  });
+
+  test('every bomber and enemy has its own death frames, in order', () {
+    for (var n = 1; n <= 4; n++) {
+      for (var f = 1; f < DeathEffects.playerSteps.length; f++) {
+        expect(SpriteAtlas.has('p$n-die-$f'), isTrue, reason: 'p$n-die-$f');
+      }
+    }
+    for (final sprite in WorldRenderer.enemySprites.values) {
+      for (var f = 1; f < DeathEffects.enemySteps.length; f++) {
+        expect(
+          SpriteAtlas.has('$sprite-die-$f'),
+          isTrue,
+          reason: '$sprite-die-$f',
+        );
+      }
+    }
+    // Frames play one after another and the last one runs to the end.
+    final seen = [
+      for (var t = 0.0; t <= 1.0; t += 0.01)
+        DeathEffects.step(DeathEffects.playerSteps, t),
+    ];
+    expect(seen.toSet().length, DeathEffects.playerSteps.length);
+    for (var i = 1; i < seen.length; i++) {
+      expect(seen[i] - seen[i - 1], inInclusiveRange(0, 1));
+    }
+    expect(DeathEffects.step(DeathEffects.enemySteps, 0.5), 1);
   });
 }

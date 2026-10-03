@@ -23,7 +23,9 @@ class WorldRenderer extends PositionComponent {
     required this.tileSize,
     required this.atlas,
     bool Function()? highContrast,
-  }) : highContrast = highContrast ?? _off;
+    bool Function()? revealHidden,
+  }) : highContrast = highContrast ?? _off,
+       revealHidden = revealHidden ?? _off;
 
   static bool _off() => false;
 
@@ -34,6 +36,9 @@ class WorldRenderer extends PositionComponent {
 
   /// Accessibility: outlines every flame tile in white (§9.6).
   final bool Function() highContrast;
+
+  /// Admin view: draws what every brick hides on top of it.
+  final bool Function() revealHidden;
 
   /// Suit colours by player slot: blue, red, green, yellow (the mockups').
   static const playerColors = [
@@ -85,6 +90,11 @@ class WorldRenderer extends PositionComponent {
     core.TileFeature.plate => 'plate',
     core.TileFeature.warp => 'warp',
     core.TileFeature.ice => 'ice',
+    // Pipes are drawn by hand; see _drawPipe.
+    core.TileFeature.pipeUp ||
+    core.TileFeature.pipeDown ||
+    core.TileFeature.pipeLeft ||
+    core.TileFeature.pipeRight => null,
     // Gates and possessed bricks change the tile itself; see _drawTiles.
     core.TileFeature.gate || core.TileFeature.possessed => null,
     core.TileFeature.none => null,
@@ -213,7 +223,9 @@ class WorldRenderer extends PositionComponent {
     _drawTiles(canvas, sim);
     _drawRegrowing(canvas, sim);
     _drawSonar(canvas, sim);
+    if (revealHidden()) _drawHidden(canvas, sim);
     _drawItems(canvas, sim);
+    _drawChest(canvas, sim);
     _drawHazards(canvas, sim);
     _drawTombstones(canvas, sim);
     _drawBombs(canvas, sim);
@@ -262,9 +274,159 @@ class WorldRenderer extends PositionComponent {
               ? 'vent-warn'
               : featureSprite(feature);
           if (name != null) atlas.draw(canvas, name, r);
+          if (feature.isPipe) _drawPipe(canvas, r, feature.pipeMouth);
         }
       }
     }
+  }
+
+  /// The pipe's shine, left to right: dark edge, mid green, a bright
+  /// highlight two thirds across, then dark again (Arvind's reference).
+  static const _pipeShine = [
+    Color(0xFF14621F),
+    Color(0xFF2B8F37),
+    Color(0xFF6CF46C),
+    Color(0xFF3FB348),
+    Color(0xFF14621F),
+  ];
+  static const _pipeStops = [0.0, 0.38, 0.66, 0.84, 1.0];
+
+  Paint _shine(Rect r) => Paint()
+    ..shader = Gradient.linear(
+      r.centerLeft,
+      r.centerRight,
+      _pipeShine,
+      _pipeStops,
+    );
+
+  /// A warp pipe standing on its tile: a wide lip on a narrower body, both
+  /// shaded like a shiny round tube, with the dark mouth on top.
+  void _drawPipe(Canvas canvas, Rect r, core.Direction facing) {
+    final t = tileSize;
+    // Drawn upright (mouth up, base on the wall below), then turned so the
+    // base sits on its wall and the mouth faces into the map.
+    canvas.save();
+    canvas.translate(r.center.dx, r.center.dy);
+    canvas.rotate(switch (facing) {
+      core.Direction.right => math.pi / 2,
+      core.Direction.down => math.pi,
+      core.Direction.left => -math.pi / 2,
+      _ => 0,
+    });
+    canvas.translate(-r.center.dx, -r.center.dy);
+    final outline = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = t * 0.045
+      ..color = const Color(0xFF0B3D14);
+    // Shadow on the floor.
+    canvas.drawOval(
+      Rect.fromLTRB(
+        r.left + t * 0.08,
+        r.bottom - t * 0.14,
+        r.right - t * 0.08,
+        r.bottom + t * 0.02,
+      ),
+      Paint()..color = const Color(0x55000000),
+    );
+    final body = Rect.fromLTRB(
+      r.left + t * 0.15,
+      r.top + t * 0.42,
+      r.right - t * 0.15,
+      r.bottom - t * 0.04,
+    );
+    canvas.drawRect(body, _shine(body));
+    canvas.drawRect(body, outline);
+    // The lip's shadow on the body.
+    canvas.drawRect(
+      Rect.fromLTWH(body.left, body.top, body.width, t * 0.06),
+      Paint()..color = const Color(0x6614621F),
+    );
+    final lip = pipeLip(r);
+    final lipShape = RRect.fromRectAndRadius(lip, Radius.circular(t * 0.05));
+    canvas.drawRRect(lipShape, _shine(lip));
+    canvas.drawRRect(lipShape, outline);
+    // A thin top highlight, then the mouth.
+    canvas.drawLine(
+      Offset(lip.left + t * 0.06, lip.top + t * 0.04),
+      Offset(lip.right - t * 0.06, lip.top + t * 0.04),
+      Paint()
+        ..color = const Color(0x88B8FFB0)
+        ..strokeWidth = t * 0.03,
+    );
+    final mouth = pipeMouth(r);
+    canvas.drawOval(
+      mouth.inflate(t * 0.025),
+      Paint()..color = const Color(0xFF0B3D14),
+    );
+    canvas.drawOval(mouth, Paint()..color = const Color(0xFF041208));
+    canvas.restore();
+  }
+
+  /// The pipe's wide top band.
+  Rect pipeLip(Rect r) => Rect.fromLTRB(
+    r.left + tileSize * 0.04,
+    r.top + tileSize * 0.08,
+    r.right - tileSize * 0.04,
+    r.top + tileSize * 0.46,
+  );
+
+  /// The dark opening on top of the lip.
+  Rect pipeMouth(Rect r) {
+    final lip = pipeLip(r);
+    return Rect.fromCenter(
+      center: Offset(lip.center.dx, lip.top + lip.height * 0.42),
+      width: lip.width * 0.72,
+      height: lip.height * 0.5,
+    );
+  }
+
+  /// The part of the board a player sliding through the pipe at [pipe]
+  /// shows in: everything outside the pipe past the middle of its mouth.
+  Rect pipeWindow(core.WorldSnapshot sim, core.GridPos pipe) {
+    final r = _tileRect(pipe.x, pipe.y);
+    final t = tileSize;
+    final far = t * 4;
+    final edge = t * 0.24;
+    return switch (sim.grid.featureAt(pipe.x, pipe.y).pipeMouth) {
+      core.Direction.up => Rect.fromLTRB(
+        r.left - far,
+        r.top - far,
+        r.right + far,
+        r.top + edge,
+      ),
+      core.Direction.down => Rect.fromLTRB(
+        r.left - far,
+        r.bottom - edge,
+        r.right + far,
+        r.bottom + far,
+      ),
+      core.Direction.left => Rect.fromLTRB(
+        r.left - far,
+        r.top - far,
+        r.left + edge,
+        r.bottom + far,
+      ),
+      _ => Rect.fromLTRB(
+        r.right - edge,
+        r.top - far,
+        r.right + far,
+        r.bottom + far,
+      ),
+    };
+  }
+
+  /// The pipe a player in the middle of a trip is sliding through, or
+  /// null while they travel unseen between pipes.
+  static core.GridPos? pipeOf(core.WorldSnapshot sim, core.PlayerState p) {
+    const total = core.World.pipeTotal;
+    final t = p.pipe * total;
+    if (t >= core.World.pipeSink &&
+        t < core.World.pipeSink + core.World.pipeTravel) {
+      return null;
+    }
+    final tile = core.GridPos(p.x.floor(), p.y.floor());
+    if (sim.grid.isPipe(tile.x, tile.y)) return tile;
+    return sim.grid.pipeOpeningOnto(tile);
   }
 
   void _drawRegrowing(Canvas canvas, core.WorldSnapshot sim) {
@@ -342,6 +504,32 @@ class WorldRenderer extends PositionComponent {
       light(_centre(f.x + 0.5, f.y + 0.5), tileSize * 1.5);
     }
     canvas.restore();
+  }
+
+  /// Admin view: every hidden item, framed (gold for the exit) so it reads
+  /// against the brick.
+  void _drawHidden(Canvas canvas, core.WorldSnapshot sim) {
+    final grid = sim.grid;
+    for (var y = 0; y < grid.height; y++) {
+      for (var x = 0; x < grid.width; x++) {
+        final hidden = grid.hiddenAt(x, y);
+        if (hidden == null) continue;
+        final exit = hidden == core.ItemType.exit;
+        canvas.drawRect(
+          _tileRect(x, y, tileSize * 0.06),
+          Paint()
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = tileSize * 0.08
+            ..color = exit ? const Color(0xFFFFD23F) : const Color(0xFF7CF0FF),
+        );
+        atlas.draw(
+          canvas,
+          itemSprite(hidden),
+          _tileRect(x, y, tileSize * 0.18),
+          paint: SpriteAtlas.faded(0.85),
+        );
+      }
+    }
   }
 
   void _drawSonar(Canvas canvas, core.WorldSnapshot sim) {
@@ -436,6 +624,66 @@ class WorldRenderer extends PositionComponent {
       final fall = (t - 0.5) * 2;
       final centre = _centre(h.x + 0.5, h.y + 0.5 - 2.5 * (1 - fall));
       atlas.draw(canvas, 'rock', _square(centre, tileSize));
+    }
+  }
+
+  /// An ordinary enemy with more HP than its kind: the stage's mini-boss.
+  static bool isMiniBoss(core.EnemyState e) {
+    final kind = e.kindData;
+    return kind != null && !kind.boss && e.maxHp > kind.hp;
+  }
+
+  /// The treasure chest: a banded box that cracks with each hit.
+  void _drawChest(Canvas canvas, core.WorldSnapshot sim) {
+    final chest = sim.chest;
+    if (chest == null) return;
+    final (x, y, hp) = chest;
+    final r = _tileRect(x, y, tileSize * 0.1);
+    final glow = 0.25 + 0.15 * math.sin(_time * 4);
+    canvas.drawRect(
+      r.inflate(tileSize * 0.06),
+      Paint()
+        ..color = const Color(0xFFFFD23F).withValues(alpha: glow)
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 5),
+    );
+    final outline = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = tileSize * 0.06
+      ..color = const Color(0xFF0D1120);
+    canvas.drawRect(r, Paint()..color = const Color(0xFF8A4B22));
+    final lid = Rect.fromLTWH(r.left, r.top, r.width, r.height * 0.4);
+    canvas.drawRect(lid, Paint()..color = const Color(0xFFB45A2C));
+    final band = Paint()..color = const Color(0xFFFFD23F);
+    canvas.drawRect(
+      Rect.fromLTWH(
+        r.left,
+        lid.bottom - tileSize * 0.04,
+        r.width,
+        tileSize * 0.08,
+      ),
+      band,
+    );
+    canvas.drawRect(
+      Rect.fromCenter(
+        center: Offset(r.center.dx, lid.bottom + tileSize * 0.05),
+        width: tileSize * 0.16,
+        height: tileSize * 0.2,
+      ),
+      band,
+    );
+    canvas.drawRect(r, outline);
+    // Cracks for each hit taken.
+    final crack = Paint()
+      ..color = const Color(0xFF0D1120)
+      ..strokeWidth = tileSize * 0.04;
+    final hits = core.Treasure.maxHp - hp;
+    for (var i = 0; i < hits; i++) {
+      final cx = r.left + r.width * (0.25 + 0.25 * i);
+      canvas.drawLine(
+        Offset(cx, r.top + r.height * 0.45),
+        Offset(cx + tileSize * 0.08, r.bottom - tileSize * 0.04),
+        crack,
+      );
     }
   }
 
@@ -544,8 +792,20 @@ class WorldRenderer extends PositionComponent {
         );
         continue;
       }
-      final bodySize = (kind?.size ?? 0.4) * tileSize * 2.5;
+      // A mini-boss is a regular enemy with extra HP: drawn half again as
+      // big, on a gold halo, with an HP bar.
+      final elite = isMiniBoss(e);
+      final bodySize = (kind?.size ?? 0.4) * tileSize * 2.5 * (elite ? 1.5 : 1);
       var centre = _centre(e.x, e.y);
+      if (elite) {
+        canvas.drawCircle(
+          centre,
+          bodySize * (0.55 + 0.05 * math.sin(_time * 5)),
+          Paint()
+            ..color = const Color(0xFFFFD23F).withValues(alpha: 0.35)
+            ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4),
+        );
+      }
 
       if (e.state == core.EnemyStateKind.underground ||
           (kind?.style == core.MoveStyle.burrow &&
@@ -624,7 +884,7 @@ class WorldRenderer extends PositionComponent {
       }
       if (e.slowed) canvas.drawCircle(centre, bodySize * 0.55, _slowRing);
 
-      if (kind?.boss ?? false) {
+      if ((kind?.boss ?? false) || elite) {
         final bar = Rect.fromLTWH(
           centre.dx - bodySize / 2,
           body.top - 9,
@@ -645,18 +905,12 @@ class WorldRenderer extends PositionComponent {
     }
   }
 
-  /// The layers a dying player pops with: the front-facing body and the
-  /// hat, in the slot's colour.
-  ({List<String> sprites, Color tint}) _popSprites(
-    int slot,
-    core.PlayerState p,
-  ) {
+  /// The layers a dying player is drawn with: the front-facing body in the
+  /// slot's colour, then the hat.
+  List<String> _popSprites(int slot, core.PlayerState p) {
     final look = (slot % playerColors.length) + 1;
     final hat = Cosmetics.spriteFor(p.skin);
-    return (
-      sprites: ['p$look', if (hat != null) hat],
-      tint: playerColors[slot % playerColors.length],
-    );
+    return ['p$look', if (hat != null) hat];
   }
 
   void _drawPlayers(Canvas canvas, core.WorldSnapshot sim) {
@@ -678,6 +932,10 @@ class WorldRenderer extends PositionComponent {
         continue;
       }
 
+      // Mid pipe trip: drawn only where it pokes out of the mouth, and not
+      // at all while travelling between pipes.
+      final pipe = p.pipe > 0 ? pipeOf(sim, p) : null;
+      if (p.pipe > 0 && pipe == null) continue;
       final blink = p.invincible && (_time * 12).floor().isEven;
       final pose = p.frozen ? (moving: false, step: 0) : _pose(p);
       // The body lifts a pixel on each stride, so the walk has a bounce.
@@ -695,6 +953,7 @@ class WorldRenderer extends PositionComponent {
       };
       final paint = blink ? SpriteAtlas.faded(0.35) : null;
       canvas.save();
+      if (pipe != null) canvas.clipRect(pipeWindow(sim, pipe));
       if (facing == core.Direction.left) {
         canvas.translate(body.center.dx, body.center.dy);
         canvas.scale(-1, 1);
@@ -710,6 +969,7 @@ class WorldRenderer extends PositionComponent {
       final hat = Cosmetics.spriteFor(p.skin);
       if (hat != null) atlas.draw(canvas, hat, body, paint: paint);
       canvas.restore();
+      if (pipe != null) continue;
       if (p.frozen) canvas.drawRect(body.deflate(2), _iceOverlay);
       if (p.cursedFor > 0) {
         // Reversed controls: an orb circles the cursed player's head.

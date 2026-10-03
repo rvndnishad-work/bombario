@@ -37,6 +37,7 @@ class StageDef {
     this.cannons = 0,
     this.big = false,
     this.theme,
+    this.pipes,
   });
 
   /// "world-stage", e.g. `1-4`.
@@ -88,6 +89,9 @@ class StageDef {
   /// Seconds between cannon shots, 0 for none.
   final double cannons;
 
+  /// Warp pipes on the stage; null picks by world (see [pipeCount]).
+  final int? pipes;
+
   /// Always the large 41 × 17 field, whatever the team size.
   final bool big;
 
@@ -98,6 +102,52 @@ class StageDef {
   int get world => theme ?? int.parse(id.split('-').first);
   int get number => int.tryParse(id.split('-').last) ?? 0;
   bool get isBoss => boss != null;
+
+  /// 1 to 50 across the campaign; 0 outside it (the Daily Dungeon).
+  int get campaignNumber =>
+      theme != null || number == 0 ? 0 : (world - 1) * 10 + number;
+
+  /// Every fifth stage gets an extra, rotating treasure, mini-boss,
+  /// challenge: 5 treasure, 10 mini-boss, 15 challenge, 20 treasure ...
+  StageExtra? get extra {
+    final n = campaignNumber;
+    if (n == 0 || n % 5 != 0) return null;
+    return StageExtra.values[(n ~/ 5 - 1) % StageExtra.values.length];
+  }
+
+  /// Warp pipes: none on the first two stages, bonus and boss stages; then
+  /// two in World 1, three in World 2 and four from World 3 on.
+  int get pipeCount {
+    if (pipes case final n?) return n;
+    if (isBoss || bonus || campaignNumber < 3) return 0;
+    return switch (world) {
+      1 => 2,
+      2 => 3,
+      _ => 4,
+    };
+  }
+
+  /// The mini-boss for each world: a regular enemy, bigger and tougher.
+  static EnemyKind miniBossKind(int world) => switch (world) {
+        1 => EnemyKind.grinface,
+        2 => EnemyKind.tigerclaw,
+        3 => EnemyKind.bombGoblin,
+        4 => EnemyKind.mirrorKnight,
+        _ => EnemyKind.phaseWraith,
+      };
+
+  /// One line describing [extra] for the stage card and the admin viewer.
+  String get extraTip => switch (extra) {
+        StageExtra.treasure =>
+          'Treasure! Bomb the chest three times for a rare power-up.',
+        StageExtra.miniBoss =>
+          'Mini-boss! A giant ${miniBossKind(world).name} drops a rare '
+              'power-up.',
+        StageExtra.challenge =>
+          'Challenge: clear it without getting hit for 5000 points and a '
+              'life.',
+        null => '',
+      };
 
   static int scaleCount(int twoPlayerCount, int players) => max(
         1,
@@ -118,7 +168,7 @@ class StageDef {
     if (b != null) return _bossArena(b, seed, n);
     final built = _build(seed, n);
     if (!bonus) _maybeHideExtraLife(built, seed);
-    return built;
+    return built..addPipes(pipeCount, seed: seed ^ 0x9e37);
   }
 
   /// Like the original's secret bonuses: on some stages one plain brick
@@ -339,6 +389,9 @@ class StageDef {
         windInterval: wind,
         cannonInterval: cannons,
         keepItemsOnDeath: !coop,
+        extra: extra,
+        miniBossKind: miniBossKind(world),
+        miniBossHp: scaleBossHp(2 + world, players),
       );
 }
 

@@ -39,6 +39,63 @@ class LevelData {
     return null;
   }
 
+  /// Puts up to [count] warp pipes against the map's walls, one per side in
+  /// the order left, right, top, bottom, so a trip crosses the map. Each
+  /// pipe juts out of its wall with the mouth facing into the map, on a
+  /// row (or column) that runs past the pillars, so the tile in front is
+  /// always open. Pipe and front tile must be clear floor (or a brick with
+  /// nothing under it, which is cleared), away from spawns, enemies and
+  /// terrain, and the stage must stay solvable.
+  void addPipes(int count, {required int seed}) {
+    if (count <= 0) return;
+    final rng = Random(seed);
+    final w = grid.width, h = grid.height;
+    final enemyTiles = {for (final e in enemySpawns) e.pos};
+    bool clear(GridPos p) {
+      final t = grid.atPos(p);
+      final open = t == TileType.floor ||
+          (t == TileType.brick && grid.hiddenAt(p.x, p.y) == null);
+      return open &&
+          grid.featureAt(p.x, p.y) == TileFeature.none &&
+          !enemyTiles.contains(p) &&
+          playerSpawns.every((s) => s.manhattanTo(p) >= 4);
+    }
+
+    // Each side: the pipe tiles along that wall and the mouth direction.
+    final sides = [
+      ([for (var y = 3; y < h - 3; y += 2) GridPos(1, y)], Direction.right),
+      ([for (var y = 3; y < h - 3; y += 2) GridPos(w - 2, y)], Direction.left),
+      ([for (var x = 3; x < w - 3; x += 2) GridPos(x, 1)], Direction.down),
+      ([for (var x = 3; x < w - 3; x += 2) GridPos(x, h - 2)], Direction.up),
+    ];
+    for (final (tiles, mouth) in sides.take(count)) {
+      final spots = [
+        for (final p in tiles)
+          if (clear(p) && clear(p.step(mouth.dx, mouth.dy))) p,
+      ];
+      // Prefer the middle of the wall.
+      spots.sort(
+          (a, b) => _midDistance(a, w, h).compareTo(_midDistance(b, w, h)));
+      for (final p in spots.take(3).toList()..shuffle(rng)) {
+        final front = p.step(mouth.dx, mouth.dy);
+        final before = [
+          for (final t in [p, front]) (grid.atPos(t), grid.featureAt(t.x, t.y)),
+        ];
+        grid.set(p.x, p.y, TileType.floor);
+        grid.set(front.x, front.y, TileType.floor);
+        grid.setFeature(p.x, p.y, TileFeature.pipeFacing(mouth));
+        if (solvable) break;
+        // Undo: this pipe would wall something off.
+        grid.set(p.x, p.y, before[0].$1);
+        grid.setFeature(p.x, p.y, before[0].$2);
+        grid.set(front.x, front.y, before[1].$1);
+      }
+    }
+  }
+
+  static int _midDistance(GridPos p, int w, int h) =>
+      (p.x - w ~/ 2).abs() + (p.y - h ~/ 2).abs();
+
   /// §8.4 step 6: every spawn can reach the exit once bricks are gone.
   /// Pits block; closed gates count as open only if a pressure plate is
   /// reachable without them. Stages without an exit are trivially solvable.
@@ -58,7 +115,7 @@ class LevelData {
   Set<GridPos> _reach(GridPos from, {required bool gatesOpen}) {
     bool open(GridPos p) {
       final t = grid.atPos(p);
-      if (t == TileType.pit) return false;
+      if (t == TileType.pit || grid.isPipe(p.x, p.y)) return false;
       if (t == TileType.pillar) {
         return gatesOpen && grid.featureAt(p.x, p.y) == TileFeature.gate;
       }

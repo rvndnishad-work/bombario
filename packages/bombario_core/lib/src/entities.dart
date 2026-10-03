@@ -125,6 +125,27 @@ class Player extends Entity {
 
   bool get invincible => invincibleFor > 0;
 
+  /// Seconds left of a trip through a warp pipe (sink, travel, rise); the
+  /// player can't act or be hurt meanwhile.
+  double pipeFor = 0;
+
+  /// The pipe the current trip went into, and the one it comes out of.
+  GridPos? pipeFrom;
+  GridPos? pipeTo;
+  double pipeStartX = 0;
+  double pipeStartY = 0;
+
+  /// Standing at a warp pipe's mouth, so walking in (or Action) enters it.
+  bool onPipe = false;
+
+  bool get inPipe => pipeFor > 0;
+
+  /// Admin cheat: nothing can kill or hurt this player.
+  bool godMode = false;
+
+  /// Admin cheat: walk through bricks, pillars and pits (not the border).
+  bool noClip = false;
+
   /// Seconds the player is frozen (frost bomb) or stunned (friendly flame
   /// on tutorial stages). A frozen player can't move or place bombs.
   double frozenFor = 0;

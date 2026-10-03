@@ -375,6 +375,10 @@ def make_sfx():
         delay(notes_seq(bell, duty=0.5, vol=0.2, gate=0.95, decay=0.1), 0.05),
         delay(noise_burst(0.3, vol=0.12, decay=0.1, hp=True, short=True), 0.23),
     ), 0.7)
+    # Pipe: three quick falling blips, like sliding down a warp pipe.
+    blip = sweep(0.07, 700, 180, duty=0.5, vol=0.8, curve=1.5)
+    gap = [0.0] * int(SR * 0.03)
+    s["pipe"] = (blip + gap + blip + gap + blip, 0.6)
     # Timer: alarm sting at 30 s (two alternating pitches, four cycles, dry).
     s["time_low"] = (pad(mix(
         notes_seq([(88, 0.07), (81, 0.07)] * 4, duty=0.5, vol=0.6, gate=0.9, decay=0.3),
