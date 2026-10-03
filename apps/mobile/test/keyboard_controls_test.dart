@@ -24,9 +24,13 @@ void main() {
     // A second arrow takes over; letting it go falls back to the first.
     await tester.sendKeyDownEvent(LogicalKeyboardKey.arrowDown);
     expect(game.input.held, Direction.down);
+    // A quick tap keeps walking briefly so it always moves the player.
     await tester.sendKeyUpEvent(LogicalKeyboardKey.arrowDown);
+    expect(game.input.held, Direction.down);
+    await tester.pump(const Duration(milliseconds: 200));
     expect(game.input.held, Direction.right);
     await tester.sendKeyUpEvent(LogicalKeyboardKey.arrowRight);
+    await tester.pump(const Duration(milliseconds: 200));
     expect(game.input.held, Direction.none);
 
     await tester.sendKeyEvent(LogicalKeyboardKey.space);

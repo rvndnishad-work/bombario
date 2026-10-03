@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:bombario_core/bombario_core.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
@@ -55,6 +57,37 @@ class _KeyboardControlsState extends State<KeyboardControls> {
   /// Direction keys held down, oldest first.
   final List<LogicalKeyboardKey> _held = [];
 
+  /// A quick tap still walks for at least this long. Otherwise a press that
+  /// starts and ends between two simulation ticks moves the player a sliver
+  /// or not at all, and the arrow keys feel dead.
+  static const _minPress = Duration(milliseconds: 160);
+
+  final Map<LogicalKeyboardKey, DateTime> _downAt = {};
+  final Map<LogicalKeyboardKey, Timer> _lateRelease = {};
+
+  @override
+  void dispose() {
+    for (final t in _lateRelease.values) {
+      t.cancel();
+    }
+    super.dispose();
+  }
+
+  void _releaseAll() {
+    for (final t in _lateRelease.values) {
+      t.cancel();
+    }
+    _lateRelease.clear();
+    _held.clear();
+    widget.input.release();
+  }
+
+  void _letGo(LogicalKeyboardKey key) {
+    _lateRelease.remove(key)?.cancel();
+    _held.remove(key);
+    _steer();
+  }
+
   void _steer() {
     if (_held.isEmpty) {
       widget.input.release();
@@ -70,21 +103,24 @@ class _KeyboardControlsState extends State<KeyboardControls> {
     // activated has an ActivateIntent action above its focus node.
     final focused = FocusManager.instance.primaryFocus?.context;
     if (focused != null && Actions.maybeFind<ActivateIntent>(focused) != null) {
-      if (_held.isNotEmpty) {
-        _held.clear();
-        widget.input.release();
-      }
+      if (_held.isNotEmpty) _releaseAll();
       return KeyEventResult.ignored;
     }
     if (KeyboardControls.directions.containsKey(key)) {
       if (event is KeyDownEvent) {
+        _lateRelease.remove(key)?.cancel();
+        _downAt[key] = DateTime.now();
         _held
           ..remove(key)
           ..add(key);
         _steer();
       } else if (event is KeyUpEvent) {
-        _held.remove(key);
-        _steer();
+        final heldFor = DateTime.now().difference(_downAt[key] ?? DateTime(0));
+        if (heldFor < _minPress) {
+          _lateRelease[key] = Timer(_minPress - heldFor, () => _letGo(key));
+        } else {
+          _letGo(key);
+        }
       }
       return KeyEventResult.handled;
     }
@@ -103,8 +139,7 @@ class _KeyboardControlsState extends State<KeyboardControls> {
       return KeyEventResult.handled;
     }
     if (KeyboardControls.pauseKeys.contains(key) && widget.onPause != null) {
-      _held.clear();
-      widget.input.release();
+      _releaseAll();
       widget.onPause!();
       return KeyEventResult.handled;
     }
