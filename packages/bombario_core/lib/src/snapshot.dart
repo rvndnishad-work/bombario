@@ -27,6 +27,12 @@ class WorldSnapshot {
     this.pings = const [],
     this.sonar = const [],
     this.hazards = const [],
+    this.wind = Direction.none,
+    this.windNext = Direction.none,
+    this.ventPhase = VentPhase.idle,
+    this.ventTimeLeft = 0,
+    this.darkness = 0,
+    this.regrowing = const [],
   });
 
   final int tick;
@@ -49,8 +55,23 @@ class WorldSnapshot {
   /// Items Sonar revealed under bricks (only these hidden items are sent).
   final List<ItemState> sonar;
 
-  /// Falling-rock shadows: x, y and seconds until impact.
+  /// Telegraphed hazards: falling-rock shadows, cannon rows, closing arena
+  /// tiles. x, y, seconds until impact and [HazardKind].
   final List<HazardState> hazards;
+
+  /// Current gust (World 5), and during a lull the one coming next.
+  final Direction wind;
+  final Direction windNext;
+
+  /// Shared steam-vent cycle (World 3) and seconds until it changes.
+  final VentPhase ventPhase;
+  final double ventTimeLeft;
+
+  /// Vision radius in tiles on dark stages (World 4), 0 when lit.
+  final int darkness;
+
+  /// Possessed bricks waiting to grow back: x, y and seconds left.
+  final List<HazardState> regrowing;
 
   bool get over => cleared || failed || winnerId != null;
 
@@ -75,6 +96,12 @@ class WorldSnapshot {
         pings: pings,
         sonar: sonar,
         hazards: hazards,
+        wind: wind,
+        windNext: windNext,
+        ventPhase: ventPhase,
+        ventTimeLeft: ventTimeLeft,
+        darkness: darkness,
+        regrowing: regrowing,
       );
 
   bool bombAt(int x, int y) => bombs.any((b) => b.x == x && b.y == y);
@@ -127,7 +154,19 @@ class WorldSnapshot {
           for (final p in w.pings) PingState(p.playerId, p.kind, p.x, p.y),
         ],
         sonar: [for (final s in w.sonar) ItemState(s.x, s.y, s.type)],
-        hazards: [for (final h in w.hazards) HazardState(h.x, h.y, h.warn)],
+        hazards: [
+          for (final h in w.hazards)
+            HazardState(h.x, h.y, h.warn, kind: h.kind),
+        ],
+        wind: w.wind,
+        windNext: w.windNext,
+        ventPhase: w.ventPhase,
+        ventTimeLeft: w.ventTimeLeft,
+        darkness: w.config.darkness,
+        regrowing: [
+          for (final r in w.regrowing.entries)
+            HazardState(r.key.x, r.key.y, r.value),
+        ],
       );
 
   Map<String, dynamic> toJson() => {
@@ -169,7 +208,16 @@ class WorldSnapshot {
           ],
         if (hazards.isNotEmpty)
           'hz': [
-            for (final h in hazards) [h.x, h.y, h.warn],
+            for (final h in hazards) [h.x, h.y, h.warn, h.kind.index],
+          ],
+        if (wind != Direction.none) 'wind': wind.index,
+        if (windNext != Direction.none) 'windNext': windNext.index,
+        if (ventPhase != VentPhase.idle || ventTimeLeft > 0)
+          'vent': [ventPhase.index, ventTimeLeft],
+        if (darkness > 0) 'dark': darkness,
+        if (regrowing.isNotEmpty)
+          'rg': [
+            for (final r in regrowing) [r.x, r.y, r.warn],
           ],
       };
 
@@ -229,7 +277,23 @@ class WorldSnapshot {
         ],
         hazards: [
           for (final h in (j['hz'] as List?) ?? const [])
-            HazardState(h[0] as int, h[1] as int, (h[2] as num).toDouble()),
+            HazardState(
+              h[0] as int,
+              h[1] as int,
+              (h[2] as num).toDouble(),
+              kind: (h as List).length > 3
+                  ? HazardKind.values[h[3] as int]
+                  : HazardKind.rock,
+            ),
+        ],
+        wind: Direction.values[j['wind'] as int? ?? 0],
+        windNext: Direction.values[j['windNext'] as int? ?? 0],
+        ventPhase: VentPhase.values[(j['vent'] as List?)?[0] as int? ?? 0],
+        ventTimeLeft: ((j['vent'] as List?)?[1] as num?)?.toDouble() ?? 0,
+        darkness: j['dark'] as int? ?? 0,
+        regrowing: [
+          for (final r in (j['rg'] as List?) ?? const [])
+            HazardState(r[0] as int, r[1] as int, (r[2] as num).toDouble()),
         ],
       );
 
@@ -253,14 +317,35 @@ class WorldSnapshot {
         sb.write(_tileChars[g.at(x, y)]);
       }
     }
-    return {'w': g.width, 'h': g.height, 't': sb.toString()};
+    return {
+      'w': g.width,
+      'h': g.height,
+      't': sb.toString(),
+      // Features, one character per tile: 'a' + TileFeature.index.
+      if (g.hasFeatures)
+        'f': String.fromCharCodes([
+          for (final p in g.positions)
+            _featureBase + g.featureAt(p.x, p.y).index,
+        ]),
+    };
   }
+
+  static const _featureBase = 0x61; // 'a'
 
   static Grid _decodeGrid(Map<String, dynamic> j) {
     final w = j['w'] as int, h = j['h'] as int, t = j['t'] as String;
     final g = Grid(w, h);
     for (var i = 0; i < w * h; i++) {
       g.set(i % w, i ~/ w, _charTiles[t[i]] ?? TileType.floor);
+    }
+    final f = j['f'] as String?;
+    if (f != null) {
+      for (var i = 0; i < w * h && i < f.length; i++) {
+        final index = f.codeUnitAt(i) - _featureBase;
+        if (index > 0 && index < TileFeature.values.length) {
+          g.setFeature(i % w, i ~/ w, TileFeature.values[index]);
+        }
+      }
     }
     return g;
   }
@@ -292,6 +377,8 @@ class PlayerState {
     this.kick = false,
     this.frostBombs = 0,
     this.active = ActiveItem.none,
+    this.cursedFor = 0,
+    this.momentum = Direction.none,
   });
 
   final int id;
@@ -324,7 +411,14 @@ class PlayerState {
   final int frostBombs;
   final ActiveItem active;
 
+  /// Seconds of the Lantern Witch's curse left (controls reversed).
+  final double cursedFor;
+
+  /// Direction the player is sliding on ice.
+  final Direction momentum;
+
   bool get frozen => frozenFor > 0;
+  bool get cursed => cursedFor > 0;
 
   /// What the Action button does right now, or null when it does nothing.
   String? get actionLabel {
@@ -362,6 +456,8 @@ class PlayerState {
         kick: p.kick,
         frostBombs: p.frostBombs,
         active: p.active,
+        cursedFor: p.cursedFor,
+        momentum: p.momentum,
       );
 
   PlayerState copyWith({double? x, double? y, Direction? facing}) =>
@@ -390,6 +486,8 @@ class PlayerState {
         kick: kick,
         frostBombs: frostBombs,
         active: active,
+        cursedFor: cursedFor,
+        momentum: momentum,
       );
 
   /// A mutable [Player] body with this state, for client-side prediction.
@@ -400,7 +498,9 @@ class PlayerState {
     ..wallPass = wallPass
     ..bombPass = bombPass
     ..ghost = ghost
-    ..frozenFor = frozenFor;
+    ..frozenFor = frozenFor
+    ..cursedFor = cursedFor
+    ..momentum = momentum;
 
   Map<String, dynamic> toJson() => {
         'id': id,
@@ -427,6 +527,8 @@ class PlayerState {
         if (kick) 'k': true,
         if (frostBombs > 0) 'fb': frostBombs,
         if (active != ActiveItem.none) 'ac': active.index,
+        if (cursedFor > 0) 'cu': cursedFor,
+        if (momentum != Direction.none) 'mo': momentum.index,
       };
 
   static PlayerState fromJson(Map<String, dynamic> j) {
@@ -456,6 +558,8 @@ class PlayerState {
       kick: j['k'] as bool? ?? false,
       frostBombs: j['fb'] as int? ?? 0,
       active: ActiveItem.values[j['ac'] as int? ?? 0],
+      cursedFor: (j['cu'] as num?)?.toDouble() ?? 0,
+      momentum: Direction.values[j['mo'] as int? ?? 0],
     );
   }
 }
@@ -505,12 +609,15 @@ class PingState {
 }
 
 class HazardState {
-  const HazardState(this.x, this.y, this.warn);
+  const HazardState(this.x, this.y, this.warn, {this.kind = HazardKind.rock});
   final int x;
   final int y;
 
-  /// Seconds until the rock lands.
+  /// Seconds until impact (or, for regrowing bricks, until regrowth).
   final double warn;
+
+  /// For cannons, [x] is the wall the shot comes from and [y] the row.
+  final HazardKind kind;
 }
 
 class EnemyState {
@@ -526,6 +633,10 @@ class EnemyState {
     this.frozen = false,
     this.slowed = false,
     this.facing = Direction.none,
+    this.landing,
+    this.disguise,
+    this.visible = true,
+    this.herded = false,
   });
 
   final int id;
@@ -542,6 +653,18 @@ class EnemyState {
   final bool slowed;
   final Direction facing;
 
+  /// Where a Hopper will land or a Phase Wraith / boss will appear.
+  final GridPos? landing;
+
+  /// The power-up a disguised Mimic is pretending to be.
+  final ItemType? disguise;
+
+  /// False while a Shade is cloaked: draw nothing, or a faint shimmer.
+  final bool visible;
+
+  /// Sped up by a nearby Herder: draw an aura.
+  final bool herded;
+
   EnemyKind? get kindData => EnemyKind.byName[kind];
 
   EnemyState copyWith({double? x, double? y}) => EnemyState(
@@ -556,6 +679,10 @@ class EnemyState {
         frozen: frozen,
         slowed: slowed,
         facing: facing,
+        landing: landing,
+        disguise: disguise,
+        visible: visible,
+        herded: herded,
       );
 
   static EnemyState of(Enemy e) => EnemyState(
@@ -570,6 +697,10 @@ class EnemyState {
         frozen: e.frozen,
         slowed: e.slowFor > 0,
         facing: e.direction,
+        landing: e.landing,
+        disguise: e.state == EnemyStateKind.disguised ? e.disguise : null,
+        visible: e.visible,
+        herded: e.herded,
       );
 
   List<Object> toJson() => [
@@ -584,6 +715,11 @@ class EnemyState {
         frozen,
         slowed,
         facing.index,
+        landing?.x ?? -1,
+        landing?.y ?? -1,
+        disguise?.index ?? -1,
+        visible,
+        herded,
       ];
 
   static EnemyState fromJson(List e) => EnemyState(
@@ -600,5 +736,13 @@ class EnemyState {
         frozen: e.length > 8 && e[8] as bool,
         slowed: e.length > 9 && e[9] as bool,
         facing: e.length > 10 ? Direction.values[e[10] as int] : Direction.none,
+        landing: e.length > 12 && (e[11] as int) >= 0
+            ? GridPos(e[11] as int, e[12] as int)
+            : null,
+        disguise: e.length > 13 && (e[13] as int) >= 0
+            ? ItemType.values[e[13] as int]
+            : null,
+        visible: e.length <= 14 || e[14] as bool,
+        herded: e.length > 15 && e[15] as bool,
       );
 }

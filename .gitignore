@@ -15,3 +15,6 @@ apps/mobile/ios/Pods/
 apps/mobile/ios/.symlinks/
 apps/mobile/android/.gradle/
 apps/mobile/android/local.properties
+
+# Claude Code worktrees
+.claude/worktrees/

@@ -1,3 +1,4 @@
+import 'direction.dart';
 import 'entities.dart';
 
 /// What a tile is made of. Hidden items live on the tile alongside a brick.
@@ -11,6 +12,59 @@ enum TileType {
 
   /// A collapsed floor: nobody walks here, but flames pass over it.
   pit,
+}
+
+/// A second layer on top of [TileType] for the World 3-5 mechanics (§8.1).
+///
+/// Kept separate from [TileType] so a tile can be, say, a brick with a
+/// conveyor under it, and so older renderers that only know the base tiles
+/// still draw something sensible (a closed gate is a pillar underneath).
+///
+/// Serialised by index (snapshot character), so new values go at the end.
+enum TileFeature {
+  none,
+
+  /// Conveyor belts move players and still bombs one way (World 3).
+  conveyorUp,
+  conveyorDown,
+  conveyorLeft,
+  conveyorRight,
+
+  /// Fires a short flame jet on a timer, telegraphed (World 3).
+  vent,
+
+  /// Stepping on it opens every [gate] for good (World 3).
+  plate,
+
+  /// Solid ([TileType.pillar]) until a [plate] is pressed, then floor.
+  gate,
+
+  /// A brick that grows back 20 s after it is destroyed (World 4).
+  possessed,
+
+  /// Warp door: entering one moves you to its partner. Doors pair up in
+  /// reading order: 1st with 2nd, 3rd with 4th... (World 4).
+  warp,
+
+  /// Players keep sliding on ice until they hit something (World 5).
+  ice;
+
+  /// The way a conveyor runs, [Direction.none] for anything else.
+  Direction get conveyor => switch (this) {
+        conveyorUp => Direction.up,
+        conveyorDown => Direction.down,
+        conveyorLeft => Direction.left,
+        conveyorRight => Direction.right,
+        _ => Direction.none,
+      };
+
+  static TileFeature conveyorFor(Direction d) => switch (d) {
+        Direction.up => conveyorUp,
+        Direction.down => conveyorDown,
+        Direction.left => conveyorLeft,
+        Direction.right => conveyorRight,
+        Direction.none => none,
+      };
 }
 
 /// Integer tile coordinate.
@@ -39,12 +93,36 @@ class GridPos {
 class Grid {
   Grid(this.width, this.height)
       : _tiles = List.filled(width * height, TileType.floor),
-        _hidden = List.filled(width * height, null);
+        _hidden = List.filled(width * height, null),
+        _features = List.filled(width * height, TileFeature.none);
 
   final int width;
   final int height;
   final List<TileType> _tiles;
   final List<ItemType?> _hidden;
+  final List<TileFeature> _features;
+
+  TileFeature featureAt(int x, int y) =>
+      inBounds(x, y) ? _features[y * width + x] : TileFeature.none;
+
+  void setFeature(int x, int y, TileFeature f) => _features[y * width + x] = f;
+
+  bool get hasFeatures => _features.any((f) => f != TileFeature.none);
+
+  /// Warp doors in reading order; consecutive ones are partners.
+  List<GridPos> get warps => [
+        for (final p in positions)
+          if (featureAt(p.x, p.y) == TileFeature.warp) p,
+      ];
+
+  /// The partner of the warp door at [at], or null.
+  GridPos? warpPartner(GridPos at) {
+    final all = warps;
+    final i = all.indexOf(at);
+    if (i < 0) return null;
+    final j = i.isEven ? i + 1 : i - 1;
+    return j < all.length ? all[j] : null;
+  }
 
   bool inBounds(int x, int y) => x >= 0 && y >= 0 && x < width && y < height;
 

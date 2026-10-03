@@ -130,6 +130,20 @@ class Player extends Entity {
   /// Last tile entered, for cracked floors.
   GridPos? lastTile;
 
+  /// Seconds of the Lantern Witch's curse left: controls are reversed.
+  double cursedFor = 0;
+  bool get cursed => cursedFor > 0;
+
+  /// Direction kept while sliding on ice, [Direction.none] otherwise.
+  Direction momentum = Direction.none;
+
+  /// The direction the player tried to move this tick (after curse and
+  /// ice), for enemies that copy it. Not sent over the wire.
+  Direction moveDir = Direction.none;
+
+  /// Seconds before a warp door will take this player again.
+  double warpCooldown = 0;
+
   int bombsPlaced = 0;
   int score = 0;
 
@@ -252,11 +266,21 @@ class Bomb {
   /// Progress towards the next tile while sliding, 0 to 1.
   double slideProgress = 0;
 
+  /// True while a conveyor (not a kick) is carrying it: it stops when it
+  /// rolls off the belt.
+  bool conveyed = false;
+
+  /// Tiles per second a conveyor carries a bomb.
+  static const double conveyorSpeed = 2;
+
   /// Tiles per second a kicked bomb travels.
   static const double kickSpeed = 8;
 
   /// Seconds until explosion. Ignored while [remote] is true.
   double fuse;
+
+  /// Bombs planted by enemies (Bomb Goblin, Bomb-O-Tron) use this owner.
+  static const int enemyOwner = -1;
 
   /// Players standing on this bomb when it was placed may keep walking
   /// through it until they step off; after that it is solid to them too.
@@ -321,6 +345,15 @@ enum MoveStyle {
 
   /// Travels underground and surfaces near players. Rockjaw Worm.
   burrow,
+
+  /// Never moves. Mole Queen nests, Bomb-O-Tron, curse orbs.
+  stationary,
+
+  /// Copies the nearest player's movement, mirrored left/right.
+  mirror,
+
+  /// Blinks between spots instead of walking. The Lantern Witch.
+  blink,
 }
 
 /// Special behaviour on top of movement (§6.3, §7).
@@ -339,6 +372,44 @@ enum EnemyAbility {
 
   /// Boss: splits off four Puffballs at half health. King Puffball.
   spawnAtHalf,
+
+  /// Sits still looking like a power-up; bites anyone who steps next to
+  /// it, then chases for a while. Sonar exposes it. Mimic.
+  mimic,
+
+  /// Plants its own range-2 bomb near players, then flees. Bomb Goblin.
+  plantBombs,
+
+  /// Kicks any bomb it walks into along its lane. Kicker Crab.
+  kickBombs,
+
+  /// Invisible unless a player is within 3 tiles or a flame is next to it.
+  /// Shade.
+  cloak,
+
+  /// Buried under a brick; spawns a Pebble every 8 s. Mole Queen nest.
+  nest,
+
+  /// Runs to the nearest bomb and eats it, then flees. Fuse Eater.
+  eatBombs,
+
+  /// Teleports near a player every 6 s. Phase Wraith.
+  teleport,
+
+  /// Harmless; drives nearby enemies at players and speeds them up. Herder.
+  herd,
+
+  /// Boss: drops bomb rings and lines, exposed only after each volley.
+  /// Bomb-O-Tron.
+  bombPatterns,
+
+  /// Boss: blinks around, summons Shades, curses players in phase 2.
+  /// The Lantern Witch.
+  witch,
+
+  /// Boss: copies the team's power-ups, cycles earlier bosses' attacks,
+  /// shrinks the arena in the last phase. Overlord Pontan.
+  overlord,
 }
 
 /// What an enemy is doing right now, for rendering and rules.
@@ -357,6 +428,16 @@ enum EnemyStateKind {
 
   /// Below ground: can't be hit and doesn't hurt.
   underground,
+
+  /// Mimic pretending to be a power-up ([Enemy.disguise]). Can be bombed,
+  /// doesn't hurt on touch.
+  disguised,
+
+  /// A boss with its guard down: only now do flames hurt it (Bomb-O-Tron).
+  vulnerable,
+
+  /// Running away after an ability (Bomb Goblin, Fuse Eater).
+  fleeing,
 }
 
 /// Data-driven enemy definition. New enemies are mostly new rows here.
@@ -375,6 +456,7 @@ class EnemyKind {
     this.lifespan = 0,
     this.size = 0.4,
     this.boss = false,
+    this.harmless = false,
   });
 
   final String name;
@@ -397,6 +479,9 @@ class EnemyKind {
   /// overlap.
   final double size;
   final bool boss;
+
+  /// Touching it doesn't hurt (Herder, nests, curse orbs).
+  final bool harmless;
 
   // ---- The NES roster (§6.2), renamed.
   static const puffball = EnemyKind(
@@ -505,6 +590,102 @@ class EnemyKind {
     ability: EnemyAbility.armoured,
   );
 
+  // ---- Worlds 3-5 (§6.2 tier 7, §6.3 tiers 5-13).
+  static const tigerclaw = EnemyKind(
+    name: 'Tigerclaw',
+    speed: 3.5,
+    style: MoveStyle.chase,
+    sightRange: 10,
+    bombAware: true,
+    points: 4000,
+  );
+  static const mimic = EnemyKind(
+    name: 'Mimic',
+    speed: 2.5,
+    style: MoveStyle.chase,
+    sightRange: 5,
+    points: 700,
+    ability: EnemyAbility.mimic,
+  );
+  static const bombGoblin = EnemyKind(
+    name: 'Bomb Goblin',
+    speed: 2.5,
+    style: MoveStyle.wander,
+    bombAware: true,
+    points: 900,
+    ability: EnemyAbility.plantBombs,
+  );
+  static const kickerCrab = EnemyKind(
+    name: 'Kicker Crab',
+    speed: 2.5,
+    style: MoveStyle.wander,
+    hp: 2,
+    points: 1200,
+    turnChance: 0.2,
+    ability: EnemyAbility.kickBombs,
+  );
+  static const shade = EnemyKind(
+    name: 'Shade',
+    speed: 3.5,
+    style: MoveStyle.chase,
+    sightRange: 5,
+    points: 1500,
+    ability: EnemyAbility.cloak,
+  );
+  static const moleNest = EnemyKind(
+    name: 'Mole Queen Nest',
+    speed: 0,
+    style: MoveStyle.stationary,
+    hp: 3,
+    points: 2500,
+    harmless: true,
+    ability: EnemyAbility.nest,
+  );
+  static const mirrorKnight = EnemyKind(
+    name: 'Mirror Knight',
+    speed: 3,
+    style: MoveStyle.mirror,
+    hp: 2,
+    points: 2000,
+  );
+  static const fuseEater = EnemyKind(
+    name: 'Fuse Eater',
+    speed: 3.5,
+    style: MoveStyle.wander,
+    points: 1800,
+    turnChance: 0.3,
+    ability: EnemyAbility.eatBombs,
+  );
+  static const phaseWraith = EnemyKind(
+    name: 'Phase Wraith',
+    speed: 3.5,
+    style: MoveStyle.phaseChase,
+    sightRange: 6,
+    wallPass: true,
+    bombAware: true,
+    hp: 2,
+    points: 3000,
+    ability: EnemyAbility.teleport,
+  );
+  static const herder = EnemyKind(
+    name: 'Herder',
+    speed: 2.5,
+    style: MoveStyle.wander,
+    hp: 3,
+    points: 3500,
+    harmless: true,
+    ability: EnemyAbility.herd,
+  );
+
+  /// The Lantern Witch's curse anchor: bomb it to free the cursed player.
+  static const curseOrb = EnemyKind(
+    name: 'Curse Orb',
+    speed: 0,
+    style: MoveStyle.stationary,
+    points: 500,
+    harmless: true,
+  );
+
   // ---- Bosses (§7). HP scales +60% per extra player at stage build.
   static const kingPuffball = EnemyKind(
     name: 'King Puffball',
@@ -525,6 +706,36 @@ class EnemyKind {
     size: 0.6,
     boss: true,
   );
+  static const bombOTron = EnemyKind(
+    name: 'Bomb-O-Tron',
+    speed: 0,
+    style: MoveStyle.stationary,
+    points: 15000,
+    hp: 8,
+    size: 0.9,
+    ability: EnemyAbility.bombPatterns,
+    boss: true,
+  );
+  static const lanternWitch = EnemyKind(
+    name: 'Lantern Witch',
+    speed: 0,
+    style: MoveStyle.blink,
+    points: 18000,
+    hp: 8,
+    size: 0.6,
+    ability: EnemyAbility.witch,
+    boss: true,
+  );
+  static const overlordPontan = EnemyKind(
+    name: 'Overlord Pontan',
+    speed: 2,
+    style: MoveStyle.bounce,
+    points: 30000,
+    hp: 12,
+    size: 0.9,
+    ability: EnemyAbility.overlord,
+    boss: true,
+  );
 
   static const all = [
     puffball,
@@ -542,6 +753,20 @@ class EnemyKind {
     shellback,
     kingPuffball,
     rockjaw,
+    tigerclaw,
+    mimic,
+    bombGoblin,
+    kickerCrab,
+    shade,
+    moleNest,
+    mirrorKnight,
+    fuseEater,
+    phaseWraith,
+    herder,
+    curseOrb,
+    bombOTron,
+    lanternWitch,
+    overlordPontan,
   ];
 
   static final byName = <String, EnemyKind>{
@@ -552,6 +777,16 @@ class EnemyKind {
     'slimeSage': slimeSage,
     'hunterCoin': hunterCoin,
     'doorWarden': doorWarden,
+    'tigerclaw': tigerclaw,
+    'mimic': mimic,
+    'bombGoblin': bombGoblin,
+    'kickerCrab': kickerCrab,
+    'shade': shade,
+    'moleNest': moleNest,
+    'mirrorKnight': mirrorKnight,
+    'fuseEater': fuseEater,
+    'phaseWraith': phaseWraith,
+    'herder': herder,
   };
 }
 
@@ -600,6 +835,27 @@ class Enemy extends Entity {
   /// King Puffball has already split off its Puffballs.
   bool splitDone = false;
 
+  /// What a disguised Mimic looks like.
+  ItemType? disguise;
+
+  /// False while a Shade is cloaked. Everything else is always visible.
+  bool visible = true;
+
+  /// Sped up and driven at players by a nearby Herder this tick.
+  bool herded = false;
+
+  /// The enemy that spawned this one (nest Pebbles, boss minions), or 0.
+  int parentId = 0;
+
+  /// Curse orbs: the player whose curse ends when this dies.
+  int linkedPlayer = 0;
+
+  /// Seconds until a cooldown-based ability is ready again.
+  double cooldown = 0;
+
+  /// Boss attack counter, for bosses that cycle through attacks.
+  int attackIndex = 0;
+
   /// Bounce direction for diagonal movers, and the jump start/landing for
   /// Hoppers.
   double vx = 1, vy = 1;
@@ -615,5 +871,10 @@ class Enemy extends Entity {
       !(kind.style == MoveStyle.burrow && state == EnemyStateKind.telegraph);
 
   bool get harmful =>
-      alive && solid && state != EnemyStateKind.stunned && !frozen;
+      alive &&
+      solid &&
+      !kind.harmless &&
+      state != EnemyStateKind.stunned &&
+      state != EnemyStateKind.disguised &&
+      !frozen;
 }
