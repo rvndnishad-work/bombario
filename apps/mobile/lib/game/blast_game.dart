@@ -246,7 +246,10 @@ class BlastGame extends FlameGame {
     final items = [...player.items];
     final active = player.active;
     final hearts = player.hearts;
+    // The score runs for the whole campaign, so points keep paying lives.
+    final score = player.score;
     return (core.Player np) {
+      np.score = score;
       np.items.addAll(items);
       np.recomputeStats();
       np.active = active;

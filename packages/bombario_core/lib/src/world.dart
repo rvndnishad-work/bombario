@@ -129,6 +129,7 @@ class WorldConfig {
         darkness: darkness,
         windInterval: windInterval,
         cannonInterval: cannonInterval,
+        keepItemsOnDeath: keepItemsOnDeath,
       );
 }
 
@@ -251,6 +252,9 @@ class World {
   double elapsed = 0;
   bool timeUp = false;
   double _hunterTimer = 0;
+
+  /// Times the exit has been bombed this stage.
+  int _exitWaves = 0;
   double _exitHold = 0;
 
   /// Enemies each player has killed this tick, for the multi-kill bonus.
@@ -373,8 +377,25 @@ class World {
   /// Puts a dead player back on their spawn point. The game layer decides
   /// whether a life is available.
   void respawn(Player player) {
-    final spawn =
+    var spawn =
         level.playerSpawns[players.indexOf(player) % level.playerSpawns.length];
+    // A boss arena's closing walls can cover the spawn corner: use the
+    // nearest open tile instead.
+    if (!grid.isWalkable(spawn.x, spawn.y)) {
+      GridPos? best;
+      var bestDistance = 1 << 30;
+      for (var y = 0; y < grid.height; y++) {
+        for (var x = 0; x < grid.width; x++) {
+          if (!grid.isWalkable(x, y) || bombAt(x, y) != null) continue;
+          final d = (x - spawn.x).abs() + (y - spawn.y).abs();
+          if (d < bestDistance) {
+            bestDistance = d;
+            best = GridPos(x, y);
+          }
+        }
+      }
+      if (best != null) spawn = best;
+    }
     player.setPosition(spawn.x + 0.5, spawn.y + 0.5);
     player.alive = true;
     player.ghost = false;
@@ -840,6 +861,11 @@ class World {
         if (tile == TileType.brick) {
           // Frost freezes; it doesn't break bricks.
           if (!frost) _destroyBrick(x, y, bomb.ownerId);
+          // Wall Pass is no hiding place: the blast reaches a player
+          // standing inside the brick it breaks.
+          if (players.any((p) => p.alive && p.tileX == x && p.tileY == y)) {
+            flame(x, y);
+          }
           break;
         }
         final other = bombAt(x, y);
@@ -904,12 +930,17 @@ class World {
     for (final item in floorItems.toList()) {
       if (item.x != x || item.y != y) continue;
       if (item.type == ItemType.exit) {
+        // Bonus and boss arenas don't use their exit, so it stays calm.
+        if (config.bonusStage || config.bossStage) continue;
         // Bombing the exit angers it, as in the original. The wave is
-        // spared by the flame that summoned it.
+        // spared by the flame that summoned it. Only the first wave pays
+        // points; later ones are pure danger, so the exit isn't a farm.
         events.add(const ExitBombed());
+        final paid = _exitWaves++ == 0;
         for (var i = 0; i < config.exitGuardCount; i++) {
-          spawnEnemy(GridPos(x, y), config.exitGuardKind).hitCooldown =
-              Flame.duration + 0.1;
+          spawnEnemy(GridPos(x, y), config.exitGuardKind)
+            ..hitCooldown = Flame.duration + 0.1
+            ..noPoints = !paid;
         }
       } else {
         floorItems.remove(item);
@@ -1072,6 +1103,17 @@ class World {
     } else {
       _scatter(p.loseItemsOnDeath(), p.tile);
     }
+    if (p.active != ActiveItem.remote) {
+      // Without the remote nothing could set these off, and they would
+      // hold the player's bomb slots for the rest of the stage.
+      for (final b in bombs) {
+        if (b.ownerId == p.id && b.remote) {
+          b
+            ..remote = false
+            ..fuse = Bomb.defaultFuse;
+        }
+      }
+    }
     events.add(PlayerDied(p.id, killerId));
     if (config.ghosts) {
       p.ghost = true;
@@ -1122,7 +1164,7 @@ class World {
   void _killEnemy(Enemy e, int killerId) {
     e.alive = false;
     final killer = playerById(killerId);
-    if (killer != null) {
+    if (killer != null && !e.noPoints) {
       final nth = _killsThisTick[killerId] ?? 0;
       _killsThisTick[killerId] = nth + 1;
       killer.score += multiKillPoints(e.kind.points, nth);
@@ -2423,7 +2465,13 @@ class World {
   }
 
   void _checkBossCleared() {
-    if (enemies.isEmpty || !allEnemiesDead || cleared) return;
+    if (enemies.isEmpty || cleared) return;
+    // Time-up Hunters keep coming; they shouldn't stop a beaten boss from
+    // counting, so they leave with it.
+    if (enemies.any((e) => e.alive && e.kind != config.hunterKind)) return;
+    for (final e in enemies) {
+      e.alive = false;
+    }
     cleared = true;
     for (final p in alivePlayers) {
       p.score += timeLeft.floor() * 10;

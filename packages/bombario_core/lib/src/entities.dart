@@ -282,7 +282,10 @@ class Bomb {
   int y;
   final int ownerId;
   final int range;
-  final bool remote;
+
+  /// Waits for its owner's detonate instead of a fuse. Cleared when the
+  /// owner loses the remote, so the bomb isn't stuck on the map.
+  bool remote;
 
   /// Frost bombs freeze what they hit instead of burning it.
   bool frost = false;
@@ -850,6 +853,10 @@ class Enemy extends Entity {
   /// Seconds of immunity after taking a hit, so one flame doesn't deal
   /// several hits over its 0.5 s lifetime.
   double hitCooldown = 0;
+
+  /// Scores nothing when killed: repeat exit waves, so bombing the exit
+  /// over and over can't farm points (and points lives).
+  bool noPoints = false;
 
   EnemyStateKind state = EnemyStateKind.normal;
 

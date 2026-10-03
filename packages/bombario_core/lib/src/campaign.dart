@@ -998,7 +998,7 @@ abstract final class Campaign {
       wind: 8,
       cannons: 10,
       big: true,
-      timeLimit: 120,
+      timeLimit: 240,
       tip: 'Split up: some of you keep the Herders busy, the rest dig.',
     ),
     StageDef(
