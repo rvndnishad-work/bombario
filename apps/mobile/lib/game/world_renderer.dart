@@ -59,6 +59,33 @@ class WorldRenderer extends PositionComponent {
     'King Puffball': 'kingPuffball',
     'Rockjaw Worm': 'rockjaw',
     'Bomb Goblin': 'goblin',
+    'Tigerclaw': 'tigerclaw',
+    'Mimic': 'mimic',
+    'Kicker Crab': 'kickerCrab',
+    'Shade': 'shade',
+    'Mole Queen Nest': 'moleNest',
+    'Mirror Knight': 'mirrorKnight',
+    'Fuse Eater': 'fuseEater',
+    'Phase Wraith': 'phaseWraith',
+    'Herder': 'herder',
+    'Curse Orb': 'curseOrb',
+    'Bomb-O-Tron': 'bombOTron',
+    'Lantern Witch': 'lanternWitch',
+    'Overlord Pontan': 'overlordPontan',
+  };
+
+  static String? featureSprite(core.TileFeature f) => switch (f) {
+    core.TileFeature.conveyorUp => 'conveyor-up',
+    core.TileFeature.conveyorDown => 'conveyor-down',
+    core.TileFeature.conveyorLeft => 'conveyor-left',
+    core.TileFeature.conveyorRight => 'conveyor-right',
+    core.TileFeature.vent => 'vent',
+    core.TileFeature.plate => 'plate',
+    core.TileFeature.warp => 'warp',
+    core.TileFeature.ice => 'ice',
+    // Gates and possessed bricks change the tile itself; see _drawTiles.
+    core.TileFeature.gate || core.TileFeature.possessed => null,
+    core.TileFeature.none => null,
   };
 
   /// Body colour for enemies drawn without a sprite (and the minimap).
@@ -104,6 +131,7 @@ class WorldRenderer extends PositionComponent {
   static final _hpFront = _fill(0xFFFF4B4B);
   static final _bubble = _fill(0xFFF3F1E6);
   static final _flameOutline = _stroke(0xFFFFFFFF, 2);
+  static final _vulnerable = _fill(0x66FFFFFF);
 
   double _time = 0;
 
@@ -128,7 +156,8 @@ class WorldRenderer extends PositionComponent {
   @override
   void render(Canvas canvas) {
     final sim = snapshot();
-    _drawTiles(canvas, sim.grid);
+    _drawTiles(canvas, sim);
+    _drawRegrowing(canvas, sim);
     _drawSonar(canvas, sim);
     _drawItems(canvas, sim);
     _drawHazards(canvas, sim);
@@ -138,22 +167,124 @@ class WorldRenderer extends PositionComponent {
     _drawEnemies(canvas, sim);
     _drawPlayers(canvas, sim);
     _drawFallingRocks(canvas, sim);
+    _drawWind(canvas, sim);
+    _drawDarkness(canvas, sim);
     _drawPings(canvas, sim);
   }
 
-  void _drawTiles(Canvas canvas, core.Grid grid) {
+  void _drawTiles(Canvas canvas, core.WorldSnapshot sim) {
+    final grid = sim.grid;
+    final features = grid.hasFeatures;
+    // Vents glow in the warning phase, blinking faster as it runs out.
+    final ventHot =
+        sim.ventPhase == core.VentPhase.warning &&
+        (_time * (4 + 8 / math.max(0.2, sim.ventTimeLeft))).floor().isEven;
     for (var y = 0; y < grid.height; y++) {
       for (var x = 0; x < grid.width; x++) {
-        final name = switch (grid.at(x, y)) {
+        final tile = grid.at(x, y);
+        final feature = features ? grid.featureAt(x, y) : core.TileFeature.none;
+        final r = _tileRect(x, y);
+        if (feature == core.TileFeature.gate && tile == core.TileType.pillar) {
+          atlas.draw(canvas, 'gate', r);
+          continue;
+        }
+        if (feature == core.TileFeature.possessed &&
+            tile == core.TileType.brick) {
+          atlas.draw(canvas, 'brick-possessed', r);
+          continue;
+        }
+        atlas.draw(canvas, switch (tile) {
           core.TileType.floor => 'floor',
           core.TileType.cracked => 'cracked',
           core.TileType.pit => 'pit',
           core.TileType.pillar => 'wall',
           core.TileType.brick => 'brick',
-        };
-        atlas.draw(canvas, name, _tileRect(x, y));
+        }, r);
+        if (tile == core.TileType.floor || tile == core.TileType.cracked) {
+          final name = feature == core.TileFeature.vent && ventHot
+              ? 'vent-warn'
+              : featureSprite(feature);
+          if (name != null) atlas.draw(canvas, name, r);
+        }
       }
     }
+  }
+
+  void _drawRegrowing(Canvas canvas, core.WorldSnapshot sim) {
+    // Possessed bricks fade back in over their last seconds.
+    for (final r in sim.regrowing) {
+      final t = (1 - r.warn / 5).clamp(0.0, 1.0);
+      if (t <= 0) continue;
+      atlas.draw(
+        canvas,
+        'brick-possessed',
+        _tileRect(r.x, r.y),
+        paint: SpriteAtlas.faded(0.15 + 0.5 * t),
+      );
+    }
+  }
+
+  void _drawWind(Canvas canvas, core.WorldSnapshot sim) {
+    final wind = sim.wind != core.Direction.none ? sim.wind : sim.windNext;
+    if (wind == core.Direction.none) return;
+    final blowing = sim.wind != core.Direction.none;
+    final w = sim.grid.width * tileSize;
+    final h = sim.grid.height * tileSize;
+    final paint = Paint()
+      ..color = const Color(0xFFFFFFFF).withValues(alpha: blowing ? 0.35 : 0.15)
+      ..strokeWidth = 2;
+    // Streaks drift with the gust; a faint preview during the lull.
+    for (var i = 0; i < 14; i++) {
+      final lane = (i * 0.37 % 1);
+      final along = ((_time * (blowing ? 0.6 : 0.2) + i * 0.29) % 1);
+      final len = tileSize * 1.2;
+      final horizontal = wind.dx != 0;
+      final dir = horizontal ? wind.dx.toDouble() : wind.dy.toDouble();
+      final pos = dir > 0 ? along : 1 - along;
+      final start = horizontal
+          ? Offset(pos * w, lane * h)
+          : Offset(lane * w, pos * h);
+      final end =
+          start + (horizontal ? Offset(len * dir, 0) : Offset(0, len * dir));
+      canvas.drawLine(start, end, paint);
+    }
+  }
+
+  void _drawDarkness(Canvas canvas, core.WorldSnapshot sim) {
+    if (sim.darkness <= 0) return;
+    final bounds = Rect.fromLTWH(
+      0,
+      0,
+      sim.grid.width * tileSize,
+      sim.grid.height * tileSize,
+    );
+    // A dark layer with soft holes around players and flames.
+    canvas.saveLayer(bounds, Paint());
+    canvas.drawRect(bounds, Paint()..color = const Color(0xF20D1120));
+    final clear = Paint()..blendMode = BlendMode.dstOut;
+    void light(Offset c, double radius) {
+      canvas.drawCircle(
+        c,
+        radius,
+        clear
+          ..shader = Gradient.radial(
+            c,
+            radius,
+            const [Color(0xFF000000), Color(0xFF000000), Color(0x00000000)],
+            const [0, 0.6, 1],
+          ),
+      );
+    }
+
+    for (final p in sim.players) {
+      if (p.alive || p.ghost) {
+        light(_centre(p.x, p.y), sim.darkness * tileSize);
+      }
+    }
+    for (final f in sim.flames) {
+      light(_centre(f.x + 0.5, f.y + 0.5), tileSize * 1.5);
+    }
+    canvas.restore();
   }
 
   void _drawSonar(Canvas canvas, core.WorldSnapshot sim) {
@@ -186,23 +317,53 @@ class WorldRenderer extends PositionComponent {
   }
 
   void _drawHazards(Canvas canvas, core.WorldSnapshot sim) {
-    // A shadow that grows as the rock gets closer (§8.1 telegraphed rocks).
     for (final h in sim.hazards) {
-      final t = (1 - h.warn / core.World.rockWarning).clamp(0.0, 1.0);
-      canvas.drawOval(
-        Rect.fromCenter(
-          center: _centre(h.x + 0.5, h.y + 0.7),
-          width: tileSize * (0.3 + 0.5 * t),
-          height: tileSize * (0.15 + 0.25 * t),
-        ),
-        _shadow,
-      );
+      switch (h.kind) {
+        case core.HazardKind.rock:
+          // A shadow that grows as the rock gets closer (§8.1).
+          final t = (1 - h.warn / core.World.rockWarning).clamp(0.0, 1.0);
+          canvas.drawOval(
+            Rect.fromCenter(
+              center: _centre(h.x + 0.5, h.y + 0.7),
+              width: tileSize * (0.3 + 0.5 * t),
+              height: tileSize * (0.15 + 0.25 * t),
+            ),
+            _shadow,
+          );
+        case core.HazardKind.cannonLeft || core.HazardKind.cannonRight:
+          // The row the cannonball will sweep, blinking, with the ball
+          // waiting at its wall.
+          final blink = (_time * 8).floor().isEven;
+          canvas.drawRect(
+            Rect.fromLTWH(
+              0,
+              h.y * tileSize,
+              sim.grid.width * tileSize,
+              tileSize,
+            ),
+            Paint()
+              ..color = const Color(
+                0xFFFF4B4B,
+              ).withValues(alpha: blink ? 0.28 : 0.14),
+          );
+          atlas.draw(canvas, 'cannonball', _tileRect(h.x, h.y));
+        case core.HazardKind.wall:
+          // An arena tile about to close: the wall fades in and shakes.
+          final shake = math.sin(_time * 50) * 1.5;
+          atlas.draw(
+            canvas,
+            'wall',
+            _tileRect(h.x, h.y).translate(shake, 0),
+            paint: SpriteAtlas.faded(0.5),
+          );
+      }
     }
   }
 
   void _drawFallingRocks(Canvas canvas, core.WorldSnapshot sim) {
     // In the last half of the warning the rock itself drops into view.
     for (final h in sim.hazards) {
+      if (h.kind != core.HazardKind.rock) continue;
       final t = (1 - h.warn / core.World.rockWarning).clamp(0.0, 1.0);
       if (t < 0.5) continue;
       final fall = (t - 0.5) * 2;
@@ -274,8 +435,17 @@ class WorldRenderer extends PositionComponent {
 
   void _drawEnemies(Canvas canvas, core.WorldSnapshot sim) {
     for (final e in sim.enemies) {
-      if (!e.alive) continue;
+      if (!e.alive || !e.visible) continue;
       final kind = e.kindData;
+      if (e.state == core.EnemyStateKind.disguised && e.disguise != null) {
+        // A Mimic looks exactly like the power-up it pretends to be.
+        atlas.draw(
+          canvas,
+          itemSprite(e.disguise!),
+          _square(_centre(e.x, e.y), tileSize * 0.84),
+        );
+        continue;
+      }
       final bodySize = (kind?.size ?? 0.4) * tileSize * 2.5;
       var centre = _centre(e.x, e.y);
 
@@ -349,6 +519,11 @@ class WorldRenderer extends PositionComponent {
       if (e.frozen) {
         canvas.drawRect(body.deflate(bodySize * 0.08), _iceOverlay);
       }
+      if (e.state == core.EnemyStateKind.vulnerable &&
+          (_time * 10).floor().isEven) {
+        // Guard down: flashes so players know to strike now.
+        canvas.drawRect(body.deflate(bodySize * 0.1), _vulnerable);
+      }
       if (e.slowed) canvas.drawCircle(centre, bodySize * 0.55, _slowRing);
 
       if (kind?.boss ?? false) {
@@ -400,6 +575,19 @@ class WorldRenderer extends PositionComponent {
         paint: blink ? SpriteAtlas.faded(0.35) : null,
       );
       if (p.frozen) canvas.drawRect(body.deflate(2), _iceOverlay);
+      if (p.cursedFor > 0) {
+        // Reversed controls: an orb circles the cursed player's head.
+        final a = _time * 4;
+        atlas.draw(
+          canvas,
+          'curseOrb',
+          _square(
+            body.topCenter +
+                Offset(math.cos(a) * tileSize * 0.35, math.sin(a) * 4),
+            tileSize * 0.4,
+          ),
+        );
+      }
       if (p.hearts > 0) {
         atlas.draw(
           canvas,

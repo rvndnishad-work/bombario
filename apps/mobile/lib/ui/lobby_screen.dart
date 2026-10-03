@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../net/room_session.dart';
+import 'kit/pixel_theme.dart';
+import 'kit/sprite_icon.dart';
 import 'network_game_screen.dart';
 import 'player_name.dart';
 
@@ -135,26 +137,48 @@ class _LobbyScreenState extends State<LobbyScreen> {
                     child: ListView(
                       padding: const EdgeInsets.all(8),
                       children: [
-                        for (final p in s.lobby.players)
-                          ListTile(
-                            leading: Icon(p.isHost ? Icons.star : Icons.person),
-                            title: Text(p.name),
-                            subtitle: p.connected
-                                ? null
-                                : const Text(
-                                    'reconnecting…',
-                                    style: TextStyle(color: Colors.orange),
-                                  ),
-                            trailing: p.isHost
-                                ? const Text('Host')
-                                : Icon(
-                                    p.ready
-                                        ? Icons.check_circle
-                                        : Icons.radio_button_unchecked,
-                                    color: p.ready
-                                        ? Colors.greenAccent
-                                        : Colors.white38,
-                                  ),
+                        for (final (i, p) in s.lobby.players.indexed)
+                          Container(
+                            margin: const EdgeInsets.only(bottom: 8),
+                            decoration: BoxDecoration(
+                              color: Px.night,
+                              border: Border.all(
+                                color: _slotColours[i % 4],
+                                width: 3,
+                              ),
+                            ),
+                            child: ListTile(
+                              leading: SpriteIcon('p${i % 4 + 1}', size: 40),
+                              title: Text(
+                                p.id == s.clientId ? '${p.name} (you)' : p.name,
+                                style: Px.label(15),
+                              ),
+                              subtitle: p.connected
+                                  ? null
+                                  : Text(
+                                      'reconnecting…',
+                                      style: Px.label(12, color: Px.blast),
+                                    ),
+                              trailing: p.isHost
+                                  ? Text(
+                                      'HOST',
+                                      style: Px.label(12, color: Px.fuse),
+                                    )
+                                  : Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 8,
+                                        vertical: 4,
+                                      ),
+                                      color: p.ready ? Px.ok : Px.ink,
+                                      child: Text(
+                                        p.ready ? 'READY' : 'NOT READY',
+                                        style: Px.label(
+                                          11,
+                                          color: p.ready ? Px.night : Px.muted,
+                                        ),
+                                      ),
+                                    ),
+                            ),
                           ),
                         if (s.lobby.players.length < 4)
                           const ListTile(
@@ -282,6 +306,13 @@ class _LobbyScreenState extends State<LobbyScreen> {
       ),
     );
   }
+
+  static const _slotColours = [
+    Color(0xFF3D7BFF),
+    Color(0xFFFF4B4B),
+    Color(0xFF3FC062),
+    Color(0xFFFFC23D),
+  ];
 
   String _lastResult(RoomSession s) {
     if (s.lastCleared) return 'Last round: stage cleared!';

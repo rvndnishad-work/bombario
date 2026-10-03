@@ -1945,7 +1945,7 @@ class World {
         return true;
       case EnemyStateKind.airborne:
         e.stateFor -= dt;
-        final land = e.landing!;
+        final land = e.landing ?? e.tile; // lands in place if it had no target
         final t = (1 - e.stateFor / airTime).clamp(0.0, 1.0);
         e.setPosition(
           e.fromX + (land.x + 0.5 - e.fromX) * t,

@@ -22,7 +22,11 @@ void main() {
 ''',
       items: const [ItemType.sonar],
     );
-    final w = World(level, seed: 1, config: WorldConfig.coop);
+    final w = World(
+      level,
+      seed: 1,
+      config: const WorldConfig(ghosts: true, sharedLives: 4, darkness: 4),
+    );
     final a = w.addPlayer()
       ..applyItem(ItemType.heart)
       ..frozenFor = 1;
@@ -33,6 +37,16 @@ void main() {
       ..tombstone = const GridPos(5, 3)
       ..reviveProgress = 1;
     w.grid.set(5, 1, TileType.pit);
+    // World 3-5 terrain and conditions.
+    for (final (i, f) in TileFeature.values.indexed) {
+      if (f != TileFeature.none) w.grid.setFeature(1 + i % 13, 5, f);
+    }
+    w.wind = Direction.left;
+    w.ventPhase = VentPhase.warning;
+    w.hazards.addAll([
+      Hazard(1, 3, 0.5, kind: HazardKind.cannonLeft),
+      Hazard(4, 5, 0.5, kind: HazardKind.wall),
+    ]);
     var x = 1;
     for (final kind in EnemyKind.all) {
       final e = w.spawnEnemy(GridPos(x, 3 + (x.isEven ? 2 : 0)), kind);

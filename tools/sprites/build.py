@@ -16,6 +16,7 @@ file has its own palette; '.' is transparent), then `sprite <name>` blocks of
   compose <name> = <a> + <b> [+ ...]      later layers draw over earlier ones
   recolor <name> = <src> #from:#to ...    swaps exact colours
   flipx <name> = <src>                    mirrors left to right
+  rotate <name> = <src> <90|180|270>      turns clockwise
 
 Pure standard library so it runs anywhere Python 3 does.
 """
@@ -85,7 +86,7 @@ def parse(path, sprites, order):
             add(sprites, order, name, grid)
             i += 1 + CELL
             continue
-        if words[0] in ('compose', 'recolor', 'flipx'):
+        if words[0] in ('compose', 'recolor', 'flipx', 'rotate'):
             name, eq = words[1], words[2]
             if eq != '=':
                 fail('expected "="')
@@ -106,6 +107,11 @@ def parse(path, sprites, order):
                     swap[hex_rgba(a)] = hex_rgba(b)
                 grid = [[swap.get(p, p) for p in row]
                         for row in need(sprites, args[0], fail)]
+            elif words[0] == 'rotate':
+                grid = need(sprites, args[0], fail)
+                for _ in range(int(args[1]) // 90 % 4):  # clockwise
+                    grid = [[grid[CELL - 1 - x][y] for x in range(CELL)]
+                            for y in range(CELL)]
             else:
                 grid = [row[::-1] for row in need(sprites, args[0], fail)]
             add(sprites, order, name, grid)
