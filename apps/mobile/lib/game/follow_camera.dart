@@ -4,16 +4,15 @@ import 'package:flame/components.dart';
 
 /// The classic top-down Bomberman camera, shared by solo and room play.
 ///
-/// The board fills the screen width (up to [maxColumns] tiles, so big mazes
-/// keep readable tiles) and scrolls on whichever axis the maze overflows.
-/// The camera eases after the player with a small dead zone, so it doesn't
-/// jitter on every step, and stops at the maze walls.
+/// Like the original, every row of the maze is on screen and the camera
+/// scrolls sideways only; a maze narrower than the screen sits centred. On a
+/// tall (portrait) screen the zoom is capped so at least [minColumns] fit
+/// across, and the board scrolls vertically too. The camera eases after the
+/// player with a small dead zone, so it doesn't jitter on every step, and
+/// stops at the maze walls.
 class FollowCamera {
-  /// The most tiles shown across; wider mazes scroll sideways.
-  static const int maxColumns = 17;
-
-  /// Never zoom in so far that fewer rows than this are visible.
-  static const int minRows = 5;
+  /// Never zoom in so far that fewer columns than this are visible.
+  static const int minColumns = 9;
 
   /// How far (in tiles) the player can stray from the centre before the
   /// camera moves.
@@ -25,10 +24,15 @@ class FollowCamera {
 
   Vector2? _pos;
 
-  static double zoomFor(Vector2 view, int gridWidth, double tileSize) {
-    final fillWidth = view.x / (math.min(gridWidth, maxColumns) * tileSize);
-    final keepRows = view.y / (minRows * tileSize);
-    return math.min(fillWidth, keepRows);
+  static double zoomFor(
+    Vector2 view,
+    int gridWidth,
+    int gridHeight,
+    double tileSize,
+  ) {
+    final fitHeight = view.y / (gridHeight * tileSize);
+    final keepColumns = view.x / (math.min(gridWidth, minColumns) * tileSize);
+    return math.min(fitHeight, keepColumns);
   }
 
   /// Jumps straight to the next target instead of easing (new stage).

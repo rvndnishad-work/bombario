@@ -44,18 +44,21 @@ void main() {
   });
 
   group('camera', () {
-    test('narrow mazes fill the screen width; wide ones cap the columns', () {
+    test('every row fits, like the original; tall screens keep columns', () {
       final view = Vector2(1600, 800);
       expect(
-        FollowCamera.zoomFor(view, 15, 32),
-        closeTo(1600 / (15 * 32), 1e-9),
+        FollowCamera.zoomFor(view, 31, 13, 32),
+        closeTo(800 / (13 * 32), 1e-9),
       );
       expect(
-        FollowCamera.zoomFor(view, 31, 32),
-        closeTo(1600 / (17 * 32), 1e-9),
+        FollowCamera.zoomFor(view, 41, 17, 32),
+        closeTo(800 / (17 * 32), 1e-9),
       );
-      // A very wide, short screen still shows enough rows.
-      expect(FollowCamera.zoomFor(Vector2(2000, 300), 15, 32), 300 / (5 * 32));
+      // A portrait screen still shows enough columns.
+      expect(
+        FollowCamera.zoomFor(Vector2(400, 900), 31, 13, 32),
+        closeTo(400 / (9 * 32), 1e-9),
+      );
     });
 
     test('follows with a dead zone and stops at the maze walls', () {

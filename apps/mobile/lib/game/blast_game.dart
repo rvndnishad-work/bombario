@@ -212,6 +212,7 @@ class BlastGame extends FlameGame {
     camera.viewfinder.zoom = FollowCamera.zoomFor(
       size,
       sim.grid.width,
+      sim.grid.height,
       tileSize,
     );
     _followPlayer(0);
