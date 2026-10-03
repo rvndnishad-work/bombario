@@ -52,6 +52,42 @@ void main() {
     expect(fx.activeEnemies, 0);
   });
 
+  test('a dead player pops for a second, then clears', () async {
+    final atlas = await SpriteAtlas.load();
+    final w = makeWorld();
+    final fx = DeathEffects();
+    String? sprite(EnemyState e) => 'puff';
+    ({List<String> sprites, Color tint}) look(int slot, PlayerState p) =>
+        (sprites: ['p1', 'hat-cap'], tint: const Color(0xFF3D7BFF));
+
+    fx.observe(WorldSnapshot.of(w), 0, sprite, playerSprites: look);
+    expect(fx.activePlayers, 0);
+
+    w.players.single.alive = false;
+    fx.observe(WorldSnapshot.of(w), 0.1, sprite, playerSprites: look);
+    expect(fx.activePlayers, 1);
+    // Still dead next frame: the pop plays once, not once per frame.
+    fx.observe(WorldSnapshot.of(w), 0.2, sprite, playerSprites: look);
+    expect(fx.activePlayers, 1);
+
+    for (final t in [0.15, 0.5, 0.9, 1.05]) {
+      final recorder = PictureRecorder();
+      final canvas = Canvas(recorder);
+      fx.drawPlayers(canvas, atlas, 32, t);
+      recorder.endRecording();
+    }
+
+    fx.observe(WorldSnapshot.of(w), 1.3, sprite, playerSprites: look);
+    expect(fx.activePlayers, 0);
+
+    // Respawning and dying again pops again.
+    w.respawn(w.players.single);
+    fx.observe(WorldSnapshot.of(w), 1.4, sprite, playerSprites: look);
+    w.players.single.alive = false;
+    fx.observe(WorldSnapshot.of(w), 1.5, sprite, playerSprites: look);
+    expect(fx.activePlayers, 1);
+  });
+
   test('moving to a new maze animates nothing', () {
     final fx = DeathEffects();
     String? sprite(EnemyState e) => 'puff';
