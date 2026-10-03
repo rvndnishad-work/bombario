@@ -313,7 +313,11 @@ class BlastGame extends FlameGame {
         (sim.failed && lives == 0) || overlays.isActive(Overlays.gameOver);
 
     // Fixed-step simulation so the rules behave identically everywhere.
-    _accumulator += math.min(dt, 0.25) * settings.soloSpeed;
+    // While frozen behind Game Over nothing piles up, or an ad continue
+    // would replay all that time in a burst.
+    _accumulator = outOfLives
+        ? 0
+        : _accumulator + math.min(dt, 0.25) * settings.soloSpeed;
     while (!outOfLives && _accumulator >= core.World.tickDt) {
       _accumulator -= core.World.tickDt;
       final x0 = player.x, y0 = player.y;

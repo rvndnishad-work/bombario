@@ -136,7 +136,9 @@ void main() {
     await tester.tap(find.byKey(const Key('extra-life-ad')));
     await tester.pump();
     expect(ads.shown, 0);
-    await tester.pump(const Duration(milliseconds: 1300));
+    for (var i = 0; i < 60; i++) {
+      await tester.pump(const Duration(milliseconds: 50));
+    }
 
     // A skipped ad gives nothing.
     ads.reward = false;
@@ -147,6 +149,7 @@ void main() {
 
     // A watched one puts the player back on the same stage.
     ads.reward = true;
+    final frozenAt = game.sim.timeLeft;
     await tester.tap(find.byKey(const Key('extra-life-ad')));
     await tester.pump();
     expect(game.overlays.isActive(Overlays.gameOver), isFalse);
@@ -154,6 +157,9 @@ void main() {
     expect(game.player.alive, isTrue);
     expect(game.stage.id, '1-1');
     expect(ads.shown, 2);
+    // The clock picks up where it stopped: no burst of frozen time.
+    await tester.pump(const Duration(milliseconds: 100));
+    expect(frozenAt - game.sim.timeLeft, lessThan(0.5));
     expect(game.adLivesUsed, 1);
     // A run gets two ad lives; after that Game Over means starting over.
     game.adLivesUsed = BlastGame.maxAdLives;
