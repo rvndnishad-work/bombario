@@ -2,8 +2,10 @@ import 'dart:math' as math;
 
 import 'package:bombario_core/bombario_core.dart' as core;
 import 'package:flame/components.dart';
+import 'package:flame/events.dart' show KeyboardEvents;
 import 'package:flame/game.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart' show KeyEventResult;
 import 'package:flutter/services.dart';
 
 import '../audio/game_audio.dart';
@@ -11,6 +13,7 @@ import '../net/analytics.dart';
 import '../progress/achievements.dart';
 import '../progress/cosmetics.dart';
 import '../settings/settings.dart';
+import 'follow_camera.dart';
 import 'game_hud.dart';
 import 'input_controller.dart';
 import 'sprite_atlas.dart';
@@ -29,7 +32,7 @@ abstract final class Overlays {
 ///
 /// The simulation lives entirely in `bombario_core`; this class only steps it at
 /// a fixed 30 Hz, feeds it input, moves the camera and reacts to events.
-class BlastGame extends FlameGame {
+class BlastGame extends FlameGame with KeyboardEvents {
   BlastGame({
     int seed = 1,
     this.daily,
@@ -84,6 +87,7 @@ class BlastGame extends FlameGame {
   double _shake = 0;
   bool _hurry = false;
   final math.Random _shakeRng = math.Random();
+  final FollowCamera _camera = FollowCamera();
 
   @override
   Color backgroundColor() => const Color(0xFF0D1120);
@@ -144,6 +148,7 @@ class BlastGame extends FlameGame {
     world.add(renderer);
 
     camera.viewfinder.anchor = Anchor.center;
+    _camera.reset();
     _fitCamera();
     _accumulator = 0;
     _respawnTimer = 0;
@@ -176,12 +181,12 @@ class BlastGame extends FlameGame {
   }
 
   void _fitCamera() {
-    // Show the whole maze height; width scrolls like the NES version.
-    final rows = sim.grid.height * tileSize;
-    final cols = sim.grid.width * tileSize;
-    final zoom = math.min(size.y / rows, size.x / cols * 1.6);
-    camera.viewfinder.zoom = zoom;
-    _followPlayer();
+    camera.viewfinder.zoom = FollowCamera.zoomFor(
+      size,
+      sim.grid.width,
+      tileSize,
+    );
+    _followPlayer(0);
   }
 
   @override
@@ -190,22 +195,34 @@ class BlastGame extends FlameGame {
     if (isLoaded) _fitCamera();
   }
 
-  void _followPlayer() {
-    final zoom = camera.viewfinder.zoom;
-    final halfW = size.x / zoom / 2;
-    final halfH = size.y / zoom / 2;
-    final mazeW = sim.grid.width * tileSize;
-    final mazeH = sim.grid.height * tileSize;
-    var x = player.x * tileSize;
-    var y = player.y * tileSize;
-    // Clamp so the camera never shows outside the maze (when it fits).
-    x = mazeW <= halfW * 2 ? mazeW / 2 : x.clamp(halfW, mazeW - halfW);
-    y = mazeH <= halfH * 2 ? mazeH / 2 : y.clamp(halfH, mazeH - halfH);
+  void _followPlayer(double dt) {
+    final pos = _camera.follow(
+      view: size,
+      zoom: camera.viewfinder.zoom,
+      targetX: player.x * tileSize,
+      targetY: player.y * tileSize,
+      mazeW: sim.grid.width * tileSize,
+      mazeH: sim.grid.height * tileSize,
+      tileSize: tileSize,
+      dt: dt,
+    );
     if (_shake > 0 && settings.shake > 0) {
-      x += (_shakeRng.nextDouble() - 0.5) * 6;
-      y += (_shakeRng.nextDouble() - 0.5) * 6;
+      pos.x += (_shakeRng.nextDouble() - 0.5) * 6;
+      pos.y += (_shakeRng.nextDouble() - 0.5) * 6;
     }
-    camera.viewfinder.position = Vector2(x, y);
+    camera.viewfinder.position = pos;
+  }
+
+  @override
+  KeyEventResult onKeyEvent(
+    KeyEvent event,
+    Set<LogicalKeyboardKey> keysPressed,
+  ) {
+    final ours = input.handleKey(
+      event,
+      onPause: () => paused ? resume() : pause(),
+    );
+    return ours ? KeyEventResult.handled : KeyEventResult.ignored;
   }
 
   @override
@@ -256,7 +273,7 @@ class BlastGame extends FlameGame {
     }
 
     _shake = math.max(0, _shake - dt);
-    _followPlayer();
+    _followPlayer(dt);
 
     messages.tick(dt);
     if (!_hurry && sim.timeLeft <= 30 && sim.timeLeft > 0) {

@@ -3,14 +3,17 @@ import 'dart:math' as math;
 import 'package:bombario_core/bombario_core.dart' as core;
 import 'package:bombario_net/bombario_net.dart' show GameMode;
 import 'package:flame/components.dart';
+import 'package:flame/events.dart' show KeyboardEvents;
 import 'package:flame/game.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart' show KeyEventResult;
 import 'package:flutter/services.dart';
 
 import '../net/room_session.dart';
 import '../audio/game_audio.dart';
 import '../progress/achievements.dart';
 import '../settings/settings.dart';
+import 'follow_camera.dart';
 import 'game_hud.dart';
 import 'input_controller.dart';
 import 'sprite_atlas.dart';
@@ -23,7 +26,7 @@ import 'world_renderer.dart';
 /// predicts it to be (it moves the instant the stick does), and everyone else
 /// is interpolated between the last two snapshots so 15 Hz updates still look
 /// like smooth 60 fps movement.
-class NetworkGame extends FlameGame {
+class NetworkGame extends FlameGame with KeyboardEvents {
   NetworkGame(this.session, {AppSettings? settings, Achievements? achievements})
     : settings = settings ?? AppSettings.memory(),
       achievements = achievements ?? Achievements.memory();
@@ -57,6 +60,7 @@ class NetworkGame extends FlameGame {
   double _shake = 0;
   int _seenFlames = 0;
   final math.Random _rng = math.Random();
+  final FollowCamera _camera = FollowCamera();
 
   @override
   Color backgroundColor() => const Color(0xFF0D1120);
@@ -102,10 +106,7 @@ class NetworkGame extends FlameGame {
 
   void _fitCamera() {
     final grid = _snapshot.grid;
-    final rows = grid.height * tileSize;
-    final cols = grid.width * tileSize;
-    final zoom = math.min(size.y / rows, size.x / cols * 1.6);
-    camera.viewfinder.zoom = zoom;
+    camera.viewfinder.zoom = FollowCamera.zoomFor(size, grid.width, tileSize);
   }
 
   @override
@@ -122,7 +123,10 @@ class NetworkGame extends FlameGame {
     if (snap != null && snap != _last) {
       _prev = _last;
       _lastAt = _clock;
-      if (_last == null || snap.grid.width != _last!.grid.width) _fitCamera();
+      if (_last == null || snap.grid.width != _last!.grid.width) {
+        _camera.reset();
+        _fitCamera();
+      }
       // Any new flame tile means something exploded: shake a little.
       if (snap.flames.length > _seenFlames && settings.shake > 0) {
         _shake = 0.15;
@@ -160,7 +164,7 @@ class NetworkGame extends FlameGame {
 
     _view = _smoothed();
     _shake = math.max(0, _shake - dt);
-    _follow();
+    _follow(dt);
   }
 
   core.WorldSnapshot? _smoothed() {
@@ -203,26 +207,33 @@ class NetworkGame extends FlameGame {
     );
   }
 
-  void _follow() {
+  void _follow(double dt) {
     final snap = _snapshot;
     final me = session.myPlayerId == null
         ? null
         : snap.player(session.myPlayerId!);
-    final zoom = camera.viewfinder.zoom;
-    final halfW = size.x / zoom / 2;
-    final halfH = size.y / zoom / 2;
-    final mazeW = snap.grid.width * tileSize;
-    final mazeH = snap.grid.height * tileSize;
-    var x = (me?.x ?? snap.grid.width / 2) * tileSize;
-    var y = (me?.y ?? snap.grid.height / 2) * tileSize;
-    x = mazeW <= halfW * 2 ? mazeW / 2 : x.clamp(halfW, mazeW - halfW);
-    y = mazeH <= halfH * 2 ? mazeH / 2 : y.clamp(halfH, mazeH - halfH);
+    final pos = _camera.follow(
+      view: size,
+      zoom: camera.viewfinder.zoom,
+      targetX: (me?.x ?? snap.grid.width / 2) * tileSize,
+      targetY: (me?.y ?? snap.grid.height / 2) * tileSize,
+      mazeW: snap.grid.width * tileSize,
+      mazeH: snap.grid.height * tileSize,
+      tileSize: tileSize,
+      dt: dt,
+    );
     if (_shake > 0 && settings.shake > 0) {
-      x += (_rng.nextDouble() - 0.5) * 6;
-      y += (_rng.nextDouble() - 0.5) * 6;
+      pos.x += (_rng.nextDouble() - 0.5) * 6;
+      pos.y += (_rng.nextDouble() - 0.5) * 6;
     }
-    camera.viewfinder.position = Vector2(x, y);
+    camera.viewfinder.position = pos;
   }
+
+  @override
+  KeyEventResult onKeyEvent(
+    KeyEvent event,
+    Set<LogicalKeyboardKey> keysPressed,
+  ) => input.handleKey(event) ? KeyEventResult.handled : KeyEventResult.ignored;
 
   int get _mySlot {
     final snap = session.snapshot;
