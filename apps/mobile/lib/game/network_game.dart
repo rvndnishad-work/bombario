@@ -90,6 +90,7 @@ class NetworkGame extends FlameGame {
         tileSize: tileSize,
         atlas: await SpriteAtlas.load(),
         highContrast: () => settings.highContrastFlames,
+        look: WorldRenderer.lookFor(_stageDef),
       ),
     );
     final name = session.stageName;

@@ -19,6 +19,11 @@ file has its own palette; '.' is transparent), then `sprite <name>` blocks of
   rotate <name> = <src> <90|180|270>      turns clockwise
   stamp <name> = <src> <patch>            patch over src; #ff00ff erases
 
+Stage looks (palette swaps of the terrain, one per five stages):
+
+  lookset <sprite> [<sprite> ...]         the sprites every look recolours
+  look <suffix> #from:#to ...             adds <sprite>-<suffix> for each
+
 Pure standard library so it runs anywhere Python 3 does.
 """
 import os
@@ -46,6 +51,7 @@ def hex_rgba(h):
 
 def parse(path, sprites, order):
     palette = {'.': CLEAR}
+    looks = {}
     lines = open(path).read().split('\n')
     i = 0
 
@@ -87,6 +93,23 @@ def parse(path, sprites, order):
                     fail(f'{name}: colour {e} is not in this file\'s palette')
             add(sprites, order, name, grid)
             i += 1 + CELL
+            continue
+        if words[0] == 'lookset':
+            looks['set'] = words[1:]
+            i += 1
+            continue
+        if words[0] == 'look':
+            if not looks.get('set'):
+                fail('look before lookset')
+            swap = {}
+            for pair in words[2:]:
+                a, b = pair.split(':')
+                swap[hex_rgba(a)] = hex_rgba(b)
+            for src in looks['set']:
+                grid = [[swap.get(p, p) for p in row]
+                        for row in need(sprites, src, fail)]
+                add(sprites, order, f'{src}-{words[1]}', grid)
+            i += 1
             continue
         if words[0] in ('compose', 'recolor', 'flipx', 'rotate', 'stamp'):
             name, eq = words[1], words[2]

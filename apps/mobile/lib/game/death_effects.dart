@@ -26,6 +26,9 @@ class DeathEffects {
   /// More bricks than this vanishing at once is a new maze, not a blast.
   static const int maxBurstsPerFrame = 24;
 
+  /// The brick sprite in the stage's look, so the crumble matches the wall.
+  String brickSprite = 'brick';
+
   final List<_BrickBurst> _bricks = [];
   final List<_EnemyDeath> _enemies = [];
   final List<_PlayerDeath> _players = [];
@@ -145,7 +148,7 @@ class DeathEffects {
       );
       // First a hot glow on the whole brick...
       if (t < 0.35) {
-        atlas.draw(canvas, 'brick', tile);
+        atlas.draw(canvas, brickSprite, tile);
         canvas.drawRect(
           tile,
           Paint()..color = Color.fromRGBO(255, 150, 40, 0.75 * (1 - t / 0.35)),
@@ -176,7 +179,7 @@ class DeathEffects {
         canvas.scale(1 - 0.5 * k);
         canvas.translate(-c.dx, -c.dy);
         canvas.clipRect(quarter);
-        atlas.draw(canvas, 'brick', tile, paint: SpriteAtlas.faded(1 - k));
+        atlas.draw(canvas, brickSprite, tile, paint: SpriteAtlas.faded(1 - k));
         canvas.restore();
       }
     }
