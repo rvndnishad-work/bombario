@@ -276,48 +276,102 @@ class WorldRenderer extends PositionComponent {
     }
   }
 
-  static const _pipeGreen = Color(0xFF2FA84F);
-  static const _pipeDark = Color(0xFF1B6B32);
-  static const _pipeLight = Color(0xFF8CE07A);
+  /// The pipe's shine, left to right: dark edge, mid green, a bright
+  /// highlight two thirds across, then dark again (Arvind's reference).
+  static const _pipeShine = [
+    Color(0xFF14621F),
+    Color(0xFF2B8F37),
+    Color(0xFF6CF46C),
+    Color(0xFF3FB348),
+    Color(0xFF14621F),
+  ];
+  static const _pipeStops = [0.0, 0.38, 0.66, 0.84, 1.0];
 
-  /// A warp pipe seen from above at a slight angle: a thick green lip
-  /// around a dark mouth, with a highlight stripe, after Mario's pipes.
-  void _drawPipe(Canvas canvas, Rect r) {
-    final ink = Paint()..color = const Color(0xFF0D1120);
-    final lip = r.deflate(tileSize * 0.04);
-    canvas.drawRect(lip, ink);
-    canvas.drawRect(lip.deflate(tileSize * 0.04), Paint()..color = _pipeGreen);
-    // Shade on the right, shine on the left, like a round pipe.
-    final inner = lip.deflate(tileSize * 0.04);
-    canvas.drawRect(
-      Rect.fromLTWH(
-        inner.right - inner.width * 0.22,
-        inner.top,
-        inner.width * 0.22,
-        inner.height,
-      ),
-      Paint()..color = _pipeDark,
+  Paint _shine(Rect r) => Paint()
+    ..shader = Gradient.linear(
+      r.centerLeft,
+      r.centerRight,
+      _pipeShine,
+      _pipeStops,
     );
-    canvas.drawRect(
-      Rect.fromLTWH(
-        inner.left + inner.width * 0.12,
-        inner.top,
-        inner.width * 0.1,
-        inner.height,
+
+  /// A warp pipe standing on its tile: a wide lip on a narrower body, both
+  /// shaded like a shiny round tube, with the dark mouth on top.
+  void _drawPipe(Canvas canvas, Rect r) {
+    final t = tileSize;
+    final outline = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = t * 0.045
+      ..color = const Color(0xFF0B3D14);
+    // Shadow on the floor.
+    canvas.drawOval(
+      Rect.fromLTRB(
+        r.left + t * 0.08,
+        r.bottom - t * 0.14,
+        r.right - t * 0.08,
+        r.bottom + t * 0.02,
       ),
-      Paint()..color = _pipeLight,
+      Paint()..color = const Color(0x55000000),
+    );
+    final body = Rect.fromLTRB(
+      r.left + t * 0.15,
+      r.top + t * 0.42,
+      r.right - t * 0.15,
+      r.bottom - t * 0.04,
+    );
+    canvas.drawRect(body, _shine(body));
+    canvas.drawRect(body, outline);
+    // The lip's shadow on the body.
+    canvas.drawRect(
+      Rect.fromLTWH(body.left, body.top, body.width, t * 0.06),
+      Paint()..color = const Color(0x6614621F),
+    );
+    final lip = pipeLip(r);
+    final lipShape = RRect.fromRectAndRadius(lip, Radius.circular(t * 0.05));
+    canvas.drawRRect(lipShape, _shine(lip));
+    canvas.drawRRect(lipShape, outline);
+    // A thin top highlight, then the mouth.
+    canvas.drawLine(
+      Offset(lip.left + t * 0.06, lip.top + t * 0.04),
+      Offset(lip.right - t * 0.06, lip.top + t * 0.04),
+      Paint()
+        ..color = const Color(0x88B8FFB0)
+        ..strokeWidth = t * 0.03,
     );
     final mouth = pipeMouth(r);
-    canvas.drawOval(mouth.inflate(tileSize * 0.03), ink);
-    canvas.drawOval(mouth, Paint()..color = const Color(0xFF071A0E));
+    canvas.drawOval(
+      mouth.inflate(t * 0.025),
+      Paint()..color = const Color(0xFF0B3D14),
+    );
+    canvas.drawOval(mouth, Paint()..color = const Color(0xFF041208));
   }
 
-  /// The dark opening of a pipe drawn in [r].
-  Rect pipeMouth(Rect r) => Rect.fromCenter(
-    center: r.center - Offset(0, tileSize * 0.04),
-    width: r.width * 0.62,
-    height: r.height * 0.5,
+  /// The pipe's wide top band.
+  Rect pipeLip(Rect r) => Rect.fromLTRB(
+    r.left + tileSize * 0.04,
+    r.top + tileSize * 0.08,
+    r.right - tileSize * 0.04,
+    r.top + tileSize * 0.46,
   );
+
+  /// The dark opening on top of the lip.
+  Rect pipeMouth(Rect r) {
+    final lip = pipeLip(r);
+    return Rect.fromCenter(
+      center: Offset(lip.center.dx, lip.top + lip.height * 0.42),
+      width: lip.width * 0.72,
+      height: lip.height * 0.5,
+    );
+  }
+
+  /// 0 to 1: how far up onto a pipe a player at (x, y) has stepped; 1 at
+  /// the pipe's centre, 0 at its edge or off it.
+  double _pipeLift(core.WorldSnapshot sim, double x, double y) {
+    final tx = x.floor(), ty = y.floor();
+    if (sim.grid.featureAt(tx, ty) != core.TileFeature.pipe) return 0;
+    final d = math.max((x - tx - 0.5).abs(), (y - ty - 0.5).abs());
+    return (1 - d / 0.5).clamp(0.0, 1.0);
+  }
 
   /// How deep a player is in a pipe, 0 (out) to 1 (gone), from the trip's
   /// progress: sink, travel unseen, rise.
@@ -844,6 +898,13 @@ class WorldRenderer extends PositionComponent {
 
       final depth = pipeDepth(p.pipe);
       if (depth >= 1) continue; // travelling through the pipe
+      // On a pipe you stand on its mouth, like Mario: the body lifts as
+      // you step up onto it.
+      final onPipe = _pipeLift(sim, p.x, p.y);
+      final pipeTile = _tileRect(p.x.floor(), p.y.floor());
+      final standY =
+          pipeMouth(pipeTile).center.dy - (centre.dy + tileSize * 0.34);
+      centre += Offset(0, standY * (depth > 0 ? 1 : onPipe));
       final blink = p.invincible && (_time * 12).floor().isEven;
       final pose = p.frozen || depth > 0 ? (moving: false, step: 0) : _pose(p);
       // The body lifts a pixel on each stride, so the walk has a bounce.
@@ -864,16 +925,15 @@ class WorldRenderer extends PositionComponent {
       if (depth > 0) {
         // Sinking into (or rising out of) a pipe: slide down past the
         // mouth's front edge.
-        final tile = _tileRect(p.x.floor(), p.y.floor());
         canvas.clipRect(
           Rect.fromLTRB(
-            tile.left - tileSize,
-            tile.top - tileSize * 2,
-            tile.right + tileSize,
-            pipeMouth(tile).bottom,
+            pipeTile.left - tileSize,
+            pipeTile.top - tileSize * 3,
+            pipeTile.right + tileSize,
+            pipeMouth(pipeTile).center.dy,
           ),
         );
-        canvas.translate(0, depth * tileSize * 0.85);
+        canvas.translate(0, depth * tileSize * 0.95);
       }
       if (facing == core.Direction.left) {
         canvas.translate(body.center.dx, body.center.dy);
