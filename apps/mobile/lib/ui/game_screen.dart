@@ -3,18 +3,22 @@ import 'package:flame/game.dart';
 import 'package:flutter/material.dart';
 
 import '../game/blast_game.dart';
+import '../net/online.dart';
 import '../audio/game_audio.dart';
 import '../progress/achievements.dart';
 import '../settings/settings.dart';
 import 'controls_overlay.dart';
 import 'kit/game_chrome.dart';
 
-/// Solo campaign: the toolbar on top, the board everywhere else, controls
-/// and popups over the board.
+/// Solo campaign, or the Daily Dungeon when [daily] is set: the toolbar on
+/// top, the board everywhere else, controls and popups over the board.
+///
+/// A cleared daily pops with its time in milliseconds.
 class GameScreen extends StatefulWidget {
-  const GameScreen({super.key, this.seed = 1});
+  const GameScreen({super.key, this.seed = 1, this.daily});
 
   final int seed;
+  final core.DailyDungeon? daily;
 
   @override
   State<GameScreen> createState() => _GameScreenState();
@@ -23,6 +27,7 @@ class GameScreen extends StatefulWidget {
 class _GameScreenState extends State<GameScreen> {
   late final BlastGame _game = BlastGame(
     seed: widget.seed,
+    daily: widget.daily,
     settings: Settings.read(context),
     achievements: AchievementsScope.read(context),
   );
@@ -76,25 +81,44 @@ class _GameScreenState extends State<GameScreen> {
                           ),
                         ],
                       ),
-                      Overlays
-                          .stageCleared: (context, BlastGame game) => MenuCard(
-                        border: const Color(0xFF3FC062),
-                        title: game.isLastStage
-                            ? 'Campaign complete!'
-                            : 'Stage ${game.stage.id} cleared!',
-                        subtitle: game.isLastStage
-                            ? 'Score ${game.player.score}'
-                            : 'Score ${game.player.score}. Next up: '
-                                  '${core.Campaign.stages[game.stageIndex + 1].name}',
-                        actions: [
-                          FilledButton(
-                            onPressed: game.nextStage,
-                            child: Text(
-                              game.isLastStage ? 'Play again' : 'Next stage',
+                      Overlays.stageCleared: (context, BlastGame game) =>
+                          game.daily != null
+                          ? MenuCard(
+                              border: const Color(0xFF3FC062),
+                              title: 'Daily cleared!',
+                              subtitle:
+                                  'Time ${formatTime(game.stageTimeMs)}. '
+                                  'Score ${game.player.score}',
+                              actions: [
+                                FilledButton(
+                                  key: const Key('daily-done'),
+                                  onPressed: () => Navigator.of(
+                                    context,
+                                  ).pop(game.stageTimeMs),
+                                  child: const Text('Submit time'),
+                                ),
+                              ],
+                            )
+                          : MenuCard(
+                              border: const Color(0xFF3FC062),
+                              title: game.isLastStage
+                                  ? 'Campaign complete!'
+                                  : 'Stage ${game.stage.id} cleared!',
+                              subtitle: game.isLastStage
+                                  ? 'Score ${game.player.score}'
+                                  : 'Score ${game.player.score}. Next up: '
+                                        '${core.Campaign.stages[game.stageIndex + 1].name}',
+                              actions: [
+                                FilledButton(
+                                  onPressed: game.nextStage,
+                                  child: Text(
+                                    game.isLastStage
+                                        ? 'Play again'
+                                        : 'Next stage',
+                                  ),
+                                ),
+                              ],
                             ),
-                          ),
-                        ],
-                      ),
                       Overlays.gameOver: (context, BlastGame game) => MenuCard(
                         border: const Color(0xFFFF4B4B),
                         title: 'Game over',

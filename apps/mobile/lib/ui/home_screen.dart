@@ -2,13 +2,20 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 
+import 'package:bombario_core/bombario_core.dart' as core;
+
+import '../net/online.dart';
 import '../progress/achievements.dart';
+import '../progress/cosmetics.dart';
+import '../settings/settings.dart';
 import 'achievements_screen.dart';
+import 'daily_screen.dart';
 import 'game_screen.dart';
 import 'join_screen.dart';
 import 'kit/pixel_theme.dart';
 import 'kit/sprite_icon.dart';
 import 'lobby_screen.dart';
+import 'locker_screen.dart';
 import 'online_screen.dart';
 import 'player_name.dart';
 import 'settings_screen.dart';
@@ -24,6 +31,9 @@ class HomeScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final achievements = AchievementsScope.of(context);
+    final skin = Cosmetics.equipped(Settings.of(context).skin, achievements);
+    final daily = core.DailyDungeon.today();
+    final dailyBest = achievements.dailyBest(daily.id);
     return Scaffold(
       body: SafeArea(
         child: Row(
@@ -42,7 +52,11 @@ class HomeScreen extends StatelessWidget {
                     padding: const EdgeInsets.all(10),
                     child: Row(
                       children: [
-                        const SpriteIcon('p1', size: 44),
+                        GestureDetector(
+                          key: const Key('profile-locker'),
+                          onTap: () => _go(context, const LockerScreen()),
+                          child: PlayerPreview(skin: skin, size: 44),
+                        ),
                         const SizedBox(width: 10),
                         const Expanded(child: PlayerNameField()),
                       ],
@@ -56,6 +70,15 @@ class HomeScreen extends StatelessWidget {
                           sprite: 'star',
                           label: 'Awards',
                           onTap: () => _go(context, const AchievementsScreen()),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: _SmallTile(
+                          key: const Key('locker'),
+                          sprite: 'crown',
+                          label: 'Locker',
+                          onTap: () => _go(context, const LockerScreen()),
                         ),
                       ),
                       const SizedBox(width: 8),
@@ -86,7 +109,7 @@ class HomeScreen extends StatelessWidget {
                         _BigTile(
                           sprite: 'bomb',
                           title: 'Online',
-                          subtitle: 'Create a room or join with a code',
+                          subtitle: 'Quick match, or a room with friends',
                           color: Px.fuse,
                           onTap: () => _go(context, const OnlineScreen()),
                         ),
@@ -137,6 +160,41 @@ class HomeScreen extends StatelessWidget {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
+                    GestureDetector(
+                      key: const Key('daily'),
+                      onTap: () => _go(context, const DailyScreen()),
+                      child: PxPanel(
+                        border: Px.fuse,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                const SpriteIcon('cal', size: 22),
+                                const SizedBox(width: 6),
+                                Flexible(
+                                  child: Text(
+                                    'DAILY DUNGEON',
+                                    style: Px.label(11, color: Px.fuse),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 6),
+                            Text(daily.stage.name, style: Px.label(14)),
+                            const SizedBox(height: 4),
+                            Text(
+                              dailyBest == null
+                                  ? 'Race the world. Tap to play'
+                                  : 'Best ${formatTime(dailyBest)}',
+                              style: Px.label(12, color: Px.ok, bold: false),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 10),
                     PxPanel(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,

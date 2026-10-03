@@ -230,6 +230,20 @@ class Achievements extends ChangeNotifier {
     if (got.isNotEmpty) _save();
   }
 
+  /// Best Daily Dungeon clear for [dayId] (`YYYY-MM-DD`) in milliseconds.
+  int? dailyBest(String dayId) {
+    final v = stat('daily.$dayId');
+    return v > 0 ? v : null;
+  }
+
+  /// Saves a Daily Dungeon clear; true when it beats the day's best.
+  bool recordDaily(String dayId, int timeMs) {
+    final best = dailyBest(dayId);
+    if (best != null && best <= timeMs) return false;
+    _set('daily.$dayId', timeMs);
+    return true;
+  }
+
   void _bump(String key, List<AchievementDef> got) {
     _set(key, stat(key) + 1);
     if (key == bombsPlaced && stat(key) >= 100) _unlock('bomber-100', got);

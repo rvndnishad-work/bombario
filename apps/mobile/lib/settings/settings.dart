@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:flutter/widgets.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -13,6 +15,14 @@ class AppSettings extends ChangeNotifier {
   static Future<AppSettings> load() async {
     final s = AppSettings._(await SharedPreferences.getInstance());
     s._read();
+    if (s.installId.isEmpty) {
+      final r = Random.secure();
+      s.installId = List.generate(
+        16,
+        (_) => r.nextInt(16).toRadixString(16),
+      ).join();
+      await s._prefs?.setString('installId', s.installId);
+    }
     return s;
   }
 
@@ -37,6 +47,20 @@ class AppSettings extends ChangeNotifier {
   /// Solo only: 0.75 slows the whole game down (§9.6).
   double soloSpeed = 1;
 
+  // ---- Profile
+  /// Equipped hat from the locker (see `Cosmetics`).
+  String skin = 'classic';
+
+  /// Anonymous gameplay stats sent to the server (§13). On by default,
+  /// switchable in Settings.
+  bool shareAnalytics = true;
+
+  /// Name for rooms and leaderboards; empty until the player types one.
+  String playerName = '';
+
+  /// Random per-install id for analytics; not tied to the player.
+  String installId = '';
+
   static const _keys = (
     music: 'musicVolume',
     sfx: 'sfxVolume',
@@ -47,6 +71,8 @@ class AppSettings extends ChangeNotifier {
     shake: 'reduceShake',
     flames: 'highContrastFlames',
     speed: 'soloSpeed',
+    skin: 'skin',
+    analytics: 'shareAnalytics',
   );
 
   void _read() {
@@ -61,6 +87,10 @@ class AppSettings extends ChangeNotifier {
     reduceShake = p.getBool(_keys.shake) ?? reduceShake;
     highContrastFlames = p.getBool(_keys.flames) ?? highContrastFlames;
     soloSpeed = p.getDouble(_keys.speed) ?? soloSpeed;
+    skin = p.getString(_keys.skin) ?? skin;
+    shareAnalytics = p.getBool(_keys.analytics) ?? shareAnalytics;
+    installId = p.getString('installId') ?? '';
+    playerName = p.getString('playerName') ?? '';
   }
 
   /// Applies [change] and saves everything.
@@ -81,6 +111,9 @@ class AppSettings extends ChangeNotifier {
     p.setBool(_keys.shake, reduceShake);
     p.setBool(_keys.flames, highContrastFlames);
     p.setDouble(_keys.speed, soloSpeed);
+    p.setString(_keys.skin, skin);
+    p.setBool(_keys.analytics, shareAnalytics);
+    p.setString('playerName', playerName);
   }
 
   /// Screen shake multiplier.
