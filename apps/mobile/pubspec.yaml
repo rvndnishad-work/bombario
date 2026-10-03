@@ -1,0 +1,22 @@
+name: bombario
+description: Bombario mobile client (Flutter + Flame). Renders the bombario_core simulation and handles touch input.
+publish_to: none
+version: 0.1.0+1
+
+environment:
+  sdk: ^3.5.0
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flame: ^1.20.0
+  bombario_core:
+    path: ../../packages/bombario_core
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0
+
+flutter:
+  uses-material-design: true
