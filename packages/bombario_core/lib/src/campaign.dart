@@ -36,6 +36,7 @@ class StageDef {
     this.wind = 0,
     this.cannons = 0,
     this.big = false,
+    this.theme,
   });
 
   /// "world-stage", e.g. `1-4`.
@@ -90,8 +91,12 @@ class StageDef {
   /// Always the large 41 × 17 field, whatever the team size.
   final bool big;
 
-  int get world => int.parse(id.split('-').first);
-  int get number => int.parse(id.split('-').last);
+  /// The world whose look and music a stage outside the campaign borrows
+  /// (the Daily Dungeon).
+  final int? theme;
+
+  int get world => theme ?? int.parse(id.split('-').first);
+  int get number => int.tryParse(id.split('-').last) ?? 0;
   bool get isBoss => boss != null;
 
   static int scaleCount(int twoPlayerCount, int players) => max(
