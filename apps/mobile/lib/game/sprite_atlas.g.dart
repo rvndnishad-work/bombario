@@ -122,4 +122,11 @@ const Map<String, int> spriteIndex = {
   'brick-possessed': 111,
   'warp': 112,
   'ice': 113,
+  'hat-cap': 114,
+  'hat-crown': 115,
+  'hat-sprout': 116,
+  'hat-wizard': 117,
+  'hat-horns': 118,
+  'hat-tophat': 119,
+  'hat-halo': 120,
 };

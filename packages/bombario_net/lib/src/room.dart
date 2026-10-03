@@ -7,9 +7,16 @@ import 'package:bombario_core/bombario_core.dart';
 
 import 'protocol.dart';
 
-/// A connected (or briefly disconnected) player in a room.
+/// A connected (or briefly disconnected) player in a room, or a bot seat.
 class RoomClient {
   RoomClient(this.id, this._socket, this.token);
+
+  /// A seat the server plays with a [Bot]. It has no socket and is always
+  /// ready and connected.
+  RoomClient.bot(this.id, this.botSkill)
+      : _socket = null,
+        token = '',
+        ready = true;
 
   final int id;
   WebSocket? _socket;
@@ -20,6 +27,18 @@ class RoomClient {
   String name = 'Player';
   bool ready = false;
   bool isHost = false;
+
+  /// Cosmetic look sent by the app (any string up to [maxSkinLength]).
+  String skin = Player.defaultSkin;
+
+  static const int maxSkinLength = 32;
+
+  /// Set for bot seats: how well the bot plays.
+  BotSkill? botSkill;
+  bool get isBot => botSkill != null;
+
+  /// The bot driving this seat while a match runs.
+  Bot? bot;
 
   /// World player id while a match runs.
   int? playerId;
@@ -39,7 +58,7 @@ class RoomClient {
   /// snapshots so the client can reconcile its prediction.
   int lastInputSeq = 0;
 
-  bool get connected => _socket?.readyState == WebSocket.open;
+  bool get connected => isBot || _socket?.readyState == WebSocket.open;
 
   void queueInput(int? seq, PlayerInput input) {
     final s = seq ?? _lastQueuedSeq + 1;
@@ -78,7 +97,10 @@ class RoomClient {
   }
 
   void send(Map<String, dynamic> message) {
-    if (connected) _socket!.add(encode(message));
+    final socket = _socket; // bots have none
+    if (socket != null && socket.readyState == WebSocket.open) {
+      socket.add(encode(message));
+    }
   }
 
   LobbyPlayer get lobbyRow => LobbyPlayer(
@@ -87,6 +109,8 @@ class RoomClient {
         ready: ready,
         isHost: isHost,
         connected: connected,
+        bot: isBot,
+        skin: skin,
       );
 }
 
@@ -94,9 +118,52 @@ enum RoomState { lobby, playing }
 
 /// Lobby plus match loop. Authoritative: clients only ever send inputs.
 class Room {
-  Room({int? seed, this.maxPlayers = defaultMaxPlayers})
-      : _rng = Random(seed),
+  Room({
+    int? seed,
+    this.maxPlayers = defaultMaxPlayers,
+    this.quick = false,
+    this.quickStartDelay = defaultQuickStartDelay,
+    this.botSkins = const [Player.defaultSkin],
+  })  : _rng = Random(seed),
         code = _makeCode(Random(seed));
+
+  /// A quick-match room (§7.x): it starts [quickStartDelay] after its first
+  /// human joins, or at once when every seat has a human, and fills empty
+  /// seats with bots. Players can't change its mode or stage.
+  final bool quick;
+  final Duration quickStartDelay;
+
+  /// Skins bots pick from at random. Not validated here; the app does.
+  final List<String> botSkins;
+
+  static const Duration defaultQuickStartDelay = Duration(seconds: 20);
+
+  /// Quick matches: seats bots fill up to, by mode. Co-op pairs a lone
+  /// player with one bot buddy rather than a full team of bots.
+  static const int quickVersusSeats = 4;
+  static const int quickCoopSeats = 2;
+
+  static const botNames = [
+    'Pip',
+    'Bolt',
+    'Fizz',
+    'Nib',
+    'Dot',
+    'Zap',
+    'Momo',
+    'Rex',
+  ];
+
+  /// True once a quick-match room has started its first match; the hub
+  /// stops sending new players to it.
+  bool quickStarted = false;
+  Timer? _autoStart;
+  Timer? _countdown;
+  DateTime? _startsAt;
+
+  /// Seats promised by the hub to players who haven't connected yet.
+  final List<DateTime> _reservations = [];
+  static const Duration reservationTtl = Duration(seconds: 15);
 
   static const int defaultMaxPlayers = 4;
 
@@ -113,6 +180,10 @@ class Room {
   final String code;
   final Random _rng;
   final List<RoomClient> clients = [];
+
+  /// Seats held by people (not bots).
+  Iterable<RoomClient> get humans => clients.where((c) => !c.isBot);
+  Iterable<RoomClient> get bots => clients.where((c) => c.isBot);
   final Map<RoomClient, Timer> _resumeTimers = {};
 
   GameMode mode = GameMode.versus;
@@ -213,6 +284,11 @@ class Room {
 
   /// Admits a new player, or refuses with an error and returns null.
   RoomClient? _admit(WebSocket socket) {
+    // A person bumps a bot out of a full lobby.
+    if (clients.length >= maxPlayers && state == RoomState.lobby) {
+      final bot = bots.lastOrNull;
+      if (bot != null) clients.remove(bot);
+    }
     if (clients.length >= maxPlayers || state != RoomState.lobby) {
       socket.add(encode({
         't': Msg.error,
@@ -222,9 +298,13 @@ class Room {
       return null;
     }
     final client = RoomClient(_nextClientId++, socket, _makeToken());
-    client.isHost = clients.isEmpty;
+    client.isHost = humans.isEmpty;
     clients.add(client);
-    if (clients.length == 1) onOccupied?.call();
+    if (_reservations.isNotEmpty) _reservations.removeAt(0);
+    if (humans.length == 1) {
+      onOccupied?.call();
+      if (quick && !quickStarted) _scheduleQuickStart();
+    }
     client.send({
       't': Msg.welcome,
       'id': client.id,
@@ -241,16 +321,34 @@ class Room {
       case Msg.join:
         final name = (msg['name'] as String? ?? '').trim();
         client.name = name.isEmpty ? 'Player ${client.id}' : name;
+        _setSkin(client, msg['skin']);
         _broadcastLobby();
+        if (quick &&
+            !quickStarted &&
+            state == RoomState.lobby &&
+            humans.length >= maxPlayers) {
+          startQuickMatch();
+        }
+      case Msg.skin:
+        _setSkin(client, msg['v']);
+        _broadcastLobby();
+      case Msg.addBot:
+        if (!client.isHost || state != RoomState.lobby) return;
+        if (addBot(skill: BotSkill.parse(msg['skill'] as String?)) == null) {
+          client.send({'t': Msg.error, 'm': 'Room is full'});
+        }
+      case Msg.removeBot:
+        if (!client.isHost || state != RoomState.lobby) return;
+        removeBot(id: msg['id'] as int?);
       case Msg.ready:
         client.ready = msg['v'] == true;
         _broadcastLobby();
       case Msg.mode:
-        if (!client.isHost || state != RoomState.lobby) return;
+        if (!client.isHost || state != RoomState.lobby || quick) return;
         mode = GameMode.parse(msg['v'] as String? ?? '');
         _broadcastLobby();
       case Msg.stage:
-        if (!client.isHost || state != RoomState.lobby) return;
+        if (!client.isHost || state != RoomState.lobby || quick) return;
         final id = msg['v'] as String? ?? '';
         if (Campaign.byId(id) == null) return;
         stageId = id;
@@ -258,10 +356,13 @@ class Room {
       case Msg.start:
         if (!client.isHost || state != RoomState.lobby) return;
         if (clients.length < 2 && mode == GameMode.versus) {
-          client.send({'t': Msg.error, 'm': 'Versus needs at least 2 players'});
-          return;
+          if (!quick) {
+            client
+                .send({'t': Msg.error, 'm': 'Versus needs at least 2 players'});
+            return;
+          }
         }
-        startMatch();
+        quick ? startQuickMatch() : startMatch();
       case Msg.input:
         if (state != RoomState.playing) return;
         client.queueInput(msg['s'] as int?, inputFromJson(msg));
@@ -293,7 +394,10 @@ class Room {
     if (!clients.remove(client)) return;
     client._socket?.close();
     client._socket = null;
-    if (client.isHost && clients.isNotEmpty) clients.first.isHost = true;
+    if (client.isHost) {
+      client.isHost = false;
+      humans.firstOrNull?.isHost = true;
+    }
     final w = world;
     if (state == RoomState.playing && w != null && client.playerId != null) {
       // A player who leaves mid-match is out. The sim will end the round if
@@ -304,7 +408,10 @@ class Room {
         p.invincibleFor = 0;
       }
     }
-    if (clients.isEmpty) {
+    if (humans.isEmpty) {
+      // Bots don't keep a room alive.
+      clients.clear();
+      _cancelQuickStart();
       _stopMatch();
       onEmpty?.call();
     } else {
@@ -312,13 +419,118 @@ class Room {
     }
   }
 
+  void _setSkin(RoomClient client, Object? skin) {
+    if (skin is! String) return;
+    final s = skin.trim();
+    if (s.isEmpty || s.length > RoomClient.maxSkinLength) return;
+    client.skin = s;
+  }
+
+  /// Adds a bot seat in the lobby. Returns null when the room is full or a
+  /// match is running.
+  RoomClient? addBot({BotSkill skill = BotSkill.normal}) {
+    if (clients.length >= maxPlayers || state != RoomState.lobby) return null;
+    final taken = {for (final c in clients) c.name};
+    final free = [
+      for (final n in botNames)
+        if (!taken.contains('Bot $n')) n,
+    ];
+    final name = free.isEmpty
+        ? botNames[_rng.nextInt(botNames.length)]
+        : free[_rng.nextInt(free.length)];
+    final bot = RoomClient.bot(_nextClientId++, skill)
+      ..name = 'Bot $name'
+      ..skin = botSkins.isEmpty
+          ? Player.defaultSkin
+          : botSkins[_rng.nextInt(botSkins.length)];
+    clients.add(bot);
+    _broadcastLobby();
+    return bot;
+  }
+
+  /// Removes the bot with lobby id [id], or the most recently added bot.
+  bool removeBot({int? id}) {
+    if (state != RoomState.lobby) return false;
+    final bot = id == null
+        ? bots.lastOrNull
+        : bots.where((c) => c.id == id).firstOrNull;
+    if (bot == null) return false;
+    clients.remove(bot);
+    _broadcastLobby();
+    return true;
+  }
+
+  /// Free seats a quick match can still promise to new players.
+  int get openQuickSeats {
+    final now = DateTime.now();
+    _reservations.removeWhere((t) => t.isBefore(now));
+    return maxPlayers - humans.length - _reservations.length;
+  }
+
+  /// Can the hub send another player here?
+  bool get acceptsQuickPlayers =>
+      quick && !quickStarted && state == RoomState.lobby && openQuickSeats > 0;
+
+  /// Holds a seat for a player the hub is sending here.
+  void reserveSeat() => _reservations.add(DateTime.now().add(reservationTtl));
+
+  /// Seconds until a quick match starts, while it counts down.
+  int? get startsIn {
+    final at = _startsAt;
+    if (at == null) return null;
+    final ms = at.difference(DateTime.now()).inMilliseconds;
+    return max(0, (ms / 1000).ceil());
+  }
+
+  void _scheduleQuickStart() {
+    _cancelQuickStart();
+    _startsAt = DateTime.now().add(quickStartDelay);
+    _autoStart = Timer(quickStartDelay, () {
+      if (state == RoomState.lobby && !quickStarted && humans.isNotEmpty) {
+        startQuickMatch();
+      }
+    });
+    // A lobby update each second carries the countdown.
+    _countdown =
+        Timer.periodic(const Duration(seconds: 1), (_) => _broadcastLobby());
+  }
+
+  void _cancelQuickStart() {
+    _autoStart?.cancel();
+    _countdown?.cancel();
+    _autoStart = null;
+    _countdown = null;
+    _startsAt = null;
+  }
+
+  /// Fills empty seats with bots (up to four for versus, two for co-op) and
+  /// starts. Quick co-op plays stage 1-1: its friendly flames only stun,
+  /// which suits strangers who have never played together.
+  void startQuickMatch() {
+    if (state != RoomState.lobby) return;
+    _cancelQuickStart();
+    quickStarted = true;
+    final seats = min(
+      maxPlayers,
+      mode == GameMode.versus ? quickVersusSeats : quickCoopSeats,
+    );
+    while (clients.length < seats) {
+      if (addBot() == null) break;
+    }
+    startMatch();
+  }
+
+  /// What the lobby looks like right now.
+  LobbyState get lobby => LobbyState(
+        mode: mode,
+        stage: stageId,
+        quick: quick,
+        startsIn: state == RoomState.lobby ? startsIn : null,
+        players: [for (final c in clients) c.lobbyRow],
+      );
+
   void _broadcastLobby() {
-    final msg = {
-      't': Msg.lobby,
-      'mode': mode.name,
-      'stage': stageId,
-      'players': [for (final c in clients) c.lobbyRow.toJson()],
-    };
+    final msg = lobby.toJson();
     for (final c in clients) {
       c.send(msg);
     }
@@ -354,8 +566,12 @@ class Room {
     }
     final w = World(level, seed: seed, config: config);
     for (final c in clients) {
-      c.playerId = w.addPlayer(name: c.name).id;
+      c.playerId = w.addPlayer(name: c.name, skin: c.skin).id;
       c.resetInputs();
+      final skill = c.botSkill;
+      c.bot = skill == null
+          ? null
+          : Bot(w, c.playerId!, skill: skill, seed: _rng.nextInt(1 << 30));
     }
     world = w;
     state = RoomState.playing;
@@ -388,6 +604,11 @@ class Room {
   void tick() {
     final w = world;
     if (w == null || state != RoomState.playing) return;
+    // Bots think on the server and queue their input like anyone else.
+    for (final c in clients) {
+      final bot = c.bot;
+      if (bot != null) c.queueInput(null, bot.think());
+    }
     final inputs = <int, PlayerInput>{
       for (final c in clients)
         if (c.playerId != null) c.playerId!: c.takeInput(),
@@ -434,8 +655,9 @@ class Room {
     _ticker = null;
     state = RoomState.lobby;
     for (final c in clients.toList()) {
-      c.ready = false;
+      c.ready = c.isBot;
       c.playerId = null;
+      c.bot = null;
       // Nobody waits for a dropped player once the match is over.
       if (!c.connected) _remove(c);
     }
@@ -444,6 +666,7 @@ class Room {
 
   Future<void> close() async {
     _ticker?.cancel();
+    _cancelQuickStart();
     for (final t in _resumeTimers.values) {
       t.cancel();
     }

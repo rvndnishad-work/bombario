@@ -14,10 +14,13 @@ import 'protocol.dart';
 /// [LocalPredictor] for the local player, and resumes the seat after a
 /// dropped connection using the token the server handed out.
 class GameClient {
-  GameClient._(this.uri, this.playerName);
+  GameClient._(this.uri, this.playerName, this.skin);
 
   final Uri uri;
   final String playerName;
+
+  /// Cosmetic look sent on join (and on resume); change it with [setSkin].
+  String skin;
   WebSocket? _socket;
   StreamSubscription<dynamic>? _sub;
 
@@ -61,17 +64,19 @@ class GameClient {
   static Future<GameClient> connect(
     Uri uri, {
     required String playerName,
+    String skin = Player.defaultSkin,
     Duration timeout = const Duration(seconds: 8),
   }) async {
-    final client = GameClient._(uri, playerName);
+    final client = GameClient._(uri, playerName, skin);
     await client._open(timeout);
     return client;
   }
 
   /// Convenience for phone-hosted rooms.
   static Future<GameClient> connectLocal(String host, int port,
-          {required String playerName}) =>
-      connect(Uri.parse('ws://$host:$port/'), playerName: playerName);
+          {required String playerName, String skin = Player.defaultSkin}) =>
+      connect(Uri.parse('ws://$host:$port/'),
+          playerName: playerName, skin: skin);
 
   Future<void> _open(Duration timeout) async {
     final socket = await WebSocket.connect(uri.toString()).timeout(timeout);
@@ -84,6 +89,7 @@ class GameClient {
     _send({
       't': Msg.join,
       'name': playerName,
+      'skin': skin,
       if (resumeToken != null) 'token': resumeToken,
     });
   }
@@ -164,6 +170,23 @@ class GameClient {
   void setMode(GameMode m) => _send({'t': Msg.mode, 'v': m.name});
   void setStage(String id) => _send({'t': Msg.stage, 'v': id});
   void start() => _send({'t': Msg.start});
+
+  /// Changes this player's cosmetic look (lobby or mid-match; the world
+  /// picks it up at the next match start).
+  void setSkin(String value) {
+    skin = value;
+    _send({'t': Msg.skin, 'v': value});
+  }
+
+  /// Host only, in the lobby: adds a bot seat. The server answers with an
+  /// `error` message when the room is full.
+  void addBot({BotSkill skill = BotSkill.normal}) =>
+      _send({'t': Msg.addBot, 'skill': skill.name});
+
+  /// Host only, in the lobby: removes the bot with lobby id [id], or the
+  /// most recently added bot.
+  void removeBot([int? id]) =>
+      _send({'t': Msg.removeBot, if (id != null) 'id': id});
 
   /// Call once per simulation tick (30 Hz) while playing. The input is
   /// predicted locally and sent with its sequence number; the server consumes

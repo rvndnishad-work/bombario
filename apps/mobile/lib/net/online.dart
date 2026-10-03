@@ -61,13 +61,94 @@ class OnlineServer {
     return u.replace(scheme: u.scheme == 'https' ? 'wss' : 'ws');
   }
 
+  /// Puts this player in a quick-match room of [mode] (`coop` or
+  /// `versus`) and returns its code. The server fills empty seats with bots
+  /// if nobody else turns up.
+  static Future<String> quickMatch(Uri base, String mode) async {
+    final (status, body) = await _call(
+      'POST',
+      base.resolve('quickmatch'),
+      body: {'mode': mode},
+    );
+    if (status != HttpStatus.ok && status != HttpStatus.created) {
+      throw OnlineException('Quick match is unavailable ($status)');
+    }
+    return body['code'] as String;
+  }
+
+  /// Submits a time to [board]; returns the rank it reached.
+  static Future<int> submitScore(
+    Uri base, {
+    required String board,
+    required String name,
+    required int timeMs,
+    int players = 1,
+  }) async {
+    final (status, body) = await _call(
+      'POST',
+      base.resolve('scores'),
+      body: {
+        'board': board,
+        'name': name,
+        'timeMs': timeMs,
+        'players': players,
+      },
+    );
+    if (status == HttpStatus.tooManyRequests) {
+      throw OnlineException('Too many scores sent. Try again in a minute');
+    }
+    if (status != HttpStatus.ok && status != HttpStatus.created) {
+      throw OnlineException('Score not accepted ($status)');
+    }
+    return (body['rank'] as num).toInt();
+  }
+
+  /// The fastest times on [board], best first.
+  static Future<List<LeaderboardEntry>> leaderboard(
+    Uri base,
+    String board, {
+    int limit = 20,
+  }) async {
+    final (status, body) = await _call(
+      'GET',
+      base.resolve('leaderboards/$board?limit=$limit'),
+    );
+    if (status == HttpStatus.notFound) return const [];
+    if (status != HttpStatus.ok) {
+      throw OnlineException('Leaderboard unavailable ($status)');
+    }
+    return [
+      for (final e in (body['entries'] as List? ?? const []))
+        LeaderboardEntry.fromJson(e as Map<String, dynamic>),
+    ];
+  }
+
+  /// Fire-and-forget upload of analytics events; true when accepted.
+  static Future<bool> sendEvents(
+    Uri base,
+    List<Map<String, Object?>> events,
+  ) async {
+    final (status, _) = await _call(
+      'POST',
+      base.resolve('events'),
+      body: {'events': events},
+    );
+    return status >= 200 && status < 300;
+  }
+
   static Future<(int, Map<String, dynamic>)> _call(
     String method,
-    Uri uri,
-  ) async {
+    Uri uri, {
+    Map<String, Object?>? body,
+  }) async {
+    final payload = body;
     final client = HttpClient()..connectionTimeout = const Duration(seconds: 8);
     try {
       final req = await client.openUrl(method, uri);
+      if (payload != null) {
+        req.headers.contentType = ContentType.json;
+        req.write(jsonEncode(payload));
+      }
       final res = await req.close().timeout(const Duration(seconds: 8));
       final text = await res.transform(utf8.decoder).join();
       Map<String, dynamic> body;
@@ -83,6 +164,35 @@ class OnlineServer {
       client.close(force: true);
     }
   }
+}
+
+class LeaderboardEntry {
+  const LeaderboardEntry({
+    required this.rank,
+    required this.name,
+    required this.timeMs,
+    this.players = 1,
+  });
+
+  factory LeaderboardEntry.fromJson(Map<String, dynamic> j) => LeaderboardEntry(
+    rank: (j['rank'] as num).toInt(),
+    name: j['name'] as String,
+    timeMs: (j['timeMs'] as num).toInt(),
+    players: (j['players'] as num?)?.toInt() ?? 1,
+  );
+
+  final int rank;
+  final String name;
+  final int timeMs;
+  final int players;
+}
+
+/// `1:23.4` from milliseconds.
+String formatTime(int ms) {
+  final tenths = (ms ~/ 100) % 10;
+  final s = (ms ~/ 1000) % 60;
+  final m = ms ~/ 60000;
+  return '$m:${s.toString().padLeft(2, '0')}.$tenths';
 }
 
 class OnlineException implements Exception {

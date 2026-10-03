@@ -4,6 +4,7 @@ import 'dart:ui';
 import 'package:bombario_core/bombario_core.dart' as core;
 import 'package:flame/components.dart';
 
+import '../progress/cosmetics.dart';
 import 'sprite_atlas.dart';
 
 /// Draws a [core.WorldSnapshot] in immediate mode with the pixel-art sprites
@@ -574,6 +575,15 @@ class WorldRenderer extends PositionComponent {
         body,
         paint: blink ? SpriteAtlas.faded(0.35) : null,
       );
+      final hat = Cosmetics.spriteFor(p.skin);
+      if (hat != null) {
+        atlas.draw(
+          canvas,
+          hat,
+          body,
+          paint: blink ? SpriteAtlas.faded(0.35) : null,
+        );
+      }
       if (p.frozen) canvas.drawRect(body.deflate(2), _iceOverlay);
       if (p.cursedFor > 0) {
         // Reversed controls: an orb circles the cursed player's head.

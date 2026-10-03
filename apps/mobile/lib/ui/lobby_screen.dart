@@ -5,7 +5,7 @@ import 'package:flutter/services.dart';
 
 import '../net/room_session.dart';
 import 'kit/pixel_theme.dart';
-import 'kit/sprite_icon.dart';
+import 'locker_screen.dart';
 import 'network_game_screen.dart';
 import 'player_name.dart';
 
@@ -35,7 +35,10 @@ class _LobbyScreenState extends State<LobbyScreen> {
     if (s != null) {
       _bind(s);
     } else {
-      RoomSession.host(playerName: PlayerName.current).then(
+      RoomSession.host(
+        playerName: PlayerName.current,
+        skin: currentSkin(context),
+      ).then(
         _bind,
         onError: (Object e) {
           if (mounted) setState(() => _startError = '$e');
@@ -148,7 +151,11 @@ class _LobbyScreenState extends State<LobbyScreen> {
                               ),
                             ),
                             child: ListTile(
-                              leading: SpriteIcon('p${i % 4 + 1}', size: 40),
+                              leading: PlayerPreview(
+                                skin: p.skin,
+                                look: i % 4 + 1,
+                                size: 40,
+                              ),
                               title: Text(
                                 p.id == s.clientId ? '${p.name} (you)' : p.name,
                                 style: Px.label(15),
@@ -159,7 +166,27 @@ class _LobbyScreenState extends State<LobbyScreen> {
                                       'reconnecting…',
                                       style: Px.label(12, color: Px.blast),
                                     ),
-                              trailing: p.isHost
+                              trailing: p.bot
+                                  ? Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Text(
+                                          'BOT',
+                                          style: Px.label(12, color: Px.muted),
+                                        ),
+                                        if (s.isHost && !s.lobby.quick)
+                                          IconButton(
+                                            key: Key('remove-bot-${p.id}'),
+                                            tooltip: 'Remove bot',
+                                            icon: const Icon(
+                                              Icons.close,
+                                              size: 18,
+                                            ),
+                                            onPressed: () => s.removeBot(p.id),
+                                          ),
+                                      ],
+                                    )
+                                  : p.isHost
                                   ? Text(
                                       'HOST',
                                       style: Px.label(12, color: Px.fuse),
@@ -181,15 +208,26 @@ class _LobbyScreenState extends State<LobbyScreen> {
                             ),
                           ),
                         if (s.lobby.players.length < 4)
-                          const ListTile(
-                            leading: Icon(
+                          ListTile(
+                            leading: const Icon(
                               Icons.hourglass_empty,
                               color: Colors.white38,
                             ),
                             title: Text(
-                              'Waiting for players…',
-                              style: TextStyle(color: Colors.white38),
+                              s.lobby.startsIn != null
+                                  ? 'Bots fill empty seats in '
+                                        '${s.lobby.startsIn} s'
+                                  : 'Waiting for players…',
+                              style: const TextStyle(color: Colors.white38),
                             ),
+                            trailing: s.isHost && !s.lobby.quick
+                                ? OutlinedButton.icon(
+                                    key: const Key('add-bot'),
+                                    icon: const Icon(Icons.smart_toy, size: 18),
+                                    label: const Text('Add bot'),
+                                    onPressed: () => s.addBot(),
+                                  )
+                                : null,
                           ),
                       ],
                     ),
@@ -215,13 +253,13 @@ class _LobbyScreenState extends State<LobbyScreen> {
                               ),
                             ],
                             selected: {s.mode},
-                            onSelectionChanged: s.isHost
+                            onSelectionChanged: s.isHost && !s.lobby.quick
                                 ? (v) => s.setMode(v.first)
                                 : null,
                           ),
                           const SizedBox(height: 8),
                           if (s.mode == GameMode.coop) ...[
-                            if (s.isHost)
+                            if (s.isHost && !s.lobby.quick)
                               DropdownButton<String>(
                                 key: const Key('stage-picker'),
                                 isExpanded: true,
@@ -262,7 +300,11 @@ class _LobbyScreenState extends State<LobbyScreen> {
                           if (s.isHost)
                             FilledButton.icon(
                               icon: const Icon(Icons.play_arrow),
-                              label: const Text('Start'),
+                              label: Text(
+                                s.lobby.quick && s.lobby.startsIn != null
+                                    ? 'Start now'
+                                    : 'Start',
+                              ),
                               onPressed: s.lobby.everyoneReady ? s.start : null,
                             )
                           else

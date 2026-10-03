@@ -7,7 +7,9 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 
 import '../audio/game_audio.dart';
+import '../net/analytics.dart';
 import '../progress/achievements.dart';
+import '../progress/cosmetics.dart';
 import '../settings/settings.dart';
 import 'game_hud.dart';
 import 'input_controller.dart';
@@ -28,13 +30,21 @@ abstract final class Overlays {
 /// The simulation lives entirely in `bombario_core`; this class only steps it at
 /// a fixed 30 Hz, feeds it input, moves the camera and reacts to events.
 class BlastGame extends FlameGame {
-  BlastGame({int seed = 1, AppSettings? settings, Achievements? achievements})
-    : _seed = seed,
-      settings = settings ?? AppSettings.memory(),
-      achievements = achievements ?? Achievements.memory();
+  BlastGame({
+    int seed = 1,
+    this.daily,
+    AppSettings? settings,
+    Achievements? achievements,
+  }) : _seed = seed,
+       settings = settings ?? AppSettings.memory(),
+       achievements = achievements ?? Achievements.memory();
 
   final AppSettings settings;
   final Achievements achievements;
+
+  /// Set when playing the Daily Dungeon instead of the campaign: one stage,
+  /// the day's seed, timed for the leaderboard.
+  final core.DailyDungeon? daily;
 
   static const double tileSize = 32;
   static const int startingLives = 3;
@@ -53,8 +63,14 @@ class BlastGame extends FlameGame {
   int stageIndex = 0;
   int lives = startingLives;
 
-  core.StageDef get stage => core.Campaign.stages[stageIndex];
-  bool get isLastStage => stageIndex == core.Campaign.stages.length - 1;
+  core.StageDef get stage => daily?.stage ?? core.Campaign.stages[stageIndex];
+  bool get isLastStage =>
+      daily != null || stageIndex == core.Campaign.stages.length - 1;
+
+  /// Simulation time spent on this stage, deaths included: the Daily
+  /// Dungeon's leaderboard time.
+  int get stageTimeMs => (_ticks * core.World.tickDt * 1000).round();
+  int _ticks = 0;
 
   late core.World sim;
   late core.Player player;
@@ -82,7 +98,7 @@ class BlastGame extends FlameGame {
 
   void _startStage() {
     final def = stage;
-    final seed = _seed + stageIndex;
+    final seed = daily?.seed ?? _seed + stageIndex;
     final level = def.level(seed: seed, players: 1);
     final carryOver = _hasPlayer ? _playerStats() : null;
     sim = core.World(
@@ -94,13 +110,23 @@ class BlastGame extends FlameGame {
       ..clear()
       ..show(
         GameMessage(
-          title: 'Stage ${def.id}: ${def.name}',
+          title: daily != null
+              ? 'Daily Dungeon: ${def.name}'
+              : 'Stage ${def.id}: ${def.name}',
           body: def.tip,
           sprite: 'p1',
         ),
       );
-    player = sim.addPlayer(name: 'You');
+    player = sim.addPlayer(
+      name: 'You',
+      skin: Cosmetics.equipped(settings.skin, achievements),
+    );
     achievements.startStage();
+    _ticks = 0;
+    Analytics.instance.log('stage_start', {
+      'stage': def.id,
+      if (daily != null) 'mode': 'daily',
+    });
     _hurry = false;
     GameAudio.instance.playMusic(def.world);
     _hasPlayer = true;
@@ -129,7 +155,7 @@ class BlastGame extends FlameGame {
     hud.updateFrom(
       snap,
       myId: player.id,
-      stage: stage.id,
+      stage: daily != null ? 'Daily' : stage.id,
       lives: lives,
       showPlayers: false,
     );
@@ -192,6 +218,7 @@ class BlastGame extends FlameGame {
     while (_accumulator >= core.World.tickDt) {
       _accumulator -= core.World.tickDt;
       sim.tick({player.id: input.consume()});
+      if (!sim.cleared) _ticks++;
       _handleEvents();
       _announce(
         achievements.recordEvents(
@@ -211,6 +238,11 @@ class BlastGame extends FlameGame {
           sim.respawn(player);
           sim.clearFailure();
         } else if (!overlays.isActive(Overlays.gameOver)) {
+          Analytics.instance.log('game_over', {
+            'stage': stage.id,
+            'score': player.score,
+            if (daily != null) 'mode': 'daily',
+          });
           GameAudio.instance
             ..stopMusic()
             ..play(Sfx.gameOver);
@@ -293,6 +325,12 @@ class BlastGame extends FlameGame {
             ),
           );
         case core.StageCleared():
+          Analytics.instance.log('stage_clear', {
+            'stage': stage.id,
+            'timeMs': stageTimeMs,
+            'lives': lives,
+            if (daily != null) 'mode': 'daily',
+          });
           audio
             ..stopMusic()
             ..play(Sfx.stageClear);
@@ -343,6 +381,7 @@ class BlastGame extends FlameGame {
     stageIndex = 0;
     _hasPlayer = false;
     lives = startingLives;
+    // The daily keeps its seed: everyone races the same dungeon.
     _seed = _shakeRng.nextInt(1 << 30);
     _startStage();
   }

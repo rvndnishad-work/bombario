@@ -2,8 +2,12 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 
-/// The display name used in rooms. Kept in memory for the app's lifetime;
-/// accounts and persistence arrive with online play.
+import '../progress/achievements.dart';
+import '../progress/cosmetics.dart';
+import '../settings/settings.dart';
+
+/// The display name used in rooms and on leaderboards. `main` saves it in
+/// the settings so it survives restarts.
 class PlayerName {
   static final ValueNotifier<String> value = ValueNotifier(
     'Player ${Random().nextInt(900) + 100}',
@@ -46,3 +50,9 @@ class _PlayerNameFieldState extends State<PlayerNameField> {
     );
   }
 }
+
+/// The hat this player wears into rooms: their locker pick if unlocked.
+String currentSkin(BuildContext context) => Cosmetics.equipped(
+  Settings.read(context).skin,
+  AchievementsScope.read(context),
+);

@@ -38,6 +38,7 @@ class _JoinScreenState extends State<JoinScreen> {
         host: host,
         port: port,
         playerName: PlayerName.current,
+        skin: currentSkin(context),
       );
       if (!mounted) return;
       await Navigator.of(context).pushReplacement(

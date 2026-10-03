@@ -80,6 +80,13 @@ class SettingsScreen extends StatelessWidget {
               display: '${(s.soloSpeed * 100).round()}%',
               onChanged: (v) => s.update((s) => s.soloSpeed = v),
             ),
+            const _Header('Privacy'),
+            _SwitchRow(
+              key: const Key('share-analytics'),
+              label: 'Share anonymous play stats',
+              value: s.shareAnalytics,
+              onChanged: (v) => s.update((s) => s.shareAnalytics = v),
+            ),
             const SizedBox(height: 8),
             Text(
               'Players are told apart by hat as well as colour, so every '

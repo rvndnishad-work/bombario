@@ -79,9 +79,16 @@ class Player extends Entity {
     required super.x,
     required super.y,
     this.name = '',
+    this.skin = defaultSkin,
   });
 
   final String name;
+
+  /// Cosmetic look picked in the app. The rules never read it; the room sets
+  /// it at match start and snapshots carry it to every client.
+  String skin;
+
+  static const String defaultSkin = 'classic';
 
   bool alive = true;
   Direction facing = Direction.down;
