@@ -55,6 +55,9 @@ class BlastGame extends FlameGame {
 
   /// A life for every this many points, paid when a stage is cleared.
   static const int pointsPerLife = 10000;
+
+  /// Ad lives one run may claim; after that Game Over means starting over.
+  static const int maxAdLives = 2;
   static const double respawnDelay = 1.5;
 
   /// The board waits behind a "Stage N" card this long before play starts,
@@ -106,6 +109,9 @@ class BlastGame extends FlameGame {
 
   /// Lives the last cleared stage paid for points, for the results card.
   int livesForPoints = 0;
+
+  /// Lives claimed by watching ads this run (see [maxAdLives]).
+  int adLivesUsed = 0;
 
   /// Adds up to [n] lives without passing [maxLives]; returns how many fit.
   int gainLives(int n) {
@@ -303,7 +309,8 @@ class BlastGame extends FlameGame {
 
     // Out of lives: the board freezes, but the respawn timer below still has
     // to run so the game-over menu appears.
-    final outOfLives = sim.failed && lives == 0;
+    final outOfLives =
+        (sim.failed && lives == 0) || overlays.isActive(Overlays.gameOver);
 
     // Fixed-step simulation so the rules behave identically everywhere.
     _accumulator += math.min(dt, 0.25) * settings.soloSpeed;
@@ -660,14 +667,22 @@ class BlastGame extends FlameGame {
   }
 
   /// Whether the game-over card may offer a life for watching an ad: not
-  /// in the Daily Dungeon, where everyone races on the same terms.
-  bool get canContinue => daily == null && lives == 0;
+  /// in the Daily Dungeon, where everyone races on the same terms, and at
+  /// most [maxAdLives] times a run.
+  bool get canContinue =>
+      daily == null && lives == 0 && adLivesUsed < maxAdLives;
+
+  /// Whether this run has used up its ad lives (the card says so).
+  bool get adLivesSpent => daily == null && adLivesUsed >= maxAdLives;
 
   /// Back into the stage where it was lost, with one life (the ad reward).
   void continueWithExtraLife() {
     if (!canContinue) return;
+    adLivesUsed++;
     lives = 1;
     overlays.remove(Overlays.gameOver);
+    // The ad took the app to the background; make sure the board runs.
+    if (paused && !overlays.isActive(Overlays.pause)) resumeEngine();
     sim.respawn(player);
     sim.clearFailure();
     _respawnTimer = 0;
@@ -700,6 +715,7 @@ class BlastGame extends FlameGame {
     lives = startingLives;
     _nextLifeAt = pointsPerLife;
     livesForPoints = 0;
+    adLivesUsed = 0;
     // The daily keeps its seed: everyone races the same dungeon.
     _seed = _shakeRng.nextInt(1 << 30);
     _startStage();

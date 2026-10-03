@@ -143,29 +143,29 @@ class _GameScreenState extends State<GameScreen> {
                                     ),
                                   ],
                                 ),
-                          Overlays.gameOver: (context, BlastGame game) =>
-                              MenuCard(
-                                border: const Color(0xFFFF4B4B),
-                                title: 'Game over',
-                                subtitle: game.daily != null
-                                    ? 'Out of lives. Try the dungeon again?'
-                                    : 'Reached stage ${game.stage.id} with '
-                                          '${game.player.score} points',
-                                actions: [
-                                  OutlinedButton(
-                                    onPressed: () =>
-                                        Navigator.of(context).pop(),
-                                    child: const Text('Home'),
-                                  ),
-                                  if (game.canContinue &&
-                                      RewardedAds.instance.supported)
-                                    ExtraLifeButton(game: game),
-                                  FilledButton(
-                                    onPressed: game.restart,
-                                    child: const Text('Try again'),
-                                  ),
-                                ],
+                          Overlays
+                              .gameOver: (context, BlastGame game) => MenuCard(
+                            border: const Color(0xFFFF4B4B),
+                            title: 'Game over',
+                            subtitle: game.daily != null
+                                ? 'Out of lives. Try the dungeon again?'
+                                : 'Reached stage ${game.stage.id} with '
+                                      '${game.player.score} points'
+                                      '${game.adLivesSpent && RewardedAds.instance.supported ? '\nNo ad lives left. Start again from 1-1.' : ''}',
+                            actions: [
+                              OutlinedButton(
+                                onPressed: () => Navigator.of(context).pop(),
+                                child: const Text('Home'),
                               ),
+                              if (game.canContinue &&
+                                  RewardedAds.instance.supported)
+                                ExtraLifeButton(game: game),
+                              FilledButton(
+                                onPressed: game.restart,
+                                child: const Text('Try again'),
+                              ),
+                            ],
+                          ),
                         },
                       ),
                     ),
@@ -204,11 +204,14 @@ class _ExtraLifeButtonState extends State<ExtraLifeButton> {
     });
     GameAudio.instance.pauseMusic();
     final rewarded = await RewardedAds.instance.showForReward();
-    if (!mounted) return;
+    // The card may have been rebuilt while the ad covered the app (the
+    // activity can rotate or resize), so the reward goes to the game
+    // whether or not this button is still mounted.
     if (rewarded) {
       widget.game.continueWithExtraLife();
       return;
     }
+    if (!mounted) return;
     setState(() {
       _busy = false;
       _note = 'No ad right now. Try again in a moment.';

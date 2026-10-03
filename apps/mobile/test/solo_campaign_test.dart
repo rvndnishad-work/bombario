@@ -148,6 +148,15 @@ void main() {
     expect(game.player.alive, isTrue);
     expect(game.stage.id, '1-1');
     expect(ads.shown, 2);
+    expect(game.adLivesUsed, 1);
+    // A run gets two ad lives; after that Game Over means starting over.
+    game.adLivesUsed = BlastGame.maxAdLives;
+    game.lives = 0;
+    expect(game.canContinue, isFalse);
+    expect(game.adLivesSpent, isTrue);
+    game.restart();
+    expect(game.adLivesUsed, 0);
+    expect(game.stage.id, '1-1');
     // Clear the enemy we dropped on the spawn before time moves on.
     for (final e in game.sim.enemies) {
       e.alive = false;

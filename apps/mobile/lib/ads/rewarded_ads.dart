@@ -101,12 +101,20 @@ class AdMobRewardedAds implements RewardedAds {
     if (ad == null) return false;
     _ready = null;
     final result = Completer<bool>();
-    var earned = false;
+    final earned = Completer<void>();
     ad.fullScreenContentCallback = FullScreenContentCallback(
-      onAdDismissedFullScreenContent: (ad) {
+      onAdDismissedFullScreenContent: (ad) async {
         ad.dispose();
-        if (!result.isCompleted) result.complete(earned);
         unawaited(_load());
+        // The reward event can land just after the dismissal, so give it a
+        // moment before calling the ad unwatched.
+        final got = await earned.future
+            .then((_) => true)
+            .timeout(
+              const Duration(milliseconds: 1500),
+              onTimeout: () => false,
+            );
+        if (!result.isCompleted) result.complete(got);
       },
       onAdFailedToShowFullScreenContent: (ad, error) {
         debugPrint('RewardedAds: show failed: $error');
@@ -115,7 +123,11 @@ class AdMobRewardedAds implements RewardedAds {
         unawaited(_load());
       },
     );
-    await ad.show(onUserEarnedReward: (_, _) => earned = true);
+    await ad.show(
+      onUserEarnedReward: (_, _) {
+        if (!earned.isCompleted) earned.complete();
+      },
+    );
     return result.future;
   }
 }
