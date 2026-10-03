@@ -18,6 +18,7 @@ void main() {
     await tester.pump(const Duration(milliseconds: 50));
     final state = tester.state(find.byType(GameScreen));
     final game = (state as dynamic).game as BlastGame;
+    game.skipIntro();
 
     await tester.sendKeyDownEvent(LogicalKeyboardKey.arrowRight);
     expect(game.input.held, Direction.right);

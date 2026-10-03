@@ -4,10 +4,11 @@ import 'package:flame/components.dart';
 
 /// The classic top-down Bomberman camera, shared by solo and room play.
 ///
-/// Like the original, every row of the maze is on screen and the camera
-/// scrolls sideways only; a maze narrower than the screen sits centred. On a
-/// tall (portrait) screen the zoom is capped so at least [minColumns] fit
-/// across, and the board scrolls vertically too. The camera eases after the
+/// The board always covers the whole screen. Like the original, a standard
+/// 31 x 13 maze shows every row and scrolls sideways only; a maze too narrow
+/// to fill the width at that size is zoomed until it does, and scrolls a
+/// little vertically instead. On a tall (portrait) screen the zoom is capped
+/// so at least [minColumns] fit across. The camera eases after the
 /// player with a small dead zone, so it doesn't jitter on every step, and
 /// stops at the maze walls.
 class FollowCamera {
@@ -31,8 +32,9 @@ class FollowCamera {
     double tileSize,
   ) {
     final fitHeight = view.y / (gridHeight * tileSize);
+    final fitWidth = view.x / (gridWidth * tileSize);
     final keepColumns = view.x / (math.min(gridWidth, minColumns) * tileSize);
-    return math.min(fitHeight, keepColumns);
+    return math.min(math.max(fitHeight, fitWidth), keepColumns);
   }
 
   /// Jumps straight to the next target instead of easing (new stage).
