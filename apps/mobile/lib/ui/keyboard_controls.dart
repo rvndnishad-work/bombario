@@ -62,7 +62,21 @@ class _KeyboardControlsState extends State<KeyboardControls> {
   /// or not at all, and the arrow keys feel dead.
   static const _minPress = Duration(milliseconds: 160);
 
+  /// Some keyboards (the Android emulator's, notably) send a held key as a
+  /// burst of instant press+release pairs: one at once, then auto-repeats
+  /// after the host's repeat delay (half a second by default). A release
+  /// this soon after its press is one of those, not a finger lifting.
+  static const _instant = Duration(milliseconds: 60);
+
+  /// How long to keep walking after an instant pair: long enough to bridge
+  /// the repeat delay after the first one, and the short repeat interval
+  /// after that, so a held key walks without the stop-start hitch.
+  static const _bridgeFirst = Duration(milliseconds: 600);
+  static const _bridgeRepeat = Duration(milliseconds: 150);
+
   final Map<LogicalKeyboardKey, DateTime> _downAt = {};
+  final Map<LogicalKeyboardKey, DateTime> _upAt = {};
+  final Set<LogicalKeyboardKey> _repeating = {};
   final Map<LogicalKeyboardKey, Timer> _lateRelease = {};
 
   @override
@@ -109,14 +123,29 @@ class _KeyboardControlsState extends State<KeyboardControls> {
     if (KeyboardControls.directions.containsKey(key)) {
       if (event is KeyDownEvent) {
         _lateRelease.remove(key)?.cancel();
-        _downAt[key] = DateTime.now();
+        final now = DateTime.now();
+        // Pressed again right after an instant release: an auto-repeat.
+        final lastUp = _upAt[key];
+        if (lastUp != null && now.difference(lastUp) < _bridgeFirst) {
+          _repeating.add(key);
+        } else {
+          _repeating.remove(key);
+        }
+        _downAt[key] = now;
         _held
           ..remove(key)
           ..add(key);
         _steer();
       } else if (event is KeyUpEvent) {
-        final heldFor = DateTime.now().difference(_downAt[key] ?? DateTime(0));
-        if (heldFor < _minPress) {
+        final now = DateTime.now();
+        final heldFor = now.difference(_downAt[key] ?? DateTime(0));
+        _upAt[key] = now;
+        if (heldFor < _instant) {
+          final bridge = _repeating.contains(key)
+              ? _bridgeRepeat
+              : _bridgeFirst;
+          _lateRelease[key] = Timer(bridge, () => _letGo(key));
+        } else if (heldFor < _minPress) {
           _lateRelease[key] = Timer(_minPress - heldFor, () => _letGo(key));
         } else {
           _letGo(key);
