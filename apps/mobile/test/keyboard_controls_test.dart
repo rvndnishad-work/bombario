@@ -24,22 +24,29 @@ void main() {
     // A second arrow takes over; letting it go falls back to the first.
     await tester.sendKeyDownEvent(LogicalKeyboardKey.arrowDown);
     expect(game.input.held, Direction.down);
-    // An instant release (how the emulator sends a held key) keeps walking
-    // through the keyboard's auto-repeat delay.
     await tester.sendKeyUpEvent(LogicalKeyboardKey.arrowDown);
-    await tester.pump(const Duration(milliseconds: 500));
-    expect(game.input.held, Direction.down);
-    await tester.pump(const Duration(milliseconds: 200));
     expect(game.input.held, Direction.right);
     await tester.sendKeyUpEvent(LogicalKeyboardKey.arrowRight);
-    await tester.pump(const Duration(milliseconds: 700));
     expect(game.input.held, Direction.none);
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(game.input.moving, Direction.none);
+
+    // A quick tap nudges the player a short step, not a whole tile.
+    final before = game.sim.players.single.x;
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowLeft);
+    expect(game.input.moving, Direction.left);
+    await tester.pump(const Duration(milliseconds: 300));
+    final stepped = before - game.sim.players.single.x;
+    expect(stepped, greaterThan(0.05));
+    expect(stepped, lessThan(0.4));
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(before - game.sim.players.single.x, stepped);
 
     // Held on the emulator: a pair, the repeat delay, then a stream of
-    // pairs. The player walks the whole time and stops soon after the last.
+    // pairs. The player walks through the repeats and stops soon after
+    // the last.
     await tester.sendKeyEvent(LogicalKeyboardKey.arrowLeft);
     await tester.pump(const Duration(milliseconds: 500));
-    expect(game.input.held, Direction.left);
     for (var i = 0; i < 5; i++) {
       await tester.sendKeyEvent(LogicalKeyboardKey.arrowLeft);
       await tester.pump(const Duration(milliseconds: 33));
