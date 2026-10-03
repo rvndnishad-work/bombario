@@ -5,9 +5,10 @@ import 'package:flutter/material.dart';
 import 'game_screen.dart';
 import 'join_screen.dart';
 import 'lobby_screen.dart';
+import 'online_screen.dart';
 import 'player_name.dart';
 
-/// Title screen: solo, host a local room, or join one.
+/// Title screen: solo, online rooms, or a room on the local Wi-Fi.
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
 
@@ -22,7 +23,7 @@ class HomeScreen extends StatelessWidget {
             Text('Bombario', style: Theme.of(context).textTheme.displaySmall),
             const SizedBox(height: 4),
             const Text(
-              'Phase 1 prototype: local Wi-Fi rooms',
+              'Phase 2 prototype: online and Wi-Fi rooms',
               style: TextStyle(color: Colors.white54),
             ),
             const SizedBox(height: 24),
@@ -43,16 +44,23 @@ class HomeScreen extends StatelessWidget {
                     ),
                   ),
                 ),
+                FilledButton.icon(
+                  icon: const Icon(Icons.public),
+                  label: const Text('Online'),
+                  onPressed: () => Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const OnlineScreen()),
+                  ),
+                ),
                 FilledButton.tonalIcon(
                   icon: const Icon(Icons.wifi_tethering),
-                  label: const Text('Host room'),
+                  label: const Text('Host Wi-Fi room'),
                   onPressed: () => Navigator.of(context).push(
                     MaterialPageRoute(builder: (_) => const LobbyScreen.host()),
                   ),
                 ),
                 FilledButton.tonalIcon(
                   icon: const Icon(Icons.login),
-                  label: const Text('Join room'),
+                  label: const Text('Join Wi-Fi room'),
                   onPressed: () => Navigator.of(
                     context,
                   ).push(MaterialPageRoute(builder: (_) => const JoinScreen())),
@@ -61,7 +69,7 @@ class HomeScreen extends StatelessWidget {
             ),
             const SizedBox(height: 12),
             const Text(
-              'Host and joiners must be on the same Wi-Fi or hotspot.',
+              'Wi-Fi rooms need everyone on the same Wi-Fi or hotspot.',
               style: TextStyle(color: Colors.white38, fontSize: 12),
             ),
           ],

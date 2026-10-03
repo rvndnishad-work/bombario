@@ -92,23 +92,24 @@ class _LobbyScreenState extends State<LobbyScreen> {
         ),
       );
     }
-    final me = s.lobby.players
-        .where((p) => p.name == PlayerName.current)
-        .firstOrNull;
+    final me = s.lobby.players.where((p) => p.id == s.clientId).firstOrNull;
     final disconnected = s.phase == SessionPhase.disconnected;
+    final share = s.online ? s.code : s.hostAddress;
     return Scaffold(
       appBar: AppBar(
         title: Text(s.code == null ? 'Room' : 'Room ${s.code}'),
         actions: [
-          if (s.hostAddress != null)
+          if (share != null)
             TextButton.icon(
               icon: const Icon(Icons.copy, size: 16),
-              label: Text(s.hostAddress!),
+              label: Text(share),
               onPressed: () {
-                Clipboard.setData(ClipboardData(text: s.hostAddress!));
-                ScaffoldMessenger.of(
-                  context,
-                ).showSnackBar(const SnackBar(content: Text('Address copied')));
+                Clipboard.setData(ClipboardData(text: share));
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(s.online ? 'Code copied' : 'Address copied'),
+                  ),
+                );
               },
             ),
         ],
@@ -116,6 +117,17 @@ class _LobbyScreenState extends State<LobbyScreen> {
       body: SafeArea(
         child: disconnected
             ? const Center(child: Text('Disconnected from the room'))
+            : s.phase == SessionPhase.reconnecting
+            ? const Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    CircularProgressIndicator(),
+                    SizedBox(height: 12),
+                    Text('Connection lost, reconnecting…'),
+                  ],
+                ),
+              )
             : Row(
                 children: [
                   Expanded(
@@ -126,6 +138,12 @@ class _LobbyScreenState extends State<LobbyScreen> {
                           ListTile(
                             leading: Icon(p.isHost ? Icons.star : Icons.person),
                             title: Text(p.name),
+                            subtitle: p.connected
+                                ? null
+                                : const Text(
+                                    'reconnecting…',
+                                    style: TextStyle(color: Colors.orange),
+                                  ),
                             trailing: p.isHost
                                 ? const Text('Host')
                                 : Icon(

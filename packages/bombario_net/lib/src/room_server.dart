@@ -2,315 +2,179 @@ import 'dart:async';
 import 'dart:io';
 import 'dart:math';
 
-import 'package:bombario_core/bombario_core.dart';
-
 import 'protocol.dart';
+import 'room.dart';
 
-/// A WebSocket server hosting one [Room].
+/// HTTP + WebSocket front for one or many [Room]s.
 ///
-/// `await RoomServer.start()` binds a port (0 picks a free one); clients
-/// connect to `ws://<host>:<port>/` and send a `join`. The first player to
-/// join is the host and controls mode and start. For local Wi-Fi play the
-/// hosting phone runs this in-process and joins its own room over loopback.
+/// Routes:
+/// - `GET /health` → `ok`
+/// - `POST /rooms` → `{"code": "K7QX4M"}` creates a room (online play)
+/// - `GET /rooms/<code>` → `{"code", "players", "state"}`
+/// - WebSocket at `/rooms/<code>` → join that room
+/// - WebSocket at `/` → join the default room (local Wi-Fi hosting, where
+///   the phone runs one room and friends connect by address)
+///
+/// The same binary runs in the cloud (`apps/server`) and inside the hosting
+/// phone; only the entry point differs.
 class RoomServer {
-  RoomServer._(this._http, this.room);
+  RoomServer._(this._http, this.hub, this.serveDefaultRoom);
 
   final HttpServer _http;
-  final Room room;
+  final RoomHub hub;
+
+  /// Whether `/` joins the default room. The cloud server turns this off so
+  /// every online room needs a code.
+  final bool serveDefaultRoom;
 
   int get port => _http.port;
   InternetAddress get address => _http.address;
+
+  /// The default room used by local Wi-Fi hosting.
+  Room get room => hub.defaultRoom;
 
   static Future<RoomServer> start({
     int port = 0,
     InternetAddress? address,
     int? seed,
     int maxPlayers = Room.defaultMaxPlayers,
+    Duration emptyRoomTtl = const Duration(minutes: 10),
+    bool serveDefaultRoom = true,
   }) async {
     final http =
         await HttpServer.bind(address ?? InternetAddress.anyIPv4, port);
-    final room = Room(seed: seed, maxPlayers: maxPlayers);
-    final server = RoomServer._(http, room);
-    http.listen((req) async {
-      if (!WebSocketTransformer.isUpgradeRequest(req)) {
-        req.response
-          ..statusCode = HttpStatus.upgradeRequired
-          ..write('Bombario room ${room.code}: connect with a WebSocket')
-          ..close();
-        return;
-      }
-      final socket = await WebSocketTransformer.upgrade(req);
-      room.accept(socket);
-    });
+    final hub =
+        RoomHub(seed: seed, maxPlayers: maxPlayers, emptyRoomTtl: emptyRoomTtl);
+    final server = RoomServer._(http, hub, serveDefaultRoom);
+    http.listen(server._handle);
     return server;
   }
 
+  Future<void> _handle(HttpRequest req) async {
+    final segments = req.uri.pathSegments;
+    try {
+      if (WebSocketTransformer.isUpgradeRequest(req)) {
+        final Room? room;
+        if (segments.isEmpty) {
+          room = serveDefaultRoom ? hub.defaultRoom : null;
+        } else if (segments.length == 2 && segments[0] == 'rooms') {
+          room = hub.byCode(segments[1]);
+        } else {
+          room = null;
+        }
+        if (room == null) {
+          req.response
+            ..statusCode = HttpStatus.notFound
+            ..write('No such room');
+          await req.response.close();
+          return;
+        }
+        final socket = await WebSocketTransformer.upgrade(req);
+        room.accept(socket);
+        return;
+      }
+
+      req.response.headers.contentType = ContentType.json;
+      if (req.method == 'GET' &&
+          segments.length == 1 &&
+          segments[0] == 'health') {
+        req.response.write('{"ok":true,"rooms":${hub.rooms.length}}');
+      } else if (req.method == 'POST' &&
+          segments.length == 1 &&
+          segments[0] == 'rooms') {
+        final room = hub.create();
+        req.response
+          ..statusCode = HttpStatus.created
+          ..write(encode({'code': room.code}));
+      } else if (req.method == 'GET' &&
+          segments.length == 2 &&
+          segments[0] == 'rooms') {
+        final room = hub.byCode(segments[1]);
+        if (room == null) {
+          req.response
+            ..statusCode = HttpStatus.notFound
+            ..write(encode({'error': 'No such room'}));
+        } else {
+          req.response.write(encode({
+            'code': room.code,
+            'players': room.clients.length,
+            'maxPlayers': room.maxPlayers,
+            'state': room.state.name,
+          }));
+        }
+      } else {
+        req.response
+          ..statusCode = HttpStatus.notFound
+          ..write(encode({'error': 'Not found'}));
+      }
+    } catch (e) {
+      req.response.statusCode = HttpStatus.internalServerError;
+    }
+    await req.response.close();
+  }
+
   Future<void> close() async {
-    await room.close();
+    await hub.close();
     await _http.close(force: true);
   }
 }
 
-/// A connected player in the lobby.
-class RoomClient {
-  RoomClient(this.id, this._socket);
-
-  final int id;
-  final WebSocket _socket;
-  String name = 'Player';
-  bool ready = false;
-  bool isHost = false;
-
-  /// World player id while a match runs.
-  int? playerId;
-
-  /// Latest held direction and any bomb/action presses since the last tick.
-  Direction held = Direction.none;
-  bool bombPressed = false;
-  bool actionPressed = false;
-
-  PlayerInput takeInput() {
-    final input = PlayerInput(
-      direction: held,
-      placeBomb: bombPressed,
-      action: actionPressed,
-    );
-    bombPressed = false;
-    actionPressed = false;
-    return input;
-  }
-
-  void send(Map<String, dynamic> message) {
-    if (_socket.readyState == WebSocket.open) _socket.add(encode(message));
-  }
-
-  LobbyPlayer get lobbyRow =>
-      LobbyPlayer(id: id, name: name, ready: ready, isHost: isHost);
-}
-
-enum RoomState { lobby, playing }
-
-/// Lobby plus match loop. Authoritative: clients only ever send inputs.
-class Room {
-  Room({int? seed, this.maxPlayers = defaultMaxPlayers})
-      : _rng = Random(seed),
-        code = _makeCode(Random(seed));
-
-  static const int defaultMaxPlayers = 4;
-
-  /// Snapshots go out every [snapshotEvery] ticks (15 Hz at a 30 Hz tick).
-  static const int snapshotEvery = 2;
+/// Owns rooms by code and retires rooms that stay empty.
+class RoomHub {
+  RoomHub({
+    int? seed,
+    this.maxPlayers = Room.defaultMaxPlayers,
+    this.emptyRoomTtl = const Duration(minutes: 10),
+  }) : _rng = Random(seed);
 
   final int maxPlayers;
-  final String code;
+  final Duration emptyRoomTtl;
   final Random _rng;
-  final List<RoomClient> clients = [];
+  final Map<String, Room> _rooms = {};
+  final Map<String, Timer> _expiry = {};
+  Room? _default;
 
-  GameMode mode = GameMode.versus;
-  RoomState state = RoomState.lobby;
-  World? world;
-  Timer? _ticker;
-  int _tick = 0;
-  int _nextClientId = 1;
+  Iterable<Room> get rooms => _rooms.values;
 
-  /// Fired when a match ends, after the `matchEnd` message went out.
-  final StreamController<World> _matchEnded = StreamController.broadcast();
-  Stream<World> get onMatchEnded => _matchEnded.stream;
+  /// The single room used when hosting on a phone. Never expires.
+  Room get defaultRoom => _default ??= create(expires: false);
 
-  // Room codes avoid letters that read like digits.
-  static const _codeAlphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-  static String _makeCode(Random rng) => List.generate(
-        6,
-        (_) => _codeAlphabet[rng.nextInt(_codeAlphabet.length)],
-      ).join();
+  Room? byCode(String code) => _rooms[code.toUpperCase()];
 
-  void accept(WebSocket socket) {
-    if (clients.length >= maxPlayers || state != RoomState.lobby) {
-      socket.add(encode({
-        't': Msg.error,
-        'm': state != RoomState.lobby ? 'Match in progress' : 'Room is full',
-      }));
-      socket.close();
-      return;
+  Room create({bool expires = true}) {
+    Room room;
+    do {
+      room = Room(seed: _rng.nextInt(1 << 30), maxPlayers: maxPlayers);
+    } while (_rooms.containsKey(room.code));
+    _rooms[room.code] = room;
+    if (expires) {
+      room.onEmpty = () => _scheduleExpiry(room);
+      room.onOccupied = () => _expiry.remove(room.code)?.cancel();
+      _scheduleExpiry(room);
     }
-    final client = RoomClient(_nextClientId++, socket);
-    client.isHost = clients.isEmpty;
-    clients.add(client);
-    client.send({
-      't': Msg.welcome,
-      'id': client.id,
-      'code': code,
-      'host': client.isHost,
-    });
-    _broadcastLobby();
-    socket.listen(
-      (frame) => _handle(client, decode(frame)),
-      onDone: () => _drop(client),
-      onError: (_) => _drop(client),
-    );
+    return room;
   }
 
-  void _handle(RoomClient client, Map<String, dynamic>? msg) {
-    if (msg == null) return;
-    switch (msg['t']) {
-      case Msg.join:
-        final name = (msg['name'] as String? ?? '').trim();
-        client.name = name.isEmpty ? 'Player ${client.id}' : name;
-        _broadcastLobby();
-      case Msg.ready:
-        client.ready = msg['v'] == true;
-        _broadcastLobby();
-      case Msg.mode:
-        if (!client.isHost || state != RoomState.lobby) return;
-        mode = GameMode.parse(msg['v'] as String? ?? '');
-        _broadcastLobby();
-      case Msg.start:
-        if (!client.isHost || state != RoomState.lobby) return;
-        if (clients.length < 2 && mode == GameMode.versus) {
-          client.send({'t': Msg.error, 'm': 'Versus needs at least 2 players'});
-          return;
-        }
-        startMatch();
-      case Msg.input:
-        if (state != RoomState.playing) return;
-        final input = inputFromJson(msg);
-        client.held = input.direction;
-        client.bombPressed |= input.placeBomb;
-        client.actionPressed |= input.action;
-    }
-  }
-
-  void _drop(RoomClient client) {
-    if (!clients.remove(client)) return;
-    if (client.isHost && clients.isNotEmpty) clients.first.isHost = true;
-    final w = world;
-    if (state == RoomState.playing && w != null && client.playerId != null) {
-      // A player who leaves mid-match is out. The sim will end the round if
-      // that leaves one survivor.
-      final p = w.playerById(client.playerId!);
-      if (p != null && p.alive) p.alive = false;
-    }
-    if (clients.isEmpty) {
-      _stopMatch();
-    } else {
-      _broadcastLobby();
-    }
-  }
-
-  void _broadcastLobby() {
-    final msg = {
-      't': Msg.lobby,
-      'mode': mode.name,
-      'players': [for (final c in clients) c.lobbyRow.toJson()],
-    };
-    for (final c in clients) {
-      c.send(msg);
-    }
-  }
-
-  /// Builds the stage and starts ticking. Public so tests and the host UI
-  /// can start without a socket round-trip.
-  void startMatch() {
-    final seed = _rng.nextInt(1 << 30);
-    final LevelData level;
-    if (mode == GameMode.versus) {
-      // Single-screen arena, no enemies, plenty of items under the bricks.
-      level = LevelData.generate(
-        seed: seed,
-        width: 15,
-        height: 13,
-        players: clients.length,
-        enemyCount: 0,
-        brickDensity: 0.55,
-        items: const [
-          ItemType.bombUp,
-          ItemType.fireUp,
-          ItemType.speedUp,
-          ItemType.remote,
-        ],
-        timeLimit: 120,
-      );
-    } else {
-      level = LevelData.generate(
-        seed: seed,
-        width: clients.length <= 2 ? 31 : 41,
-        height: clients.length <= 2 ? 13 : 17,
-        players: clients.length,
-        enemyCount: 6 + 2 * clients.length,
-        brickDensity: 0.45,
-        enemyKinds: const [EnemyKind.puffball, EnemyKind.blueDrop],
-        timeLimit: 240,
-      );
-    }
-    final w = World(level, seed: seed, config: mode.config);
-    for (final c in clients) {
-      c.playerId = w.addPlayer(name: c.name).id;
-      c.held = Direction.none;
-      c.bombPressed = false;
-      c.actionPressed = false;
-    }
-    world = w;
-    state = RoomState.playing;
-    _tick = 0;
-    for (final c in clients) {
-      c.send({'t': Msg.matchStart, 'mode': mode.name, 'you': c.playerId});
-    }
-    _sendSnapshot(w);
-    _ticker = Timer.periodic(
-      Duration(microseconds: (World.tickDt * 1e6).round()),
-      (_) => tick(),
-    );
-  }
-
-  /// One simulation step. Public so tests can drive the room without a timer.
-  void tick() {
-    final w = world;
-    if (w == null || state != RoomState.playing) return;
-    final inputs = <int, PlayerInput>{
-      for (final c in clients)
-        if (c.playerId != null) c.playerId!: c.takeInput(),
-    };
-    w.tick(inputs);
-    _tick++;
-    if (_tick % snapshotEvery == 0 || w.over) _sendSnapshot(w);
-    if (w.over) {
-      for (final c in clients) {
-        c.send({
-          't': Msg.matchEnd,
-          if (w.winnerId != null) 'winner': w.winnerId,
-          'cleared': w.cleared,
-        });
+  void _scheduleExpiry(Room room) {
+    _expiry[room.code]?.cancel();
+    _expiry[room.code] = Timer(emptyRoomTtl, () {
+      if (room.clients.isEmpty) {
+        _rooms.remove(room.code);
+        _expiry.remove(room.code);
+        room.close();
       }
-      _stopMatch();
-      _matchEnded.add(w);
-    }
-  }
-
-  void _sendSnapshot(World w) {
-    final json = WorldSnapshot.of(w, tick: _tick).toJson()
-      ..['t'] = Msg.snapshot;
-    for (final c in clients) {
-      c.send(json);
-    }
-  }
-
-  void _stopMatch() {
-    _ticker?.cancel();
-    _ticker = null;
-    state = RoomState.lobby;
-    for (final c in clients) {
-      c.ready = false;
-      c.playerId = null;
-    }
-    if (clients.isNotEmpty) _broadcastLobby();
+    });
   }
 
   Future<void> close() async {
-    _ticker?.cancel();
-    for (final c in clients.toList()) {
-      await c._socket.close();
+    for (final t in _expiry.values) {
+      t.cancel();
     }
-    clients.clear();
-    await _matchEnded.close();
+    _expiry.clear();
+    for (final r in _rooms.values.toList()) {
+      await r.close();
+    }
+    _rooms.clear();
+    _default = null;
   }
 }

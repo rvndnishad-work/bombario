@@ -7,14 +7,16 @@ import 'package:bombario_core/bombario_core.dart';
 /// replace [encode]/[decode] later without changing the message shapes.
 abstract final class Msg {
   // Client to server.
-  static const join = 'join'; // {name}
+  static const join = 'join'; // {name, token?: resume a dropped seat}
   static const ready = 'ready'; // {v: bool}
   static const mode = 'mode'; // {v: 'versus' | 'coop'}  (host only)
   static const start = 'start'; // (host only)
-  static const input = 'input'; // {d: Direction index, b: bomb, a: action}
+  static const input =
+      'input'; // {s: seq, d: Direction index, b: bomb, a: action}
+  static const leave = 'leave';
 
   // Server to client.
-  static const welcome = 'welcome'; // {id, code, host}
+  static const welcome = 'welcome'; // {id, code, host, token, resumed?}
   static const lobby = 'lobby'; // {mode, players: [{id, name, ready, host}]}
   static const matchStart = 'matchStart'; // {mode, you: world player id}
   static const snapshot = 'snap'; // WorldSnapshot.toJson() fields
@@ -48,8 +50,9 @@ Map<String, dynamic>? decode(Object? frame) {
   }
 }
 
-Map<String, dynamic> inputToJson(PlayerInput input) => {
+Map<String, dynamic> inputToJson(PlayerInput input, {int seq = 0}) => {
       't': Msg.input,
+      's': seq,
       'd': input.direction.index,
       'b': input.placeBomb,
       'a': input.action,
@@ -68,6 +71,7 @@ class LobbyPlayer {
     required this.name,
     required this.ready,
     required this.isHost,
+    this.connected = true,
   });
 
   final int id;
@@ -75,14 +79,23 @@ class LobbyPlayer {
   final bool ready;
   final bool isHost;
 
-  Map<String, dynamic> toJson() =>
-      {'id': id, 'name': name, 'ready': ready, 'host': isHost};
+  /// False while a player's connection dropped and their seat is held.
+  final bool connected;
+
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'name': name,
+        'ready': ready,
+        'host': isHost,
+        'on': connected,
+      };
 
   static LobbyPlayer fromJson(Map<String, dynamic> j) => LobbyPlayer(
         id: j['id'] as int,
         name: j['name'] as String,
         ready: j['ready'] as bool,
         isHost: j['host'] as bool,
+        connected: j['on'] as bool? ?? true,
       );
 }
 
