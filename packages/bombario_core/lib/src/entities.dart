@@ -234,6 +234,22 @@ class Player extends Entity {
   /// Drops the most recent half of [items] (rounded up), the active item,
   /// hearts and frost charges. Returns the dropped stat items so the world
   /// can scatter them for teammates.
+  /// The original's rule: the stat power-ups stay, the specials go.
+  void loseSpecialsOnDeath() {
+    items.removeWhere((i) => !_keptOnDeath.contains(i));
+    recomputeStats();
+    active = ActiveItem.none;
+    hearts = 0;
+    frostBombs = 0;
+  }
+
+  static const _keptOnDeath = {
+    ItemType.bombUp,
+    ItemType.fireUp,
+    ItemType.speedUp,
+    ItemType.kick,
+  };
+
   List<ItemType> loseItemsOnDeath() {
     final lose = (items.length + 1) ~/ 2;
     final lost = items.sublist(items.length - lose);

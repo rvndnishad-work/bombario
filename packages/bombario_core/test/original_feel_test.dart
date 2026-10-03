@@ -103,4 +103,46 @@ void main() {
     expect(events.whereType<ItemBurned>().single.releasedWave, isFalse);
     expect(w.enemies, isEmpty);
   });
+
+  List<ItemType> powerUps(LevelData level) => [
+        for (var y = 0; y < level.grid.height; y++)
+          for (var x = 0; x < level.grid.width; x++)
+            if (level.grid.hiddenAt(x, y) case final t? when t != ItemType.exit)
+              t,
+      ];
+
+  test('a solo stage hides one power-up plus the exit', () {
+    for (final stage in Campaign.stages) {
+      if (stage.bonus || stage.isBoss) continue;
+      final level = stage.level(seed: 7, players: 1);
+      expect(powerUps(level), hasLength(1), reason: stage.id);
+    }
+    expect(powerUps(Campaign.byId('1-1')!.level(seed: 1, players: 1)),
+        [ItemType.fireUp]);
+    // Co-op: one each.
+    expect(powerUps(Campaign.byId('1-2')!.level(seed: 1, players: 3)),
+        hasLength(3));
+  });
+
+  test('solo keeps stat power-ups on death, as in the original', () {
+    final config = Campaign.byId('1-2')!.config(players: 1, coop: false);
+    expect(config.keepItemsOnDeath, isTrue);
+    final w = makeWorld('''
+#######
+#P...e#
+#######
+''', config: config);
+    final p = w.addPlayer();
+    p.applyItem(ItemType.fireUp);
+    p.applyItem(ItemType.bombUp);
+    p.applyItem(ItemType.wallPass);
+    final e = w.enemies.single;
+    e.setPosition(p.x, p.y);
+    w.tick(const {});
+    expect(p.alive, isFalse);
+    expect(p.items, [ItemType.fireUp, ItemType.bombUp]);
+    expect(p.fireRange, 2);
+    expect(p.wallPass, isFalse);
+    expect(w.floorItems, isEmpty);
+  });
 }

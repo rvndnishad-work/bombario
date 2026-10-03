@@ -510,7 +510,8 @@ void main() {
                 stage.layout == null ? expected : level.enemySpawns.length,
                 reason: stage.id);
           }
-          for (final item in stage.items) {
+          // One power-up per player (all of them on bonus stages).
+          for (final item in stage.bonus ? stage.items : stage.items.take(n)) {
             expect(hidden, contains(item), reason: '${stage.id} hides $item');
           }
           run(w, 2);

@@ -33,6 +33,7 @@ class WorldConfig {
     this.darkness = 0,
     this.windInterval = 0,
     this.cannonInterval = 0,
+    this.keepItemsOnDeath = false,
   });
 
   /// Solo: step on the exit and you're done.
@@ -95,6 +96,11 @@ class WorldConfig {
 
   /// Seconds between cannon shots across a row, 0 for none (World 5).
   final double cannonInterval;
+
+  /// Solo, as in the original: a fallen player keeps Bomb Up, Fire Up,
+  /// Speed Up and Kick and loses only the specials. Otherwise half the
+  /// power-ups drop for teammates.
+  final bool keepItemsOnDeath;
 
   WorldConfig copyWith({
     int? sharedLives,
@@ -1058,8 +1064,11 @@ class World {
   void _killPlayer(Player p, int killerId) {
     p.alive = false;
     p.frozenFor = 0;
-    final lost = p.loseItemsOnDeath();
-    _scatter(lost, p.tile);
+    if (config.keepItemsOnDeath) {
+      p.loseSpecialsOnDeath();
+    } else {
+      _scatter(p.loseItemsOnDeath(), p.tile);
+    }
     events.add(PlayerDied(p.id, killerId));
     if (config.ghosts) {
       p.ghost = true;

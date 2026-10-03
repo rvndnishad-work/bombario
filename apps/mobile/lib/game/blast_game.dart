@@ -69,6 +69,10 @@ class BlastGame extends FlameGame {
   double _stride = 0;
   bool _exitOpen = false;
 
+  /// The stage's power-up has been picked up, so the "find the exit" music
+  /// plays instead of the world's.
+  bool _found = false;
+
   /// One footstep per this many tiles walked.
   static const double strideTiles = 0.5;
 
@@ -157,6 +161,7 @@ class BlastGame extends FlameGame {
     _hurry = false;
     _stride = 0;
     _exitOpen = false;
+    _found = false;
     // The fanfare plays under the stage card; the world's music follows it.
     GameAudio.instance
       ..stopMusic()
@@ -312,7 +317,7 @@ class BlastGame extends FlameGame {
     messages.tick(dt);
     if (!_hurry && sim.timeLeft <= 30 && sim.timeLeft > 0) {
       _hurry = true;
-      GameAudio.instance.playMusic(stage.world, hurry: true);
+      GameAudio.instance.playMusic(stage.world, hurry: true, found: _found);
     }
     _hudTimer += dt;
     if (_hudTimer >= 0.1) {
@@ -379,6 +384,10 @@ class BlastGame extends FlameGame {
             when playerId == player.id:
           audio.play(Sfx.pickup);
           _buzz(HapticFeedback.selectionClick);
+          if (!_found && !stage.bonus && type != core.ItemType.exit) {
+            _found = true;
+            audio.playMusic(stage.world, hurry: _hurry, found: true);
+          }
           final (title, body) = itemInfo(type);
           messages.show(
             GameMessage(
