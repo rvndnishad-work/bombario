@@ -52,165 +52,165 @@ z #1a1410
 
 sprite barrelhop mirror
 ........
-....KKKK
-...KBBBB
+...KKKKK
+..KLLLLL
 ..KBBbBB
-..Kbbbbb
-..KBBBBB
-..KBKKBB
-..KBKWBB
-..KBBBBB
-..Kbbbbb
-..KBBBBK
 ..KBBbBB
-...KBBBB
-....KKKK
+..KLLLLL
+..KBBWWB
+..KBBWxB
+..KBBbBB
+..KBBbKK
+..KLLLLL
+..KBBbBB
+..KBBbBB
+...KKKKK
 ....KvK.
 ....KKK.
 
 sprite grinface mirror
-........
+.KK.....
+.KyK....
+.KyyK...
+..KyyKKK
+..KKYYYY
+.KYYYYYY
+.KYYKKKY
+.KYYKWxY
+.KYYYWWY
+.KYYYYYY
+.KYKKKKK
+.KYKWCWC
+.KYKKKKK
+..KYYYYY
+...KKYYY
 .....KKK
-...KKEEE
-..KEEYYY
-..KEYYYY
-.KEYYKKY
-.KEYYKWY
-.KEYYYYY
-.KEYKYYY
-.KEYKKKK
-.KEYYKWW
-..KEYYKK
-..KEEYYY
-...KKEEE
-.....KKK
-........
 
 sprite slimeSage mirror
 .......K
-......Ki
-.....Kii
-....Kiii
-...KKKKK
-....KHHH
-...KHIHH
-..KHIHHH
-..KHHKKH
-..KHHKWH
+......Ks
+......Ks
+.....Kss
+.....Kss
+....Ksss
+..KKKKKK
 ..KHHHHH
-..KHHHhh
+.KHHKKKH
+.KHHHWxH
 .KHHHHHH
-.KhHhHHh
-.KKKKKKK
-........
+.KHHHwww
+.KhHHwww
+..KhHHww
+..KhhHHK
+...KK.KK
 
 sprite wisp mirror
-.......K
-......KU
-.....KUf
-....KUff
-...KUfff
-...KUfff
-..KUffff
-..KUfKKf
-..KUfKmf
-..KUffff
-..KUffff
-...KUfff
-...KUfUf
-..KUf.KU
-..KK...K
+.....KKK
+...KKUUU
+..KUUUUU
+..KUUUUU
+.KUUmmUU
+.KUUmmUU
+.KUUUUUU
+.KUUUUff
+.KUUfffK
+.KUfffff
+.Kffffff
+.Kffffff
+.Kffffff
+.KfKffKf
+.KK.KK.K
 ........
 
 sprite hunterCoin mirror
-........
-.....KKK
-...KKccc
-..KcCCCC
-..KcCYCC
-.KcCCKKC
-.KcCKWKC
-.KcCCKKC
-.KcCCCCC
-.KcCCCCC
-.KcCCKKK
-..KcCCCC
-..KcCCCC
-...KKccc
-.....KKK
-........
+.......K
+......KC
+.K...KCC
+.KK.KCcC
+..KKCCCC
+..KCKKKC
+.KCCCWxC
+.KCCCCCC
+.KCKKKKK
+.KCKWKWK
+.KCKKKKK
+..KKCCCC
+.KK.KCcC
+.K...KCC
+......KC
+.......K
 
 sprite doorWarden mirror
-......KK
-.....K2K
-....K221
-...K2111
+.......K
+......K2
+.....K21
+....K211
+....K111
 ...K1111
+...K1KKK
+...K1KYY
+..K11KYx
 ..K11KKK
-..K11KYY
-..K11KKK
-..K31111
-.K331111
-.K3K3111
-.KK.K331
-....K3K3
-...K33KK
-...KKK..
-........
+..K11133
+.K111333
+.K113333
+.K333333
+.K3K3K3K
+.KK.K.K.
 
 sprite splitter mirror
-........
 ....KKKK
-...KuusK
-..Kussss
-..Kssssn
-.KsssKKn
-.KsssKWn
-.Kssssss
-.Kssssss
-.KssKsss
-.KsssKKK
-..Kssssn
-..Kssssn
-...KKsss
-....KnnK
+..KKuuss
+.KuusWWs
+.KussWxs
+KsssssnK
+KssKKsnK
+KssssnnK
+KsssnnnK
+.KssnnnK
+.KsnnnnK
+..KnnnnK
+..KKnnnK
+...KKnnK
+....KKKK
+....KnK.
 ....KKK.
 
 sprite splitling mirror
 ........
 ........
-........
-........
-......KK
-.....Kuu
-....Kuss
-....KsKs
-....Kssn
-....Ksss
-.....Kss
-......KK
-.....KK.
-........
+....KKKK
+...Kuuss
+..KusWWs
+..KssWxs
+.Kssssss
+.KssssKK
+.Kssnnnn
+..Knnnnn
+..KKnnnn
+...KKKKK
+....KnK.
+....KKK.
 ........
 ........
 
-sprite shellback mirror
-........
-.....KKK
-....KhhH
-...KhHHh
-..KhHhhH
-..KhhhhK
-..KJJJJJ
-.KJJKKJJ
-.KJJKWJJ
-.KJJJJJJ
-.KJJJvvv
-..KJJJJJ
-..KhhhhK
-..KVVVKK
-..KKKK..
-........
+sprite shellback
+................
+.....KKKKKK.....
+...KKhHHHHhKK...
+..KhHIHHHHIHhK..
+.KhHHHHIIHHHHhK.
+.KhHIHHHHHHIHhK.
+.KhHHHHHHHHHHhK.
+.KhhHHHHHHHHhhK.
+.KKhhhhhhhhhhKKK
+..KJJJJJJJJJKJWK
+..KJJvJJvJJJKJxK
+...KKKKKKKKKKJJK
+....KvK..KvK.KKK
+....KKK..KKK....
+................
+................
 
 sprite kingPuffball mirror
 ..K.K..K
@@ -518,23 +518,23 @@ sprite ping-run
 
 # ------------------------------------------------- Worlds 3-5 (Phase 4)
 
-sprite tigerclaw mirror
-.KK.....
-.KOK....
-.KOOKKKK
-.KOOOOOO
-.KOkOOOk
-..KOOOOO
-.KOOKKOO
-.KOOKYKO
-.KOOOOOO
-.KOkOOOK
-.KOOOOKW
-..KOOOOO
-..KOkOOO
-...KOOOO
-...KKOKK
-...KK.K.
+sprite tigerclaw
+...KK...KK......
+..KOOK.KOOK.....
+..KOOOKOOOK.....
+.KOObOOOObOK....
+.KOOWWOOWWOK....
+.KObWxOOxWbK....
+.KOOOOOOOOOK.KK.
+.KOOOKKKOOOKKWWK
+..KOOObOOOOOOWWK
+..KObOOObOOOOOK.
+..KOOOOOOObOOOK.
+...KObOOOOObOK..
+...KOOOOOOOOK...
+....KOK..KOK....
+....KKK..KKK....
+................
 
 sprite mimic mirror
 ........
@@ -555,40 +555,40 @@ sprite mimic mirror
 ........
 
 sprite kickerCrab mirror
-........
-KK......
-KCK.....
-KCCK....
-.KCK.KKK
-..KKKCWK
+.....KWK
+......K.
+.KKK.KCC
+KCCCKCCC
+KCKKCCCC
+KCCCCCCC
+KccKCCCC
+.KKKCcCC
+...KCcCC
 ...KCCKK
-..KCCCCC
-.KCCCCCC
-.KCcCCCC
-.KCCCCCC
-..KCCCCC
-..KKKKKK
-..KcK.Kc
-.Kc..Kc.
+...KccCC
+...KKccK
+..K.K.KK
+.K.K....
+........
 ........
 
 sprite shade mirror
-........
-.....KKK
+.......K
+......Kn
+.....Knn
+....Knnn
 ....Knnn
 ...Knnnn
-..Knnnnn
-..KnnKKn
-..Knnuun
+...Knuun
+...Knnnn
 ..Knnnnn
 ..Knnnnn
 .Knnnnnn
 .Knnnnnn
-.Knnnnnn
-Knnnnnnn
-Knn.Knnn
-KK...KKn
-.....KK.
+.Kn3nnn3
+.K3K3n3K
+.KK.K.KK
+.K..K..K
 
 sprite moleNest mirror
 ........
@@ -627,74 +627,74 @@ sprite mirrorKnight mirror
 ...KKK..
 
 sprite fuseEater mirror
-........
-.....KKK
-...KKHHH
-..KHHHHH
-..KHKKHH
-.KHHKWHH
+...KWWK.
+...KWxK.
+..KKHHKK
 .KHHHHHH
-.KKKKKKK
-.KCCCCCC
-.KCYCCCC
-.KKKKKKK
+KHHHHHHH
+KHKKKKKK
+KHKWCWCW
+KHKCCCCC
+KHKCCcCC
+KHKWCWCW
+KHKKKKKK
 .KHHHHHH
-..KHHHHH
-...KKHHH
-.....KKK
-........
+.KhHHHHH
+..KhhHHH
+..KKhhhh
+...KK.KK
 
 sprite phaseWraith mirror
-........
-.....KKK
-....Kaaa
+......KK
+.....KUa
+....KUaa
+....KUaa
+...KUaaa
 ...Kaaaa
-..Kaaaaa
-..KaaKKa
-..KaaKWa
-..Kaaaaa
-..Kaatta
+..KaTTaa
+..KaaTTa
 ..Kaaaaa
 .Kaaaaaa
-.Ktaaaat
-Kaata.Ka
-Ka.K..K.
-KK......
-........
+.Kaaaatt
+.Kaaaaaa
+.Ktaaaaa
+.KtKaaaa
+.KKKtaaK
+....KK.K
 
-sprite herder mirror
-.K......
-KJK.....
-KJJK.KKK
-.KJKKVVV
-..KKVVVV
-...KVKKV
-...KVKWV
-...KVVVV
-...KVVvv
-....KVVV
-...KVVVV
-..KVVVVV
-..KVVVVV
-..KvVVVV
-..KKKvKK
-....KK..
+sprite herder
+................
+.......KKK......
+......KJJJK.....
+.....KJKKJJK....
+....KKJK.KJKK...
+...KVVKKKVVVVK..
+..KVVVVVVVVWWK..
+.KVVvVVVVVVWxK..
+.KVVVVVVVVVVVKK.
+.KVvVVvVVVVVJJK.
+.KVVVVVVVVVKJKK.
+..KVVvVVVVVKKK..
+..KKVVVVVVVK....
+...KvKKKKvK.....
+...KK...KK......
+................
 
 sprite curseOrb mirror
 ........
-........
-.....KKK
-....Kuss
-...Kusss
-..Kussss
-..Kssnnn
-..KssnWn
-..KssnWn
-..Kssnnn
-..Ksssss
-...Kssss
-....Ksss
-.....KKK
+....KKKK
+..KK3nnn
+.Kn3nnnn
+.K3nnnnn
+Kn3nnnnn
+KnnnKKKK
+KnnKuuuW
+KnnnKKKK
+Knnnnnnn
+.Knnnnn3
+.Knnnn3n
+..KKn3nn
+....KKKK
 ........
 ........
 
@@ -1023,27 +1023,127 @@ palette
 9 #2a2f45
 _ #ff00ff
 
-# Walk patches, stamped over each player's standing pose: one foot lifts off
-# the ground while the other stays planted ('_' erases).
-sprite stride-l
-................
-................
-................
-................
-................
-................
-................
-................
-................
-................
-................
-................
-................
-................
-....KKKK........
-....____........
+# The bombers. One body, drawn facing the camera (standing and walking
+# down), away (walking up) and to the right (walking sideways; the game
+# mirrors it for left). Players 2-4 are recolours of player 1's blue suit, so
+# every view stays identical in shape and the hats line up on all of them.
+palette
+l #3d7bff
+e #8ab4ff
+d #2452c4
+j #ffe9d6
 
-sprite stride-r
+sprite p1
+.......KK.......
+......KPPK......
+.....KKKKKK.....
+....KllllllK....
+...KleelllllK...
+...KllllllllK...
+..KllKKKKKKllK..
+..KlKjxjjxjKlK..
+..KlKjxjjxjKlK..
+..KlKjjjjjjKlK..
+...KlKKKKKKlK...
+.KWWKWWWWWWKWWK.
+.KWWKllllllKWWK.
+..KKKWWWWWWKKK..
+...KddK..KddK...
+...KKKK..KKKK...
+
+sprite p1-up
+.......KK.......
+......KPPK......
+.....KKKKKK.....
+....KllllllK....
+...KleelllllK...
+...KllllllllK...
+..KllllllllllK..
+..KllllllllllK..
+..KllllllllllK..
+..KddddddddddK..
+...KKKKKKKKKK...
+.KWWKWWWWWWKWWK.
+.KWWKllllllKWWK.
+..KKKWWWWWWKKK..
+...KddK..KddK...
+...KKKK..KKKK...
+
+sprite p1-side
+.......KK.......
+......KPPK......
+.....KKKKKKK....
+....KlllllllK...
+...KleellllllK..
+...KlllllllllK..
+..KllllllKKKKKK.
+..KllllllKjjxjK.
+..KllllllKjjxjK.
+..KdddlllKjjjjK.
+...KKKKKKKKKKK..
+....KWWWWWKWWK..
+....KlllllKWWK..
+.....KWWWWKKK...
+.....KdddddK....
+.....KKKKKKK....
+
+sprite p1-side-walk-a
+.......KK.......
+......KPPK......
+.....KKKKKKK....
+....KlllllllK...
+...KleellllllK..
+...KlllllllllK..
+..KllllllKKKKKK.
+..KllllllKjjxjK.
+..KllllllKjjxjK.
+..KdddlllKjjjjK.
+...KKKKKKKKKKK..
+....KWWWWWKWWK..
+....KlllllKWWK..
+.....KWWWWKKK...
+...KddK.KdddK...
+...KKKK.KKKKK...
+
+sprite p1-side-walk-b
+.......KK.......
+......KPPK......
+.....KKKKKKK....
+....KlllllllK...
+...KleellllllK..
+...KlllllllllK..
+..KllllllKKKKKK.
+..KllllllKjjxjK.
+..KllllllKjjxjK.
+..KdddlllKjjjjK.
+...KKKKKKKKKKK..
+....KWWWWWKWWK..
+....KlllllKWWK..
+.....KWWWWKKK...
+....KdddK.KddK..
+....KKKKK.KKKK..
+
+# Walk patches, stamped over the front and back poses: one foot lifts off
+# the ground while the other stays planted ('_' erases).
+sprite step-l
+................
+................
+................
+................
+................
+................
+................
+................
+................
+................
+................
+................
+................
+................
+...KKKK.........
+...____.........
+
+sprite step-r
 ................
 ................
 ................
@@ -1061,14 +1161,38 @@ sprite stride-r
 .........KKKK...
 .........____...
 
-stamp p1-walk-a = p1 stride-l
-stamp p1-walk-b = p1 stride-r
-stamp p2-walk-a = p2 stride-l
-stamp p2-walk-b = p2 stride-r
-stamp p3-walk-a = p3 stride-l
-stamp p3-walk-b = p3 stride-r
-stamp p4-walk-a = p4 stride-l
-stamp p4-walk-b = p4 stride-r
+stamp p1-walk-a = p1 step-l
+stamp p1-walk-b = p1 step-r
+stamp p1-up-walk-a = p1-up step-l
+stamp p1-up-walk-b = p1-up step-r
+
+recolor p2 = p1 #3d7bff:#ff4b4b #8ab4ff:#ff9a9a #2452c4:#b52a2a
+recolor p2-walk-a = p1-walk-a #3d7bff:#ff4b4b #8ab4ff:#ff9a9a #2452c4:#b52a2a
+recolor p2-walk-b = p1-walk-b #3d7bff:#ff4b4b #8ab4ff:#ff9a9a #2452c4:#b52a2a
+recolor p2-up = p1-up #3d7bff:#ff4b4b #8ab4ff:#ff9a9a #2452c4:#b52a2a
+recolor p2-up-walk-a = p1-up-walk-a #3d7bff:#ff4b4b #8ab4ff:#ff9a9a #2452c4:#b52a2a
+recolor p2-up-walk-b = p1-up-walk-b #3d7bff:#ff4b4b #8ab4ff:#ff9a9a #2452c4:#b52a2a
+recolor p2-side = p1-side #3d7bff:#ff4b4b #8ab4ff:#ff9a9a #2452c4:#b52a2a
+recolor p2-side-walk-a = p1-side-walk-a #3d7bff:#ff4b4b #8ab4ff:#ff9a9a #2452c4:#b52a2a
+recolor p2-side-walk-b = p1-side-walk-b #3d7bff:#ff4b4b #8ab4ff:#ff9a9a #2452c4:#b52a2a
+recolor p3 = p1 #3d7bff:#3fc062 #8ab4ff:#9ee8ad #2452c4:#258a43
+recolor p3-walk-a = p1-walk-a #3d7bff:#3fc062 #8ab4ff:#9ee8ad #2452c4:#258a43
+recolor p3-walk-b = p1-walk-b #3d7bff:#3fc062 #8ab4ff:#9ee8ad #2452c4:#258a43
+recolor p3-up = p1-up #3d7bff:#3fc062 #8ab4ff:#9ee8ad #2452c4:#258a43
+recolor p3-up-walk-a = p1-up-walk-a #3d7bff:#3fc062 #8ab4ff:#9ee8ad #2452c4:#258a43
+recolor p3-up-walk-b = p1-up-walk-b #3d7bff:#3fc062 #8ab4ff:#9ee8ad #2452c4:#258a43
+recolor p3-side = p1-side #3d7bff:#3fc062 #8ab4ff:#9ee8ad #2452c4:#258a43
+recolor p3-side-walk-a = p1-side-walk-a #3d7bff:#3fc062 #8ab4ff:#9ee8ad #2452c4:#258a43
+recolor p3-side-walk-b = p1-side-walk-b #3d7bff:#3fc062 #8ab4ff:#9ee8ad #2452c4:#258a43
+recolor p4 = p1 #3d7bff:#ffc23d #8ab4ff:#ffe08a #2452c4:#c98f1c
+recolor p4-walk-a = p1-walk-a #3d7bff:#ffc23d #8ab4ff:#ffe08a #2452c4:#c98f1c
+recolor p4-walk-b = p1-walk-b #3d7bff:#ffc23d #8ab4ff:#ffe08a #2452c4:#c98f1c
+recolor p4-up = p1-up #3d7bff:#ffc23d #8ab4ff:#ffe08a #2452c4:#c98f1c
+recolor p4-up-walk-a = p1-up-walk-a #3d7bff:#ffc23d #8ab4ff:#ffe08a #2452c4:#c98f1c
+recolor p4-up-walk-b = p1-up-walk-b #3d7bff:#ffc23d #8ab4ff:#ffe08a #2452c4:#c98f1c
+recolor p4-side = p1-side #3d7bff:#ffc23d #8ab4ff:#ffe08a #2452c4:#c98f1c
+recolor p4-side-walk-a = p1-side-walk-a #3d7bff:#ffc23d #8ab4ff:#ffe08a #2452c4:#c98f1c
+recolor p4-side-walk-b = p1-side-walk-b #3d7bff:#ffc23d #8ab4ff:#ffe08a #2452c4:#c98f1c
 
 sprite gear mirror
 ........
@@ -1145,3 +1269,999 @@ sprite arrow-up mirror
 rotate arrow-right = arrow-up 90
 rotate arrow-down = arrow-up 180
 rotate arrow-left = arrow-up 270
+
+sprite puff mirror
+.......K
+......KZ
+.....KZP
+....KKPP
+...KZPPP
+..KZPPPP
+..KPPWWP
+.KPPPWxP
+.KPPPPPP
+.KPPPPPP
+.KPpPKPP
+..KpPPKK
+..KppPPP
+...KKppK
+....KpK.
+....KKK.
+
+sprite drop mirror
+.......K
+......Ka
+......Ka
+.....KaA
+.....KaA
+....KaAA
+....KAAA
+...KAWWA
+..KAAWxA
+..KAAAAA
+.KAAAAAA
+.KAAAAKK
+.KTAAKAA
+.KTTAAAA
+..KTTTTT
+..KK.KK.
+
+sprite pebble mirror
+........
+........
+....KKKK
+...KVVVV
+..KVJVVV
+..KVVWWV
+.KVVVWxV
+.KVVVVVV
+.KVVvVKK
+.KVvVVVV
+KKVvvVVV
+KVKVvvvV
+KKKvvvvv
+..KKvvvv
+...KvKKv
+...KK.KK
+
+
+# ------------------------------------------- enemies turning to face the way they walk
+# Back ("-up") and right-facing ("-side", mirrored by the game for left) views,
+# derived from each front sprite by moving or hiding the face. Generated by
+# scratch tooling from the front maps; edit by hand from here on.
+
+sprite puff-up
+.......KK.......
+......KZZK......
+.....KZPPZK.....
+....KKPPPPKK....
+...KZPPPPPPZK...
+..KZPPPPPPPPZK..
+..KPPPPPPPPPPK..
+.KPPPPPPPPPPPPK.
+.KPPPPPPPPPPPPK.
+.KPPPPPppPPPPPK.
+.KPpPPPPPPPPpPK.
+..KpPPPPPPPPpK..
+..KppPPPPPPppK..
+...KKppKKppKK...
+....KpK..KpK....
+....KKK..KKK....
+
+sprite puff-side
+.......KK.......
+......KZZK......
+.....KZPPZK.....
+....KKPPPPKK....
+...KZPPPPPPZK...
+..KZPPPPPPPPZK..
+..KPPPPPPPWWPK..
+.KPPPPPPPPWxPPK.
+.KPPPPPPPPPPPPK.
+.KPPPPPPPPPPPPK.
+.KPpPPPPPPKPpPK.
+..KpPPPPKKKKpK..
+..KppPPPPPPppK..
+...KKppKKppKK...
+....KpK..KpK....
+....KKK..KKK....
+
+sprite drop-up
+.......KK.......
+......KaaK......
+......KaaK......
+.....KaAAaK.....
+.....KaAAaK.....
+....KaAAAAaK....
+....KAAAAAAK....
+...KAAAAAAAAK...
+..KAAAAAAAAAAK..
+..KAAAAAAAAAAK..
+.KAAAAAAAAAAAAK.
+.KAAAAAAAAAAAAK.
+.KTAAAAAAAAAATK.
+.KTTAAAAAAAATTK.
+..KTTTTTTTTTTK..
+..KK.KK..KK.KK..
+
+sprite drop-side
+.......KK.......
+......KaaK......
+......KaaK......
+.....KaAAaK.....
+.....KaAAaK.....
+....KaAAAAaK....
+....KAAAAAAK....
+...KAAAAAAWWK...
+..KAAAAAAAWxAK..
+..KAAAAAAAAAAK..
+.KAAAAAAAAAAAAK.
+.KAAAAAAKKKKAAK.
+.KTAAAAAAAKAATK.
+.KTTAAAAAAAATTK.
+..KTTTTTTTTTTK..
+..KK.KK..KK.KK..
+
+sprite barrelhop-up
+................
+...KKKKKKKKKK...
+..KLLLLLLLLLLK..
+..KBBbBBBBbBBK..
+..KBBbBBBBbBBK..
+..KLLLLLLLLLLK..
+..KBBbBBBbWBBK..
+..KBBbBBBbWBBK..
+..KBBbBBBBbBBK..
+..KBBbBBBBbBBK..
+..KLLLLLLLLLLK..
+..KBBbBBBBbBBK..
+..KBBbBBBBbBBK..
+...KKKKKKKKKK...
+....KvK..KvK....
+....KKK..KKK....
+
+sprite barrelhop-side
+................
+...KKKKKKKKKK...
+..KLLLLLLLLLLK..
+..KBBbBBBBbBBK..
+..KBBbBBBBbBBK..
+..KLLLLLLLLLLK..
+..KBBbBBBWWBBK..
+..KBBbBBBWxBBK..
+..KBBbBBBBbBBK..
+..KBBbBBKKKKBK..
+..KLLLLLLLLLLK..
+..KBBbBBBBbBBK..
+..KBBbBBBBbBBK..
+...KKKKKKKKKK...
+....KvK..KvK....
+....KKK..KKK....
+
+sprite grinface-up
+.KK..........KK.
+.KyK........KyK.
+.KyyK......KyyK.
+..KyyKKKKKKyyK..
+..KKYYYYYYYYKK..
+.KYYYYYYYYYYYYK.
+.KYYYYYYYYYYYYK.
+.KYYYYYYYYYYYYK.
+.KYYYYYYYYYYYYK.
+.KYYYYYYYYYYYYK.
+.KYYYYYYYYYYYYK.
+.KYYyyyyyyyyYYK.
+.KYYYYYYYYYYYYK.
+..KYYYYYYYYYYK..
+...KKYYYYYYKK...
+.....KKKKKK.....
+
+sprite grinface-side
+.KK..........KK.
+.KyK........KyK.
+.KyyK......KyyK.
+..KyyKKKKKKyyK..
+..KKYYYYYYYYKK..
+.KYYYYYYYYYYYYK.
+.KYYYYYYYYKKKYK.
+.KYYYYYYYYKWxYK.
+.KYYYYYYYYYWWYK.
+.KYYYYYYYYYYYYK.
+.KYYYYYKKKKKKKK.
+.KYYYYYKWCWCWKK.
+.KYYYYYKKKKKKKK.
+..KYYYYYYYYYYK..
+...KKYYYYYYKK...
+.....KKKKKK.....
+
+sprite slimeSage-up
+.......KK.......
+......KssK......
+......KssK......
+.....KssssK.....
+.....KssssK.....
+....KssssssK....
+..KKKKKKKKKKKK..
+..KHHHHHHHHHHK..
+.KHHHHHHHHHHHHK.
+.KHHHHHHHHHHHHK.
+.KHHHHHHHHHHHHK.
+.KHHHHHHHHHHHHK.
+.KhHHHHHHHHHHhK.
+..KhHHHHHHHHhK..
+..KhhHHKKHHhhK..
+...KK.KKKK.KK...
+
+sprite slimeSage-side
+.......KK.......
+......KssK......
+......KssK......
+.....KssssK.....
+.....KssssK.....
+....KssssssK....
+..KKKKKKKKKKKK..
+..KHHHHHHHHHHK..
+.KHHHHHHHHKKKHK.
+.KHHHHHHHHKWxHK.
+.KHHHHHHHHHHHHK.
+.KHHHHHwwwwwwHK.
+.KhHHHHwwwwwwhK.
+..KhHHHHwwwwhK..
+..KhhHHKKHHhhK..
+...KK.KKKK.KK...
+
+sprite wisp-up
+.....KKKKKK.....
+...KKUUUUUUKK...
+..KUUUUUUUUUUK..
+..KUUUUUUUUUUK..
+.KUUUUUUUUUUUUK.
+.KUUUUUUUUUUUUK.
+.KUUUUUUUUUUUUK.
+.KUUUUffffUUUUK.
+.KUUfffKKfffUUK.
+.KUffffffffffUK.
+.KffffffffffffK.
+.KffffffffffffK.
+.KffffffffffffK.
+.KfKffKffKffKfK.
+.KK.KK.KK.KK.KK.
+................
+
+sprite wisp-side
+.....KKKKKK.....
+...KKUUUUUUKK...
+..KUUUUUUUUUUK..
+..KUUUUUUUUUUK..
+.KUUUUUUUUUmmUK.
+.KUUUUUUUUUmmUK.
+.KUUUUUUUUUUUUK.
+.KUUUUffffUUUUK.
+.KUUfffKKfffUUK.
+.KUffffffffffUK.
+.KffffffffffffK.
+.KffffffffffffK.
+.KffffffffffffK.
+.KfKffKffKffKfK.
+.KK.KK.KK.KK.KK.
+................
+
+sprite hunterCoin-up
+.......KK.......
+......KCCK......
+.K...KCCCCK...K.
+.KK.KCcCCcCK.KK.
+..KKCCCCCCCCKK..
+..KCCCCCCCCCCK..
+.KCCCCCCCCCCCCK.
+.KCCCCCCCCCCCCK.
+.KCCCCCccCCCCCK.
+.KCCCCccccCCCCK.
+.KCCCCCccCCCCCK.
+..KKCCCCCCCCKK..
+.KK.KCcCCcCK.KK.
+.K...KCCCCK...K.
+......KCCK......
+.......KK.......
+
+sprite hunterCoin-side
+.......KK.......
+......KCCK......
+.K...KCCCCK...K.
+.KK.KCcCCcCK.KK.
+..KKCCCCCCCCKK..
+..KCCCCCCCKKKK..
+.KCCCCCCCCKWxCK.
+.KCCCCCCCCCCCCK.
+.KCCCCCKKKKKKCK.
+.KCCCCCKWKWKWCK.
+.KCCCCCKKKKKKCK.
+..KKCCCCCCCCKK..
+.KK.KCcCCcCK.KK.
+.K...KCCCCK...K.
+......KCCK......
+.......KK.......
+
+sprite doorWarden-up
+.......KK.......
+......K22K......
+.....K2112K.....
+....K211112K....
+....K111111K....
+...K11111111K...
+...K11111111K...
+...K11222211K...
+..K1112222111K..
+..K1111111111K..
+..K1113333111K..
+.K111333333111K.
+.K113333333311K.
+.K333333333333K.
+.K3K3K3KK3K3K3K.
+.KK.K.K..K.K.KK.
+
+sprite doorWarden-side
+.......KK.......
+......K22K......
+.....K2112K.....
+....K211112K....
+....K111111K....
+...K11111111K...
+...K11KKKKKKK...
+...K11KYYYYKK...
+..K111KYYxxK1K..
+..K111KKKKKK1K..
+..K1113333111K..
+.K111333333111K.
+.K113333333311K.
+.K333333333333K.
+.K3K3K3KK3K3K3K.
+.KK.K.K..K.K.KK.
+
+sprite pebble-up
+................
+................
+....KKKKKKKK....
+...KVVVVVVVVK...
+..KVJVVVVVVJVK..
+..KVVVVVVVVVVK..
+.KVVVVVVVVVVVVK.
+.KVVVVVVVVVVVVK.
+.KVVvVVVVVVvVVK.
+.KVvVVVVVVVVvVK.
+KKVvvVVVVVVvvVKK
+KVKVvvvVVvvvVKVK
+KKKvvvvvvvvvvKKK
+..KKvvvvvvvvKK..
+...KvKKvvKKvK...
+...KK.KKKK.KK...
+
+sprite pebble-side
+................
+................
+....KKKKKKKK....
+...KVVVVVVVVK...
+..KVJVVVVVVJVK..
+..KVVVVVVVWWVK..
+.KVVVVVVVVWxVVK.
+.KVVVVVVVVVVVVK.
+.KVVvVVVKKKKVVK.
+.KVvVVVVVVVVvVK.
+KKVvvVVVVVVvvVKK
+KVKVvvvVVvvvVKVK
+KKKvvvvvvvvvvKKK
+..KKvvvvvvvvKK..
+...KvKKvvKKvK...
+...KK.KKKK.KK...
+
+sprite hopper-up
+...KKK....KKK...
+..KHWHK..KHWHK..
+..KHKHK..KHKHK..
+...KHHKKKKHHK...
+...KHHHHHHHHK...
+..KHHHHHHHHHHK..
+..KHHHHHHHHHHK..
+..KHHhhhhhhHHK..
+..KHHHHHHHHHHK..
+.KhHHHHHHHHHHhK.
+KhhKHHHHHHHHKhhK
+KhK.KhhhhhhK.KhK
+KKK..KKKKKK..KKK
+................
+................
+................
+
+sprite hopper-side
+...KKK....KKK...
+..KWKHK..KWKHK..
+..KHKHK..KHKHK..
+...KHHKKKKHHK...
+...KHHHHHHHHK...
+..KHHHHHHHHHHK..
+..KHHHHHHHHHHK..
+..KHHhhhhhhHHK..
+..KHHHHHHHHHHK..
+.KhHHHHHHHHHHhK.
+KhhKHHHHHHHHKhhK
+KhK.KhhhhhhK.KhK
+KKK..KKKKKK..KKK
+................
+................
+................
+
+sprite splitter-up
+....KKKKKKKK....
+..KKuussssuuKK..
+.KuussssssssuuK.
+.KussssssssssuK.
+KsssssnKKnsssssK
+KssKKsnKKnsKKssK
+KssssnnKKnnssssK
+KsssnnnKKnnnsssK
+.KssnnnKKnnnssK.
+.KsnnnnKKnnnnsK.
+..KnnnnKKnnnnK..
+..KKnnnKKnnnKK..
+...KKnnKKnnKK...
+....KKKKKKKK....
+....KnK..KnK....
+....KKK..KKK....
+
+sprite splitter-side
+....KKKKKKKK....
+..KKuussssuuKK..
+.KuussssssWWuuK.
+.KusssssssWxsuK.
+KsssssnKKnsssssK
+KssKKsnKKnsKKssK
+KssssnnKKnnssssK
+KsssnnnKKnnnsssK
+.KssnnnKKnnnssK.
+.KsnnnnKKnnnnsK.
+..KnnnnKKnnnnK..
+..KKnnnKKnnnKK..
+...KKnnKKnnKK...
+....KKKKKKKK....
+....KnK..KnK....
+....KKK..KKK....
+
+sprite splitling-up
+................
+................
+....KKKKKKKK....
+...KuussssuuK...
+..KussssssssuK..
+..KssssssssssK..
+.KssssssssssssK.
+.KssssKKKKssssK.
+.KssnnnnnnnnssK.
+..KnnnnnnnnnnK..
+..KKnnnnnnnnKK..
+...KKKKKKKKKK...
+....KnK..KnK....
+....KKK..KKK....
+................
+................
+
+sprite splitling-side
+................
+................
+....KKKKKKKK....
+...KuussssuuK...
+..KussssssWWuK..
+..KsssssssWxsK..
+.KssssssssssssK.
+.KssssKKKKssssK.
+.KssnnnnnnnnssK.
+..KnnnnnnnnnnK..
+..KKnnnnnnnnKK..
+...KKKKKKKKKK...
+....KnK..KnK....
+....KKK..KKK....
+................
+................
+
+sprite shellback-up
+................
+.....KKKKKK.....
+...KKhHHHHhKK...
+..KhHIHHHHIHhK..
+.KhHHHHIIHHHHhK.
+.KhHIHHHHHHIHhK.
+.KhHHHHHHHHHHhK.
+.KhhHHHHHHHHhhK.
+.KKhhhhhhhhhhKK.
+..KJJJJJJJJJJK..
+..KJJvJJvJJvJK..
+...KKKKKKKKKK...
+....KvK..KvK....
+....KKK..KKK....
+................
+................
+
+sprite kingPuffball-up
+..K.K..KK..K.K..
+..KYKYKYYKYKYK..
+..KYYYYYYYYYYK..
+..KYCYYYYYYCYK..
+...KKKKKKKKKK...
+..KZZPPPPPPZZK..
+.KZPPPPPPPPPPZK.
+.KPPPPPPPPPPPPK.
+.KPPPPPPPPPPPPK.
+.KPPPPPPPPPPPPK.
+.KPpPPPPPPPPpPK.
+.KPPPPPPPPPPPPK.
+..KPPPPPPPPPPK..
+...KPPPPPPPPK...
+...KppKKKKppK...
+...KKKK..KKKK...
+
+sprite kingPuffball-side
+..K.K..KK..K.K..
+..KYKYKYYKYKYK..
+..KYYYYYYYYYYK..
+..KYCYYYYYYCYK..
+...KKKKKKKKKK...
+..KZZPPPPPPZZK..
+.KZPPPPPPPPPPZK.
+.KPPPPPPPPPKKPK.
+.KPPPPPPPPPKWPK.
+.KPPPPPPPPPPPPK.
+.KPpPPPPPPPPpPK.
+.KPPPPPKKKKKKPK.
+..KPPPPPPPPPPK..
+...KPPPPPPPPK...
+...KppKKKKppK...
+...KKKK..KKKK...
+
+sprite rockjaw-up
+................
+.....KKKKKK.....
+....KVVVVVVK....
+...KVJVVVVJVK...
+..KVVVVVVVVVVK..
+..KVVVVVVVVVVK..
+..KVVVVVVVVVVK..
+..KVVVVVVVVVVK..
+.KVVVVVVVVVVVVK.
+.KVVVVVVVVVVVVK.
+.KVVvvvvvvvvVVK.
+.KVVVVVVVVVVVVK.
+.KVVVVVVVVVVVVK.
+..KvVVVVVVVVvK..
+..KvvvvKKvvvvK..
+..KKKKKKKKKKKK..
+
+sprite rockjaw-side
+................
+.....KKKKKK.....
+....KVVVVVVK....
+...KVJVVVVJVK...
+..KVVVVVVVVVVK..
+..KVVVVVVVVKKK..
+..KVVVVVVVVKYK..
+..KVVVVVVVVVVK..
+.KVVVVVKKKKKKKK.
+.KVVVVVKWKWKWKK.
+.KVVVVVKKKKKKKK.
+.KVVVVVKWKWKWKK.
+.KVVVVVKKKKKKKK.
+..KvVVVVVVVVvK..
+..KvvvvKKvvvvK..
+..KKKKKKKKKKKK..
+
+sprite goblin-up
+................
+.KK...KKKK...KK.
+.KIK.KIIIIK.KIK.
+..KIKIIIIIIKIK..
+...KIIIIIIIIK...
+...KIIIIIIIIK...
+...KIIIIIIIIK...
+...KIIIIIIIIK...
+....KIIIIIIK....
+.....KKiiKK.....
+...KIKiiiiKIKKK.
+...KIKiiiiKIKNK.
+....KKiiiiKKKNK.
+.....K9999KKKKK.
+....K99KK99K....
+....KKKK.KKKK...
+
+sprite goblin-side
+................
+.KK...KKKK...KK.
+.KIK.KIIIIK.KIK.
+..KIKIIIIIIKIK..
+...KIIIIIIIIK...
+...KIIIIIIKKK...
+...KIIIIIIKOK...
+...KIIIIIIIIK...
+....KIIIIKKK....
+.....KKiiKK.....
+...KIKiiiiKIKKK.
+...KIKiiiiKIKNK.
+....KKiiiiKKKNK.
+.....K9999KKKKK.
+....K99KK99K....
+....KKKK.KKKK...
+
+sprite tigerclaw-up
+...KK...KK......
+..KOOK.KOOK.....
+..KOOOKOOOK.....
+.KOObOOOObOK....
+.KOOOOOOOOOK....
+.KObOOOOOObK....
+.KOOOOOOOOOK.KK.
+.KOOOOOOOOOKKWWK
+..KOOObOOOOOOWWK
+..KObOOObOOOOOK.
+..KOOOOOOObOOOK.
+...KObOOOOObOK..
+...KOOOOOOOOK...
+....KOK..KOK....
+....KKK..KKK....
+................
+
+sprite tigerclaw-side
+...KK...KK......
+..KOOK.KOOK.....
+..KOOOKOOOK.....
+.KOObOOOObOK....
+.KOOOOOOOWWK....
+.KObOOOOOWxK....
+.KOOOOOOOOOK.KK.
+.KOOOOOOKKKKKWWK
+..KOOObOOOOOOWWK
+..KObOOObOOOOOK.
+..KOOOOOOObOOOK.
+...KObOOOOObOK..
+...KOOOOOOOOK...
+....KOK..KOK....
+....KKK..KKK....
+................
+
+sprite mimic-up
+................
+..KKKKKKKKKKKK..
+.KBBBBBBBBBBBBK.
+.KBbbbbbbbbbbBK.
+.KBBBBBBBBBBBBK.
+.KKKKKKKKKKKKKK.
+.KCCCCCCCCCCCCK.
+.KCCCCCCCCCCCCK.
+.KCcCCCCCCCCcCK.
+.KCCCCCCCCCCCCK.
+.KKKKKKKKKKKKKK.
+.KBBBBBBBBBBBBK.
+.KBbbbbbbbbbbBK.
+.KBBBBBBBBBBBBK.
+.KKKKKKKKKKKKKK.
+................
+
+sprite kickerCrab-up
+.....KCKKCK.....
+......K..K......
+.KKK.KCCCCK.KKK.
+KCCCKCCCCCCKCCCK
+KCKKCCCCCCCCKKCK
+KCCCCCCCCCCCCCCK
+KccKCCCCCCCCKccK
+.KKKCcCCCCcCKKK.
+...KCcCCCCcCK...
+...KCCKKKKCCK...
+...KccCCCCccK...
+...KKccKKccKK...
+..K.K.KKKK.K.K..
+.K.K........K.K.
+................
+................
+
+sprite shade-up
+.......KK.......
+......KnnK......
+.....KnnnnK.....
+....KnnnnnnK....
+....KnnnnnnK....
+...KnnnnnnnnK...
+...KnnnnnnnnK...
+...KnnnnnnnnK...
+..KnnnnnnnnnnK..
+..KnnnnnnnnnnK..
+.KnnnnnnnnnnnnK.
+.KnnnnnnnnnnnnK.
+.Kn3nnn33nnn3nK.
+.K3K3n3KK3n3K3K.
+.KK.K.KKKK.K.KK.
+.K..K..KK..K..K.
+
+sprite shade-side
+.......KK.......
+......KnnK......
+.....KnnnnK.....
+....KnnnnnnK....
+....KnnnnnnK....
+...KnnnnnnnnK...
+...KnnnnnnuuK...
+...KnnnnnnnnK...
+..KnnnnnnnnnnK..
+..KnnnnnnnnnnK..
+.KnnnnnnnnnnnnK.
+.KnnnnnnnnnnnnK.
+.Kn3nnn33nnn3nK.
+.K3K3n3KK3n3K3K.
+.KK.K.KKKK.K.KK.
+.K..K..KK..K..K.
+
+sprite mirrorKnight-up
+......KKKK......
+.....KLLLLK.....
+....KLLLLLLK....
+...KLLLLLLLLK...
+...KLLLLLLLLK...
+...KLLLLLLLLK...
+...KLLLLLLLLK...
+...KLLLLLLLLK...
+..KLLMLLLLMLLK..
+.KLaLMLLLLMLaLK.
+.KLaLMLLLLMLaLK.
+.KLLLMLLLLMLLLK.
+..KLLLLLLLLLLK..
+...KMMKKKKMMK...
+...KMK....KMK...
+...KKK....KKK...
+
+sprite mirrorKnight-side
+......KKKK......
+.....KLLLLK.....
+....KLLLLLLK....
+...KLLLLLLLLK...
+...KLLKKKKKKK...
+...KLLKUUUUKK...
+...KLLKKKKKKK...
+...KLLLLLLLLK...
+..KLLMLLLLMLLK..
+.KLaLMLLLLMLaLK.
+.KLaLMLLLLMLaLK.
+.KLLLMLLLLMLLLK.
+..KLLLLLLLLLLK..
+...KMMKKKKMMK...
+...KMK....KMK...
+...KKK....KKK...
+
+sprite fuseEater-up
+...KHHK..KHHK...
+...KHHK..KHHK...
+..KKHHKKKKHHKK..
+.KHHHHHHHHHHHHK.
+KHHHHHHHHHHHHHHK
+KHHHHHHHHHHHHHHK
+KHHHHHHHHHHHHHHK
+KHHHhhhhhhhhHHHK
+KHHHHHHHHHHHHHHK
+KHHHHHHHHHHHHHHK
+KHHHHHHHHHHHHHHK
+.KHHHHHHHHHHHHK.
+.KhHHHHHHHHHHhK.
+..KhhHHHHHHhhK..
+..KKhhhhhhhhKK..
+...KK.KKKK.KK...
+
+sprite fuseEater-side
+...KWWK..KWWK...
+...KWxK..KWxK...
+..KKHHKKKKHHKK..
+.KHHHHHHHHHHHHK.
+KHHHHHHHHHHHHHHK
+KHHHHKKKKKKKKKHK
+KHHHHWCWWCWCWKHK
+KHHHHCCCCCCCCKHK
+KHHHHcCCCCcCCKHK
+KHHHHWCWWCWCWKHK
+KHHHHKKKKKKKKKHK
+.KHHHHHHHHHHHHK.
+.KhHHHHHHHHHHhK.
+..KhhHHHHHHhhK..
+..KKhhhhhhhhKK..
+...KK.KKKK.KK...
+
+sprite phaseWraith-up
+......KKKK......
+.....KUaaUK.....
+....KUaaaaUK....
+....KUaaaaUK....
+...KUaaaaaaUK...
+...KaaaaaaaaK...
+..KaaaaaaaaaaK..
+..KaaaaaaaaaaK..
+..KaaaaaaaaaaK..
+.KaaaaaaaaaaaaK.
+.KaaaaaaaaaaaaK.
+.KaaaaaaaaaaaaK.
+.KtaaaaaaaaaatK.
+.KtKaaaaaaaaKtK.
+.KKKtaaKKaatKKK.
+....KK.KK.KK....
+
+sprite phaseWraith-side
+......KKKK......
+.....KUaaUK.....
+....KUaaaaUK....
+....KUaaaaUK....
+...KUaaaaaaUK...
+...KaaaaaaaaK...
+..KaaaaaaaaTTK..
+..KaaaaaaaaTTK..
+..KaaaaaaaaaaK..
+.KaaaaaaaaaaaaK.
+.KaaaaaattttaaK.
+.KaaaaaaaaaaaaK.
+.KtaaaaaaaaaatK.
+.KtKaaaaaaaaKtK.
+.KKKtaaKKaatKKK.
+....KK.KK.KK....
+
+sprite herder-up
+................
+.......KKK......
+......KJJJK.....
+.....KJKKJJK....
+....KKJK.KJKK...
+...KVVKKKVVVVK..
+..KVVVVVVVVVVK..
+.KVVvVVVVVVVVK..
+.KVVVVVVVVVVVVK.
+.KVvVVvVVVVVVVK.
+.KVVVVVVVVVVVVK.
+..KVVvVVVVVVVK..
+..KKVVVVVVVK....
+...KvKKKKvK.....
+...KK...KK......
+................
+
+sprite curseOrb-up
+................
+....KKKKKKKK....
+..KK3nnnnnn3KK..
+.Kn3nnnnnnnn3nK.
+.K3nnnnnnnnnn3K.
+Kn3nnnnnnnnnn3nK
+KnnnnnnnnnnnnnnK
+KnnnnnnnnnnnnnnK
+KnnnnnnnnnnnnnnK
+KnnnnnnnnnnnnnnK
+.Knnnnn33nnnnnK.
+.Knnnn3nn3nnnnK.
+..KKn3nnnn3nKK..
+....KKKKKKKK....
+................
+................
+
+sprite curseOrb-side
+................
+....KKKKKKKK....
+..KK3nnnnnn3KK..
+.Kn3nnnnnnnn3nK.
+.K3nnnnnnnnnn3K.
+Kn3nnnnnnnnnn3nK
+KnnnKKKKKKKKnnnK
+KnnKuuuuuuWWKnnK
+KnnnKKKKKKKKnnnK
+KnnnnnnnnnnnnnnK
+.Knnnnn33nnnnnK.
+.Knnnn3nn3nnnnK.
+..KKn3nnnn3nKK..
+....KKKKKKKK....
+................
+................
+
+sprite bombOTron-up
+...KKKKKKKKKK...
+...KLLLLLLLLK...
+...KLCLLLLCLK...
+...KLLLLLLLLK...
+.KKKKKKKKKKKKKK.
+KMMMMMMMMMMMMMMK
+KMMMMMMMMMMMMMMK
+KMMMMMMMMMMMMMMK
+KMMMKKKKKKKKMMMK
+KMMMMMMMMMMMMMMK
+KMMMMMMMMMMMMMMK
+KMMMMMMMMMMMMMMK
+.KKMMKKKKKKMMKK.
+..KMMK....KMMK..
+..KMMK....KMMK..
+..KKKK....KKKK..
+
+sprite bombOTron-side
+...KKKKKKKKKK...
+...KLLLLLLLLK...
+...KLCLLLLCLK...
+...KLLLLLLLLK...
+.KKKKKKKKKKKKKK.
+KMMMMMMMMMMMMMMK
+KMMMMMKKKKKKKKMK
+KMMMMMNNNNNNNKMK
+KMMMMMKNNNNSNKMK
+KMMMMMNNNNNNNKMK
+KMMMMMKKKKKKKKMK
+KMMMMMMMMMMMMMMK
+.KKMMKKKKKKMMKK.
+..KMMK....KMMK..
+..KMMK....KMMK..
+..KKKK....KKKK..
+
+sprite lanternWitch-up
+.......KK.......
+......KiiK......
+.....KiiiiK.....
+....KiiiiiiK....
+...KiiiiiiiiK...
+.KKKKKKKKKKKKKK.
+...KiiiiiiiiK...
+...KiiiiiiiiK...
+...KiiiiiiiiK...
+..KiiiiiiiiiiK..
+..KiiiiiiiiiiK..
+.KiiiiiiiiiiiiK.
+.KiiYiiiiiiYiiK.
+KiiiiiiiiiiiiiiK
+KKKKKKKKKKKKKKKK
+................
+
+sprite lanternWitch-side
+.......KK.......
+......KiiK......
+.....KiiiiK.....
+....KiiiiiiK....
+...KiiiiiiiiK...
+.KKKKKKKKKKKKKK.
+...KFFFFFFFFK...
+...KFFFFFFKFK...
+...KFFFFFFFFK...
+..KiiiFFFFiiiK..
+..KiiiiiiiiiiK..
+.KiiiiiiiiiiiiK.
+.KiiYiiiiiiYiiK.
+KiiiiiiiiiiiiiiK
+KKKKKKKKKKKKKKKK
+................
+
+sprite overlordPontan-up
+...K.K.KK.K.K...
+...KYKYKKYKYK...
+...KYYYYYYYYK...
+..KKKKKKKKKKKK..
+.KccCCCCCCCCccK.
+KcCCCCCCCCCCCCcK
+KcCCCCCCCCCCCCcK
+KcCCCCCCCCCCCCcK
+KcCCCCCCCCCCCCcK
+KcCCCCCCCCCCCCcK
+KcCCCCccccCCCCcK
+KcCCCCCCCCCCCCcK
+.KcCCCCCCCCCCcK.
+..KcCCCCCCCCcK..
+...KKKKKKKKKK...
+................
+
+sprite overlordPontan-side
+...K.K.KK.K.K...
+...KYKYKKYKYK...
+...KYYYYYYYYK...
+..KKKKKKKKKKKK..
+.KccCCCCCCCCccK.
+KcCCCCCCCCCCCCcK
+KcCCCCCCCCCCKKcK
+KcCCCCCCCCCKYKcK
+KcCCCCCCCCCCCCcK
+KcCCCCCCCCCCCCcK
+KcCCCCCKKKKKKCcK
+KcCCCCCKWKWKWKcK
+.KcCCCCCCCCCCcK.
+..KcCCCCCCCCcK..
+...KKKKKKKKKK...
+................
