@@ -89,7 +89,12 @@ void main() {
       expect(SpriteAtlas.has(name!), isTrue, reason: name);
     }
     for (var slot = 1; slot <= 4; slot++) {
-      expect(SpriteAtlas.has('p$slot'), isTrue);
+      // Standing and both walk frames, facing the camera, away and sideways.
+      for (final view in ['', '-up', '-side']) {
+        for (final frame in ['', '-walk-a', '-walk-b']) {
+          expect(SpriteAtlas.has('p$slot$view$frame'), isTrue);
+        }
+      }
       expect(SpriteAtlas.has('spirit-p$slot'), isTrue);
     }
     for (final name in WorldRenderer.pingSprites.values) {
@@ -99,5 +104,16 @@ void main() {
       expect(SpriteAtlas.has(shape), isTrue);
       expect(SpriteAtlas.has('$shape-frost'), isTrue);
     }
+  });
+
+  test('sprites turn to face the way they walk', () {
+    expect(WorldRenderer.facingSprite('p1', Direction.down), 'p1');
+    expect(WorldRenderer.facingSprite('p1', Direction.up), 'p1-up');
+    expect(WorldRenderer.facingSprite('p1', Direction.left), 'p1-side');
+    expect(WorldRenderer.facingSprite('p1', Direction.right), 'p1-side');
+    expect(WorldRenderer.facingSprite('puff', Direction.up), 'puff-up');
+    // Enemies without a drawn view keep their front sprite.
+    expect(WorldRenderer.facingSprite('moleNest', Direction.up), 'moleNest');
+    expect(WorldRenderer.facingSprite('mimic', Direction.left), 'mimic');
   });
 }

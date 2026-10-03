@@ -144,8 +144,9 @@ class WorldRenderer extends PositionComponent {
   /// the feet keep pace with their speed and stop when they stop.
   final Map<int, _Stride> _strides = {};
 
-  /// Which pose to draw: 0 stand, 1 left foot up, 2 stand, 3 right foot up.
-  int _walkFrame(core.PlayerState p) {
+  /// Whether the player is walking, and which pose to draw: 0 stand, 1 left
+  /// foot up, 2 stand, 3 right foot up.
+  ({bool moving, int step}) _pose(core.PlayerState p) {
     final s = _strides.putIfAbsent(p.id, () => _Stride(p.x, p.y, _time));
     final moved = math.sqrt(math.pow(p.x - s.x, 2) + math.pow(p.y - s.y, 2));
     s
@@ -159,11 +160,26 @@ class WorldRenderer extends PositionComponent {
     }
     if (_time - s.lastMove > 0.12) {
       s.travelled = 0;
-      return 0;
+      return (moving: false, step: 0);
     }
     // A quarter tile per pose: two full steps per tile walked. The first
     // pose is already a stride so a single tap shows a step.
-    return s.travelled < 0.25 ? 1 : (s.travelled / 0.25).floor() % 4;
+    return (
+      moving: true,
+      step: s.travelled < 0.25 ? 1 : (s.travelled / 0.25).floor() % 4,
+    );
+  }
+
+  /// The sprite for [base] seen facing [facing]: the back when walking up,
+  /// the side when walking left or right (the caller mirrors it for left),
+  /// or [base] itself when the atlas has no such view.
+  static String facingSprite(String base, core.Direction facing) {
+    final view = switch (facing) {
+      core.Direction.up => '$base-up',
+      core.Direction.left || core.Direction.right => '$base-side',
+      _ => base,
+    };
+    return SpriteAtlas.has(view) ? view : base;
   }
 
   @override
@@ -538,7 +554,7 @@ class WorldRenderer extends PositionComponent {
           sprite != null &&
           atlas.draw(
             canvas,
-            sprite,
+            facingSprite(sprite, e.facing),
             body,
             paint: e.slowed ? SpriteAtlas.faded(0.6) : null,
           );
@@ -601,32 +617,37 @@ class WorldRenderer extends PositionComponent {
       }
 
       final blink = p.invincible && (_time * 12).floor().isEven;
-      final step = p.frozen ? 0 : _walkFrame(p);
+      final pose = p.frozen ? (moving: false, step: 0) : _pose(p);
       // The body lifts a pixel on each stride, so the walk has a bounce.
-      final lift = step.isOdd ? tileSize / 16 : 0.0;
+      final lift = pose.step.isOdd ? tileSize / 16 : 0.0;
       final body = _square(
         centre - Offset(0, tileSize * 0.08 + lift),
         tileSize,
       );
+      // Faces the way it walks and turns back to the camera when it stops.
+      final facing = pose.moving ? p.facing : core.Direction.down;
+      final frame = switch (pose.step) {
+        1 => '-walk-a',
+        3 => '-walk-b',
+        _ => '',
+      };
+      final paint = blink ? SpriteAtlas.faded(0.35) : null;
+      canvas.save();
+      if (facing == core.Direction.left) {
+        canvas.translate(body.center.dx, body.center.dy);
+        canvas.scale(-1, 1);
+        canvas.translate(-body.center.dx, -body.center.dy);
+      }
       atlas.draw(
         canvas,
-        switch (step) {
-          1 => 'p$look-walk-a',
-          3 => 'p$look-walk-b',
-          _ => 'p$look',
-        },
+        '${facingSprite('p$look', facing)}$frame',
         body,
-        paint: blink ? SpriteAtlas.faded(0.35) : null,
+        paint: paint,
       );
+      // The hat turns with the head, so a cap's peak points the way walked.
       final hat = Cosmetics.spriteFor(p.skin);
-      if (hat != null) {
-        atlas.draw(
-          canvas,
-          hat,
-          body,
-          paint: blink ? SpriteAtlas.faded(0.35) : null,
-        );
-      }
+      if (hat != null) atlas.draw(canvas, hat, body, paint: paint);
+      canvas.restore();
       if (p.frozen) canvas.drawRect(body.deflate(2), _iceOverlay);
       if (p.cursedFor > 0) {
         // Reversed controls: an orb circles the cursed player's head.
