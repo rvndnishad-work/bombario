@@ -4,16 +4,27 @@ import 'dart:ui';
 import 'package:bombario_core/bombario_core.dart' as core;
 import 'package:flame/components.dart';
 
-/// Draws the whole simulation in immediate mode with placeholder shapes.
+/// Draws a [core.WorldSnapshot] in immediate mode with placeholder shapes.
 ///
-/// Phase 0 is about feel, not looks: pillars, bricks, bombs, flames, items,
-/// the player and enemies are flat coloured primitives. Sprites replace this
-/// in the art pass without touching the rules.
+/// It renders snapshots rather than a live simulation so the same code draws
+/// solo play (snapshot of the local world each frame) and networked play
+/// (latest snapshot from the server). Phase 0 is about feel, not looks:
+/// pillars, bricks, bombs, flames, items, players and enemies are flat
+/// coloured primitives. Sprites replace this in the art pass.
 class WorldRenderer extends PositionComponent {
-  WorldRenderer(this.sim, {required this.tileSize});
+  WorldRenderer(this.snapshot, {required this.tileSize});
 
-  final core.World sim;
+  /// Returns the snapshot to draw this frame.
+  final core.WorldSnapshot Function() snapshot;
   final double tileSize;
+
+  /// Suit colours by player slot: blue, red, green, yellow.
+  static final playerColors = [
+    const Color(0xFF1E88E5),
+    const Color(0xFFE53935),
+    const Color(0xFF43A047),
+    const Color(0xFFFDD835),
+  ];
 
   static final _floor = Paint()..color = const Color(0xFF3FA34D);
   static final _floorAlt = Paint()..color = const Color(0xFF399A47);
@@ -30,7 +41,9 @@ class WorldRenderer extends PositionComponent {
   static final _flameOuter = Paint()..color = const Color(0xFFFF7043);
   static final _flameInner = Paint()..color = const Color(0xFFFFF176);
   static final _player = Paint()..color = const Color(0xFFFFFFFF);
-  static final _playerSuit = Paint()..color = const Color(0xFF1E88E5);
+  static final _playerSuits = [
+    for (final c in playerColors) Paint()..color = c,
+  ];
   static final _playerHit = Paint()..color = const Color(0xFF9E9E9E);
   static final _enemy = Paint()..color = const Color(0xFFF48FB1);
   static final _enemyEye = Paint()..color = const Color(0xFF000000);
@@ -51,14 +64,15 @@ class WorldRenderer extends PositionComponent {
   }
 
   Rect _tileRect(num x, num y, [double inset = 0]) => Rect.fromLTWH(
-        x * tileSize + inset,
-        y * tileSize + inset,
-        tileSize - inset * 2,
-        tileSize - inset * 2,
-      );
+    x * tileSize + inset,
+    y * tileSize + inset,
+    tileSize - inset * 2,
+    tileSize - inset * 2,
+  );
 
   @override
   void render(Canvas canvas) {
+    final sim = snapshot();
     final grid = sim.grid;
     for (var y = 0; y < grid.height; y++) {
       for (var x = 0; x < grid.width; x++) {
@@ -72,19 +86,31 @@ class WorldRenderer extends PositionComponent {
           case core.TileType.brick:
             canvas.drawRect(r, _brick);
             final third = tileSize / 3;
-            canvas.drawLine(Offset(r.left, r.top + third),
-                Offset(r.right, r.top + third), _brickLine);
-            canvas.drawLine(Offset(r.left, r.top + 2 * third),
-                Offset(r.right, r.top + 2 * third), _brickLine);
-            canvas.drawLine(Offset(r.center.dx, r.top),
-                Offset(r.center.dx, r.top + third), _brickLine);
-            canvas.drawLine(Offset(r.left + third / 2, r.top + third),
-                Offset(r.left + third / 2, r.top + 2 * third), _brickLine);
+            canvas.drawLine(
+              Offset(r.left, r.top + third),
+              Offset(r.right, r.top + third),
+              _brickLine,
+            );
+            canvas.drawLine(
+              Offset(r.left, r.top + 2 * third),
+              Offset(r.right, r.top + 2 * third),
+              _brickLine,
+            );
+            canvas.drawLine(
+              Offset(r.center.dx, r.top),
+              Offset(r.center.dx, r.top + third),
+              _brickLine,
+            );
+            canvas.drawLine(
+              Offset(r.left + third / 2, r.top + third),
+              Offset(r.left + third / 2, r.top + 2 * third),
+              _brickLine,
+            );
         }
       }
     }
 
-    for (final item in sim.floorItems) {
+    for (final item in sim.items) {
       final r = _tileRect(item.x, item.y, 4);
       if (item.type == core.ItemType.exit) {
         canvas.drawRect(_tileRect(item.x, item.y), _exit);
@@ -97,16 +123,21 @@ class WorldRenderer extends PositionComponent {
     }
 
     for (final bomb in sim.bombs) {
-      final centre =
-          Offset((bomb.x + 0.5) * tileSize, (bomb.y + 0.5) * tileSize);
+      final centre = Offset(
+        (bomb.x + 0.5) * tileSize,
+        (bomb.y + 0.5) * tileSize,
+      );
       // Pulse faster as the fuse runs out.
       final urgency = bomb.remote
           ? 0.0
           : (1 - bomb.fuse / core.Bomb.defaultFuse).clamp(0.0, 1.0);
       final pulse = 1 + 0.08 * math.sin(_time * (6 + urgency * 20));
       final radius = tileSize * 0.36 * pulse;
-      canvas.drawCircle(centre, radius,
-          urgency > 0.7 && (_time * 10).floor().isEven ? _bombHot : _bomb);
+      canvas.drawCircle(
+        centre,
+        radius,
+        urgency > 0.7 && (_time * 10).floor().isEven ? _bombHot : _bomb,
+      );
       canvas.drawCircle(centre + Offset(radius * 0.5, -radius * 0.7), 3, _fuse);
     }
 
@@ -120,21 +151,33 @@ class WorldRenderer extends PositionComponent {
       if (!enemy.alive) continue;
       final centre = Offset(enemy.x * tileSize, enemy.y * tileSize);
       final bob = math.sin(_time * 6 + enemy.id) * 1.5;
-      canvas.drawCircle(centre + Offset(0, bob), tileSize * 0.38, _enemy);
+      // Hunters are drawn darker so the time-out flood reads as a threat.
+      final paint = enemy.kind == 'Hunter Coin' ? _bombHot : _enemy;
+      canvas.drawCircle(centre + Offset(0, bob), tileSize * 0.38, paint);
       canvas.drawCircle(centre + Offset(-5, bob - 3), 2.5, _enemyEye);
       canvas.drawCircle(centre + Offset(5, bob - 3), 2.5, _enemyEye);
     }
 
-    for (final p in sim.players) {
+    for (var slot = 0; slot < sim.players.length; slot++) {
+      final p = sim.players[slot];
       if (!p.alive) continue;
       final centre = Offset(p.x * tileSize, p.y * tileSize);
       final blink = p.invincible && (_time * 12).floor().isEven;
       final body = Rect.fromCenter(
-          center: centre, width: tileSize * 0.7, height: tileSize * 0.8);
-      canvas.drawRRect(RRect.fromRectAndRadius(body, const Radius.circular(6)),
-          blink ? _playerHit : _playerSuit);
+        center: centre,
+        width: tileSize * 0.7,
+        height: tileSize * 0.8,
+      );
+      final suit = _playerSuits[slot % _playerSuits.length];
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(body, const Radius.circular(6)),
+        blink ? _playerHit : suit,
+      );
       canvas.drawCircle(
-          centre + Offset(0, -tileSize * 0.2), tileSize * 0.22, _player);
+        centre + Offset(0, -tileSize * 0.2),
+        tileSize * 0.22,
+        _player,
+      );
       // Eyes face the walking direction.
       final f = p.facing;
       final eye = Offset(f.dx * 3.0, -tileSize * 0.2 + f.dy * 2.0);
@@ -144,26 +187,37 @@ class WorldRenderer extends PositionComponent {
   }
 
   String _itemGlyph(core.ItemType type) => switch (type) {
-        core.ItemType.bombUp => 'B',
-        core.ItemType.fireUp => 'F',
-        core.ItemType.speedUp => 'S',
-        core.ItemType.wallPass => 'W',
-        core.ItemType.remote => 'R',
-        core.ItemType.bombPass => 'P',
-        core.ItemType.flamePass => 'I',
-        core.ItemType.mystery => '?',
-        core.ItemType.exit => '',
-      };
+    core.ItemType.bombUp => 'B',
+    core.ItemType.fireUp => 'F',
+    core.ItemType.speedUp => 'S',
+    core.ItemType.wallPass => 'W',
+    core.ItemType.remote => 'R',
+    core.ItemType.bombPass => 'P',
+    core.ItemType.flamePass => 'I',
+    core.ItemType.mystery => '?',
+    core.ItemType.exit => '',
+  };
 
   void _drawGlyph(Canvas canvas, Rect r, String glyph) {
-    final builder = ParagraphBuilder(
-        ParagraphStyle(textAlign: TextAlign.center, fontSize: tileSize * 0.55))
-      ..pushStyle(TextStyle(
-          color: const Color(0xFF000000), fontWeight: FontWeight.bold))
-      ..addText(glyph);
+    final builder =
+        ParagraphBuilder(
+            ParagraphStyle(
+              textAlign: TextAlign.center,
+              fontSize: tileSize * 0.55,
+            ),
+          )
+          ..pushStyle(
+            TextStyle(
+              color: const Color(0xFF000000),
+              fontWeight: FontWeight.bold,
+            ),
+          )
+          ..addText(glyph);
     final paragraph = builder.build()
       ..layout(ParagraphConstraints(width: r.width));
     canvas.drawParagraph(
-        paragraph, Offset(r.left, r.top + (r.height - paragraph.height) / 2));
+      paragraph,
+      Offset(r.left, r.top + (r.height - paragraph.height) / 2),
+    );
   }
 }

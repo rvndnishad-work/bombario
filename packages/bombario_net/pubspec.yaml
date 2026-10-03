@@ -1,0 +1,15 @@
+name: bombario_net
+description: Room server and client for Bombario over WebSockets. Pure Dart, so the server runs in the cloud or embedded in the host phone.
+version: 0.1.0
+publish_to: none
+
+environment:
+  sdk: ^3.5.0
+
+dependencies:
+  bombario_core:
+    path: ../bombario_core
+
+dev_dependencies:
+  lints: ^5.0.0
+  test: ^1.25.0

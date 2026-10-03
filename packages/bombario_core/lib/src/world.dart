@@ -19,6 +19,7 @@ class WorldConfig {
     this.hunterKind = EnemyKind.hunterCoin,
     this.exitGuardKind = EnemyKind.blueDrop,
     this.exitGuardCount = 3,
+    this.versusMode = false,
   });
 
   /// Solo: step on the exit and you're done.
@@ -30,6 +31,10 @@ class WorldConfig {
     requireAllPlayersAtExit: true,
   );
 
+  /// Versus: no exit, last player standing wins (a draw when the last two
+  /// die in the same blast).
+  static const versus = WorldConfig(versusMode: true);
+
   final double exitHoldSeconds;
   final bool requireAllPlayersAtExit;
   final int exitRadius;
@@ -38,6 +43,7 @@ class WorldConfig {
   final EnemyKind hunterKind;
   final EnemyKind exitGuardKind;
   final int exitGuardCount;
+  final bool versusMode;
 }
 
 /// The whole simulation for one stage. Deterministic given the level, the
@@ -80,6 +86,12 @@ class World {
   double _exitHold = 0;
   bool cleared = false;
   bool failed = false;
+
+  /// Versus only: set when the round ends. -1 means a draw.
+  int? winnerId;
+
+  /// True once nothing more can happen in this stage or round.
+  bool get over => cleared || failed || winnerId != null;
   int _nextId = 1;
 
   GridPos? get exitTile {
@@ -138,7 +150,7 @@ class World {
   /// Missing players get [PlayerInput.idle].
   void tick(Map<int, PlayerInput> inputs, [double dt = tickDt]) {
     events.clear();
-    if (cleared || failed) return;
+    if (over) return;
     elapsed += dt;
 
     _tickTimer(dt);
@@ -156,8 +168,12 @@ class World {
     _tickEnemies(dt);
     _pickUpItems();
     _checkEnemyContact();
-    _checkExit(dt);
-    _checkFailure();
+    if (config.versusMode) {
+      _checkVersusEnd();
+    } else {
+      _checkExit(dt);
+      _checkFailure();
+    }
   }
 
   void _tickTimer(double dt) {
@@ -699,6 +715,15 @@ class World {
 
   /// Called by the game layer after a respawn so a failed stage can continue.
   void clearFailure() => failed = false;
+
+  void _checkVersusEnd() {
+    if (players.length < 2) return;
+    final alive = alivePlayers.toList();
+    if (alive.length > 1) return;
+    winnerId = alive.isEmpty ? -1 : alive.single.id;
+    if (alive.isNotEmpty) alive.single.score += 1000;
+    events.add(MatchEnded(winnerId!));
+  }
 
   GridPos? _randomFloorTileFarFromPlayers(int minDistance) {
     final candidates = grid.positions

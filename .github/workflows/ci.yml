@@ -22,6 +22,22 @@ jobs:
       - run: dart analyze --fatal-infos
       - run: dart test
 
+  net:
+    name: bombario_net (pure Dart)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: packages/bombario_net
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dart-lang/setup-dart@v1
+        with:
+          sdk: stable
+      - run: dart pub get
+      - run: dart format --output=none --set-exit-if-changed .
+      - run: dart analyze --fatal-infos
+      - run: dart test
+
   mobile:
     name: mobile app (Flutter)
     runs-on: ubuntu-latest
