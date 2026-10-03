@@ -121,6 +121,12 @@ class Player extends Entity {
 
   bool get invincible => invincibleFor > 0;
 
+  /// Admin cheat: nothing can kill or hurt this player.
+  bool godMode = false;
+
+  /// Admin cheat: walk through bricks, pillars and pits (not the border).
+  bool noClip = false;
+
   /// Seconds the player is frozen (frost bomb) or stunned (friendly flame
   /// on tutorial stages). A frozen player can't move or place bombs.
   double frozenFor = 0;

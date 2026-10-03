@@ -2,6 +2,8 @@ import 'package:bombario_core/bombario_core.dart' as core;
 import 'package:flame/game.dart';
 import 'package:flutter/material.dart';
 
+import '../admin/admin_cheats.dart';
+import '../admin/admin_panel.dart';
 import '../game/blast_game.dart';
 import '../net/online.dart';
 import '../audio/game_audio.dart';
@@ -16,10 +18,22 @@ import 'kit/game_chrome.dart';
 ///
 /// A cleared daily pops with its time in milliseconds.
 class GameScreen extends StatefulWidget {
-  const GameScreen({super.key, this.seed = 1, this.daily});
+  const GameScreen({
+    super.key,
+    this.seed = 1,
+    this.daily,
+    this.admin,
+    this.startStage = 0,
+  });
 
   final int seed;
   final core.DailyDungeon? daily;
+
+  /// Set when launched from the admin stage viewer.
+  final AdminCheats? admin;
+
+  /// Index into [core.Campaign.stages] to start on.
+  final int startStage;
 
   @override
   State<GameScreen> createState() => _GameScreenState();
@@ -29,6 +43,8 @@ class _GameScreenState extends State<GameScreen> {
   late final BlastGame _game = BlastGame(
     seed: widget.seed,
     daily: widget.daily,
+    admin: widget.admin,
+    startStage: widget.startStage,
     settings: Settings.read(context),
     achievements: AchievementsScope.read(context),
   );
@@ -151,6 +167,12 @@ class _GameScreenState extends State<GameScreen> {
                     ),
                     MessagePopups(messages: _game.messages),
                     StageIntroCard(intro: _game.intro, onSkip: _game.skipIntro),
+                    if (widget.admin case final admin?)
+                      Positioned(
+                        top: 8,
+                        right: 8,
+                        child: AdminPanel(game: _game, cheats: admin),
+                      ),
                   ],
                 ),
               ),

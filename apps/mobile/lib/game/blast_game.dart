@@ -6,6 +6,7 @@ import 'package:flame/game.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 
+import '../admin/admin_cheats.dart';
 import '../audio/game_audio.dart';
 import '../net/analytics.dart';
 import '../progress/achievements.dart';
@@ -34,9 +35,12 @@ class BlastGame extends FlameGame {
   BlastGame({
     int seed = 1,
     this.daily,
+    this.admin,
+    this.startStage = 0,
     AppSettings? settings,
     Achievements? achievements,
   }) : _seed = seed,
+       stageIndex = startStage,
        settings = settings ?? AppSettings.memory(),
        achievements = achievements ?? Achievements.memory();
 
@@ -46,6 +50,12 @@ class BlastGame extends FlameGame {
   /// Set when playing the Daily Dungeon instead of the campaign: one stage,
   /// the day's seed, timed for the leaderboard.
   final core.DailyDungeon? daily;
+
+  /// Set when launched from the admin stage viewer.
+  final AdminCheats? admin;
+
+  /// The campaign stage to start on (and to restart from).
+  final int startStage;
 
   static const double tileSize = 32;
   static const int startingLives = 3;
@@ -86,7 +96,7 @@ class BlastGame extends FlameGame {
   int _seed;
 
   /// Index into [core.Campaign.stages].
-  int stageIndex = 0;
+  int stageIndex;
   int lives = startingLives;
 
   core.StageDef get stage => daily?.stage ?? core.Campaign.stages[stageIndex];
@@ -170,6 +180,7 @@ class BlastGame extends FlameGame {
       ..play(Sfx.stageStart);
     _hasPlayer = true;
     carryOver?.call(player);
+    _applyCheats();
 
     final old = _renderer;
     if (old != null) world.remove(old);
@@ -178,6 +189,7 @@ class BlastGame extends FlameGame {
       tileSize: tileSize,
       atlas: _atlas,
       highContrast: () => settings.highContrastFlames,
+      revealHidden: () => admin?.revealHidden ?? false,
     );
     _renderer = renderer;
     world.add(renderer);
@@ -200,6 +212,17 @@ class BlastGame extends FlameGame {
       showPlayers: false,
     );
     actionLabel.value = snap.player(player.id)?.actionLabel;
+  }
+
+  void _applyCheats() {
+    final a = admin;
+    if (a == null) return;
+    player
+      ..godMode = a.invincible
+      ..noClip = a.noClip;
+    sim.noEnemies = a.noEnemies;
+    // The clock can't run out on someone exploring.
+    if (a.invincible) sim.timeLeft = math.max(sim.timeLeft, 60);
   }
 
   /// Power-ups carry over between stages, as in the original.
@@ -277,6 +300,7 @@ class BlastGame extends FlameGame {
     _accumulator += math.min(dt, 0.25) * settings.soloSpeed;
     while (!outOfLives && _accumulator >= core.World.tickDt) {
       _accumulator -= core.World.tickDt;
+      _applyCheats();
       final x0 = player.x, y0 = player.y;
       sim.tick({player.id: input.consume()});
       _footsteps(x0, y0);
@@ -521,9 +545,19 @@ class BlastGame extends FlameGame {
     _startStage();
   }
 
+  /// Admin view: jumps straight to campaign stage [index], fresh lives.
+  void goToStage(int index) {
+    overlays
+      ..remove(Overlays.stageCleared)
+      ..remove(Overlays.gameOver);
+    stageIndex = index.clamp(0, core.Campaign.stages.length - 1);
+    lives = startingLives;
+    _startStage();
+  }
+
   void restart() {
     overlays.remove(Overlays.gameOver);
-    stageIndex = 0;
+    stageIndex = admin != null ? startStage : 0;
     _hasPlayer = false;
     lives = startingLives;
     // The daily keeps its seed: everyone races the same dungeon.

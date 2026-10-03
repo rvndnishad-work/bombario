@@ -23,7 +23,9 @@ class WorldRenderer extends PositionComponent {
     required this.tileSize,
     required this.atlas,
     bool Function()? highContrast,
-  }) : highContrast = highContrast ?? _off;
+    bool Function()? revealHidden,
+  }) : highContrast = highContrast ?? _off,
+       revealHidden = revealHidden ?? _off;
 
   static bool _off() => false;
 
@@ -34,6 +36,9 @@ class WorldRenderer extends PositionComponent {
 
   /// Accessibility: outlines every flame tile in white (§9.6).
   final bool Function() highContrast;
+
+  /// Admin view: draws what every brick hides on top of it.
+  final bool Function() revealHidden;
 
   /// Suit colours by player slot: blue, red, green, yellow (the mockups').
   static const playerColors = [
@@ -212,6 +217,7 @@ class WorldRenderer extends PositionComponent {
     _drawTiles(canvas, sim);
     _drawRegrowing(canvas, sim);
     _drawSonar(canvas, sim);
+    if (revealHidden()) _drawHidden(canvas, sim);
     _drawItems(canvas, sim);
     _drawHazards(canvas, sim);
     _drawTombstones(canvas, sim);
@@ -341,6 +347,32 @@ class WorldRenderer extends PositionComponent {
       light(_centre(f.x + 0.5, f.y + 0.5), tileSize * 1.5);
     }
     canvas.restore();
+  }
+
+  /// Admin view: every hidden item, framed (gold for the exit) so it reads
+  /// against the brick.
+  void _drawHidden(Canvas canvas, core.WorldSnapshot sim) {
+    final grid = sim.grid;
+    for (var y = 0; y < grid.height; y++) {
+      for (var x = 0; x < grid.width; x++) {
+        final hidden = grid.hiddenAt(x, y);
+        if (hidden == null) continue;
+        final exit = hidden == core.ItemType.exit;
+        canvas.drawRect(
+          _tileRect(x, y, tileSize * 0.06),
+          Paint()
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = tileSize * 0.08
+            ..color = exit ? const Color(0xFFFFD23F) : const Color(0xFF7CF0FF),
+        );
+        atlas.draw(
+          canvas,
+          itemSprite(hidden),
+          _tileRect(x, y, tileSize * 0.18),
+          paint: SpriteAtlas.faded(0.85),
+        );
+      }
+    }
   }
 
   void _drawSonar(Canvas canvas, core.WorldSnapshot sim) {

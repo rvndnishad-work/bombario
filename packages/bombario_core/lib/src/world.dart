@@ -238,6 +238,11 @@ class World {
   final List<SonarReveal> sonar = [];
   final List<Hazard> hazards = [];
 
+  /// Admin cheat: every enemy is removed each tick, spawns and bosses
+  /// included, so a stage can be explored in peace. Boss stages can't be
+  /// cleared while it is on.
+  bool noEnemies = false;
+
   /// Revives left in the shared pool (co-op).
   int livesLeft;
 
@@ -395,6 +400,7 @@ class World {
   void tick(Map<int, PlayerInput> inputs, [double dt = tickDt]) {
     events.clear();
     if (over) return;
+    if (noEnemies) enemies.clear();
     elapsed += dt;
     _killsThisTick.clear();
 
@@ -432,6 +438,7 @@ class World {
     _tickEnemies(dt);
     _tickHazards(dt);
     _tickTerrain(dt);
+    if (noEnemies) enemies.clear();
     _tickMarkers(dt);
     _pickUpItems();
     _checkEnemyContact();
@@ -491,6 +498,9 @@ class World {
   // ------------------------------------------------------------- movement
 
   bool _tileSolidFor(Player p, int x, int y) {
+    if (p.noClip) {
+      return x <= 0 || y <= 0 || x >= grid.width - 1 || y >= grid.height - 1;
+    }
     final t = grid.at(x, y);
     if (t == TileType.pillar) return true;
     if (p.ghost) return false; // ghosts float through everything else
@@ -1052,6 +1062,7 @@ class World {
 
   /// A hit that a Heart can absorb.
   void _hurtPlayer(Player p, int killerId) {
+    if (p.godMode) return;
     if (p.hearts > 0) {
       p.hearts--;
       p.invincibleFor = 1.5;
@@ -1062,6 +1073,7 @@ class World {
   }
 
   void _killPlayer(Player p, int killerId) {
+    if (p.godMode) return;
     p.alive = false;
     p.frozenFor = 0;
     if (config.keepItemsOnDeath) {
