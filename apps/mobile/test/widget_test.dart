@@ -1,15 +1,15 @@
-import 'package:bombario/main.dart';
+﻿import 'package:bombario/main.dart';
 import 'package:bombario/settings/settings.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  testWidgets('home screen shows solo, online and Wi-Fi options', (
+  testWidgets('home screen shows start, online and Wi-Fi options', (
     tester,
   ) async {
     await tester.pumpWidget(const BombarioApp());
     expect(find.text('Bombario'), findsOneWidget);
-    expect(find.text('Solo'), findsOneWidget);
+    expect(find.text('Start'), findsOneWidget);
     expect(find.text('Online'), findsOneWidget);
     expect(find.text('Host Wi-Fi room'), findsOneWidget);
   });
@@ -45,7 +45,7 @@ void main() {
     expect(settings.leftHanded, isTrue);
     await tester.pageBack();
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Awards'));
+    await tester.tap(find.byKey(const Key('awards')));
     await tester.pumpAndSettle();
     expect(find.text('First Spark'), findsOneWidget);
     expect(find.text('Bombs placed'), findsOneWidget);

@@ -17,6 +17,7 @@ file has its own palette; '.' is transparent), then `sprite <name>` blocks of
   recolor <name> = <src> #from:#to ...    swaps exact colours
   flipx <name> = <src>                    mirrors left to right
   rotate <name> = <src> <90|180|270>      turns clockwise
+  stamp <name> = <src> <patch>            patch over src; #ff00ff erases
 
 Pure standard library so it runs anywhere Python 3 does.
 """
@@ -35,6 +36,7 @@ CELL = 16
 
 Pixel = tuple  # (r, g, b, a)
 CLEAR = (0, 0, 0, 0)
+ERASE = (255, 0, 255, 255)  # in stamp patches: clears the pixel
 
 
 def hex_rgba(h):
@@ -86,12 +88,21 @@ def parse(path, sprites, order):
             add(sprites, order, name, grid)
             i += 1 + CELL
             continue
-        if words[0] in ('compose', 'recolor', 'flipx', 'rotate'):
+        if words[0] in ('compose', 'recolor', 'flipx', 'rotate', 'stamp'):
             name, eq = words[1], words[2]
             if eq != '=':
                 fail('expected "="')
             args = words[3:]
-            if words[0] == 'compose':
+            if words[0] == 'stamp':
+                grid = [row[:] for row in need(sprites, args[0], fail)]
+                patch = need(sprites, args[1], fail)
+                for y in range(CELL):
+                    for x in range(CELL):
+                        if patch[y][x] == ERASE:
+                            grid[y][x] = CLEAR
+                        elif patch[y][x][3]:
+                            grid[y][x] = patch[y][x]
+            elif words[0] == 'compose':
                 layers = [a for a in args if a != '+']
                 grid = [row[:] for row in need(sprites, layers[0], fail)]
                 for layer in layers[1:]:

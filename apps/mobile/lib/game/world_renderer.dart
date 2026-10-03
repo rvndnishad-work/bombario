@@ -136,6 +136,32 @@ class WorldRenderer extends PositionComponent {
 
   double _time = 0;
 
+  /// Walk cycle per player id, advanced by how far each player has moved so
+  /// the feet keep pace with their speed and stop when they stop.
+  final Map<int, _Stride> _strides = {};
+
+  /// Which pose to draw: 0 stand, 1 left foot up, 2 stand, 3 right foot up.
+  int _walkFrame(core.PlayerState p) {
+    final s = _strides.putIfAbsent(p.id, () => _Stride(p.x, p.y, _time));
+    final moved = math.sqrt(math.pow(p.x - s.x, 2) + math.pow(p.y - s.y, 2));
+    s
+      ..x = p.x
+      ..y = p.y;
+    // Warps and respawns jump; only count real steps.
+    if (moved > 0.001 && moved < 1) {
+      s
+        ..travelled += moved
+        ..lastMove = _time;
+    }
+    if (_time - s.lastMove > 0.12) {
+      s.travelled = 0;
+      return 0;
+    }
+    // A quarter tile per pose: two full steps per tile walked. The first
+    // pose is already a stride so a single tap shows a step.
+    return s.travelled < 0.25 ? 1 : (s.travelled / 0.25).floor() % 4;
+  }
+
   @override
   void update(double dt) {
     super.update(dt);
@@ -568,10 +594,20 @@ class WorldRenderer extends PositionComponent {
       }
 
       final blink = p.invincible && (_time * 12).floor().isEven;
-      final body = _square(centre - Offset(0, tileSize * 0.08), tileSize);
+      final step = p.frozen ? 0 : _walkFrame(p);
+      // The body lifts a pixel on each stride, so the walk has a bounce.
+      final lift = step.isOdd ? tileSize / 16 : 0.0;
+      final body = _square(
+        centre - Offset(0, tileSize * 0.08 + lift),
+        tileSize,
+      );
       atlas.draw(
         canvas,
-        'p$look',
+        switch (step) {
+          1 => 'p$look-walk-a',
+          3 => 'p$look-walk-b',
+          _ => 'p$look',
+        },
         body,
         paint: blink ? SpriteAtlas.faded(0.35) : null,
       );
@@ -633,4 +669,13 @@ class WorldRenderer extends PositionComponent {
       );
     }
   }
+}
+
+class _Stride {
+  _Stride(this.x, this.y, this.lastMove);
+
+  double x;
+  double y;
+  double lastMove;
+  double travelled = 0;
 }

@@ -1,4 +1,4 @@
-import 'dart:math';
+﻿import 'dart:math';
 
 import 'package:flutter/material.dart';
 
@@ -20,10 +20,13 @@ import 'online_screen.dart';
 import 'player_name.dart';
 import 'settings_screen.dart';
 
-/// Home (mockup board 02): profile and menus on the left, the ways to play
-/// in the middle, progress on the right.
+/// Home: a top bar with the profile and menus, the ways to play on the
+/// left (Start first, the main thing to tap), and today's challenge and
+/// progress on the right. Everything sits on one grid so tile edges line up.
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
+
+  static const double _gap = 12;
 
   void _go(BuildContext context, Widget screen) =>
       Navigator.of(context).push(MaterialPageRoute(builder: (_) => screen));
@@ -36,183 +39,155 @@ class HomeScreen extends StatelessWidget {
     final dailyBest = achievements.dailyBest(daily.id);
     return Scaffold(
       body: SafeArea(
-        child: Row(
-          children: [
-            // Left rail: title, profile, menus.
-            Container(
-              width: 250,
-              color: Px.ink,
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Bombario', style: Px.title(15, color: Px.fuse)),
-                  const SizedBox(height: 14),
-                  PxPanel(
-                    padding: const EdgeInsets.all(10),
-                    child: Row(
-                      children: [
-                        GestureDetector(
-                          key: const Key('profile-locker'),
-                          onTap: () => _go(context, const LockerScreen()),
-                          child: PlayerPreview(skin: skin, size: 44),
-                        ),
-                        const SizedBox(width: 10),
-                        const Expanded(child: PlayerNameField()),
-                      ],
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 12, 20, 16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // Top bar: title, profile, menus.
+              SizedBox(
+                height: 56,
+                child: Row(
+                  children: [
+                    Text('Bombario', style: Px.title(18, color: Px.fuse)),
+                    const Spacer(),
+                    GestureDetector(
+                      key: const Key('profile-locker'),
+                      onTap: () => _go(context, const LockerScreen()),
+                      child: PlayerPreview(skin: skin, size: 40),
                     ),
-                  ),
-                  const Spacer(),
-                  _SmallTile(
-                    key: const Key('locker'),
-                    sprite: 'crown',
-                    label: 'Locker',
-                    wide: true,
-                    onTap: () => _go(context, const LockerScreen()),
-                  ),
-                  const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _SmallTile(
-                          sprite: 'star',
-                          label: 'Awards',
-                          onTap: () => _go(context, const AchievementsScreen()),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: _SmallTile(
-                          key: const Key('settings'),
-                          sprite: 'wall',
-                          label: 'Settings',
-                          onTap: () => _go(context, const SettingsScreen()),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-            // Middle: ways to play.
-            Expanded(
-              child: Center(
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.all(16),
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 460),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        _BigTile(
-                          sprite: 'bomb',
-                          title: 'Online',
-                          subtitle: 'Quick match, or a room with friends',
-                          color: Px.fuse,
-                          onTap: () => _go(context, const OnlineScreen()),
-                        ),
-                        const SizedBox(height: 10),
-                        _BigTile(
-                          sprite: 'swords',
-                          title: 'Host Wi-Fi room',
-                          subtitle: 'Friends on the same Wi-Fi or hotspot',
-                          color: Px.blast,
-                          onTap: () => _go(context, const LobbyScreen.host()),
-                        ),
-                        const SizedBox(height: 10),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: _SmallTile(
-                                sprite: 'flag',
-                                label: 'Solo',
-                                wide: true,
-                                onTap: () => _go(
-                                  context,
-                                  GameScreen(seed: Random().nextInt(1 << 30)),
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 10),
-                            Expanded(
-                              child: _SmallTile(
-                                sprite: 'p2',
-                                label: 'Join Wi-Fi room',
-                                wide: true,
-                                onTap: () => _go(context, const JoinScreen()),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
+                    const SizedBox(width: 8),
+                    const SizedBox(width: 190, child: PlayerNameField()),
+                    const SizedBox(width: _gap),
+                    _IconTile(
+                      key: const Key('locker'),
+                      sprite: 'crown',
+                      label: 'Locker',
+                      onTap: () => _go(context, const LockerScreen()),
                     ),
-                  ),
+                    const SizedBox(width: 8),
+                    _IconTile(
+                      key: const Key('awards'),
+                      sprite: 'star',
+                      label: 'Awards',
+                      onTap: () => _go(context, const AchievementsScreen()),
+                    ),
+                    const SizedBox(width: 8),
+                    _IconTile(
+                      key: const Key('settings'),
+                      sprite: 'gear',
+                      label: 'Settings',
+                      onTap: () => _go(context, const SettingsScreen()),
+                    ),
+                  ],
                 ),
               ),
-            ),
-            // Right: progress.
-            SizedBox(
-              width: 220,
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(0, 16, 16, 16),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
+              const SizedBox(height: _gap),
+              Expanded(
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    GestureDetector(
-                      key: const Key('daily'),
-                      onTap: () => _go(context, const DailyScreen()),
-                      child: PxPanel(
-                        border: Px.fuse,
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
+                    // Ways to play.
+                    Expanded(
+                      flex: 3,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Expanded(
+                            flex: 5,
+                            child: _PlayTile(
+                              key: const Key('start'),
+                              sprite: 'play',
+                              title: 'Start',
+                              subtitle: 'Solo campaign',
+                              color: Px.ok,
+                              big: true,
+                              onTap: () => _go(
+                                context,
+                                GameScreen(seed: Random().nextInt(1 << 30)),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: _gap),
+                          Expanded(
+                            flex: 4,
+                            child: _PlayTile(
+                              sprite: 'bomb',
+                              title: 'Online',
+                              subtitle: 'Quick match, or a room with friends',
+                              color: Px.fuse,
+                              onTap: () => _go(context, const OnlineScreen()),
+                            ),
+                          ),
+                          const SizedBox(height: _gap),
+                          Expanded(
+                            flex: 4,
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
                               children: [
-                                const SpriteIcon('cal', size: 22),
-                                const SizedBox(width: 6),
-                                Flexible(
-                                  child: Text(
-                                    'DAILY DUNGEON',
-                                    style: Px.label(11, color: Px.fuse),
-                                    overflow: TextOverflow.ellipsis,
+                                Expanded(
+                                  child: _PlayTile(
+                                    sprite: 'wifi',
+                                    title: 'Host Wi-Fi room',
+                                    color: Px.blast,
+                                    onTap: () =>
+                                        _go(context, const LobbyScreen.host()),
+                                  ),
+                                ),
+                                const SizedBox(width: _gap),
+                                Expanded(
+                                  child: _PlayTile(
+                                    sprite: 'p2',
+                                    title: 'Join Wi-Fi room',
+                                    color: Px.panel,
+                                    dark: true,
+                                    onTap: () =>
+                                        _go(context, const JoinScreen()),
                                   ),
                                 ),
                               ],
                             ),
-                            const SizedBox(height: 6),
-                            Text(daily.stage.name, style: Px.label(14)),
-                            const SizedBox(height: 4),
-                            Text(
-                              dailyBest == null
-                                  ? 'Race the world. Tap to play'
-                                  : 'Best ${formatTime(dailyBest)}',
-                              style: Px.label(12, color: Px.ok, bold: false),
-                            ),
-                          ],
-                        ),
+                          ),
+                        ],
                       ),
                     ),
-                    const SizedBox(height: 10),
-                    PxPanel(
+                    const SizedBox(width: _gap),
+                    // Today's challenge and progress.
+                    Expanded(
+                      flex: 2,
                       child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
-                          Text(
-                            'PROGRESS',
-                            style: Px.label(11, color: Px.muted),
+                          Expanded(
+                            child: GestureDetector(
+                              key: const Key('daily'),
+                              onTap: () => _go(context, const DailyScreen()),
+                              child: _InfoCard(
+                                sprite: 'cal',
+                                heading: 'Daily dungeon',
+                                headingColor: Px.fuse,
+                                border: Px.fuse,
+                                line1: daily.stage.name,
+                                line2: dailyBest == null
+                                    ? 'Race the world. Tap to play'
+                                    : 'Best ${formatTime(dailyBest)}',
+                              ),
+                            ),
                           ),
-                          const SizedBox(height: 6),
-                          Text(
-                            '${achievements.stat(Achievements.stagesCleared)} '
-                            'stages cleared',
-                            style: Px.label(14),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            '${achievements.unlocked.length} of '
-                            '${Achievements.all.length} awards',
-                            style: Px.label(12, color: Px.ok, bold: false),
+                          const SizedBox(height: _gap),
+                          Expanded(
+                            child: _InfoCard(
+                              sprite: 'flag',
+                              heading: 'Progress',
+                              headingColor: Px.muted,
+                              border: Px.edge,
+                              line1:
+                                  '${achievements.stat(Achievements.stagesCleared)} '
+                                  'stages cleared',
+                              line2:
+                                  '${achievements.unlocked.length} of '
+                                  '${Achievements.all.length} awards',
+                            ),
                           ),
                         ],
                       ),
@@ -220,98 +195,168 @@ class HomeScreen extends StatelessWidget {
                   ],
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
   }
 }
 
-class _BigTile extends StatelessWidget {
-  const _BigTile({
+/// A way to play: a coloured tile filling its grid cell.
+class _PlayTile extends StatelessWidget {
+  const _PlayTile({
+    super.key,
     required this.sprite,
     required this.title,
-    required this.subtitle,
     required this.color,
     required this.onTap,
+    this.subtitle,
+    this.big = false,
+    this.dark = false,
   });
 
   final String sprite;
   final String title;
-  final String subtitle;
+  final String? subtitle;
   final Color color;
+  final VoidCallback onTap;
+  final bool big;
+
+  /// Light text on a dark tile instead of dark text on a bright one.
+  final bool dark;
+
+  @override
+  Widget build(BuildContext context) {
+    final ink = dark ? Px.paper : Px.night;
+    return Semantics(
+      button: true,
+      child: GestureDetector(
+        onTap: onTap,
+        child: PxPanel(
+          color: color,
+          border: dark ? Px.edge : Color.lerp(color, Colors.white, 0.4)!,
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          child: Row(
+            children: [
+              SpriteIcon(sprite, size: big ? 52 : 34),
+              SizedBox(width: big ? 18 : 12),
+              Expanded(
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerLeft,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        title,
+                        style: big
+                            ? Px.title(26, color: ink)
+                            : Px.label(18, color: ink),
+                      ),
+                      if (subtitle != null) ...[
+                        const SizedBox(height: 4),
+                        Text(
+                          subtitle!,
+                          style: Px.label(12, color: ink, bold: false),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// A square menu button for the top bar.
+class _IconTile extends StatelessWidget {
+  const _IconTile({
+    super.key,
+    required this.sprite,
+    required this.label,
+    required this.onTap,
+  });
+
+  final String sprite;
+  final String label;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) => Semantics(
     button: true,
-    child: GestureDetector(
-      onTap: onTap,
-      child: PxPanel(
-        color: color,
-        border: Color.lerp(color, Colors.white, 0.4)!,
-        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
-        child: Row(
-          children: [
-            SpriteIcon(sprite, size: 40),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(title, style: Px.label(20, color: Px.night)),
-                  Text(
-                    subtitle,
-                    style: Px.label(12, color: Px.night, bold: false),
-                  ),
-                ],
-              ),
-            ),
-          ],
+    label: label,
+    child: Tooltip(
+      message: label,
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          width: 48,
+          height: 48,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: Px.panel,
+            border: Border.all(color: Px.edge, width: 3),
+          ),
+          child: SpriteIcon(sprite, size: 28),
         ),
       ),
     ),
   );
 }
 
-class _SmallTile extends StatelessWidget {
-  const _SmallTile({
-    super.key,
+/// A status card in the right column.
+class _InfoCard extends StatelessWidget {
+  const _InfoCard({
     required this.sprite,
-    required this.label,
-    required this.onTap,
-    this.wide = false,
+    required this.heading,
+    required this.headingColor,
+    required this.border,
+    required this.line1,
+    required this.line2,
   });
 
   final String sprite;
-  final String label;
-  final VoidCallback onTap;
-  final bool wide;
+  final String heading;
+  final Color headingColor;
+  final Color border;
+  final String line1;
+  final String line2;
 
   @override
-  Widget build(BuildContext context) => Semantics(
-    button: true,
-    child: GestureDetector(
-      onTap: onTap,
-      child: PxPanel(
-        color: Px.panel,
-        padding: EdgeInsets.symmetric(horizontal: 10, vertical: wide ? 14 : 10),
-        child: wide
-            ? Row(
-                children: [
-                  SpriteIcon(sprite, size: 26),
-                  const SizedBox(width: 10),
-                  Flexible(child: Text(label, style: Px.label(15))),
-                ],
-              )
-            : Column(
-                children: [
-                  SpriteIcon(sprite, size: 26),
-                  const SizedBox(height: 4),
-                  Text(label, style: Px.label(12)),
-                ],
-              ),
+  Widget build(BuildContext context) => PxPanel(
+    border: border,
+    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+    child: Align(
+      alignment: Alignment.centerLeft,
+      child: FittedBox(
+        fit: BoxFit.scaleDown,
+        alignment: Alignment.centerLeft,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                SpriteIcon(sprite, size: 22),
+                const SizedBox(width: 8),
+                Text(
+                  heading.toUpperCase(),
+                  style: Px.label(12, color: headingColor),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(line1, style: Px.label(15)),
+            const SizedBox(height: 4),
+            Text(line2, style: Px.label(12, color: Px.ok, bold: false)),
+          ],
+        ),
       ),
     ),
   );
