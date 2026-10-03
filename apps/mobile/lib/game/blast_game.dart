@@ -57,7 +57,12 @@ class BlastGame extends FlameGame {
 
   /// After the exit, the board holds still while the clear jingle plays
   /// before the results card comes up.
-  static const double clearBeatSeconds = 1.6;
+  static const double clearBeatSeconds = 1.9;
+
+  /// With this much time left the music stops for the alarm sting, and
+  /// [timeLowStingSeconds] later the hurry loop takes over.
+  static const double timeLowSeconds = 30;
+  static const double timeLowStingSeconds = 0.7;
 
   /// The stage card's text while it shows, else null.
   final ValueNotifier<StageIntro?> intro = ValueNotifier(null);
@@ -109,6 +114,8 @@ class BlastGame extends FlameGame {
   double _hudTimer = 0;
   double _shake = 0;
   bool _hurry = false;
+  bool _timeLowStung = false;
+  int _lastTickSecond = -1;
   final math.Random _shakeRng = math.Random();
   final FollowCamera _camera = FollowCamera();
 
@@ -161,11 +168,14 @@ class BlastGame extends FlameGame {
       if (daily != null) 'mode': 'daily',
     });
     _hurry = false;
+    _timeLowStung = false;
+    _lastTickSecond = -1;
     _stride = 0;
     _exitOpen = false;
     _found = false;
     // The fanfare plays under the stage card; the world's music follows it.
     GameAudio.instance
+      ..stopAllOneShots()
       ..stopMusic()
       ..play(Sfx.stageStart);
     _hasPlayer = true;
@@ -299,6 +309,15 @@ class BlastGame extends FlameGame {
         if (lives > 0) {
           sim.respawn(player);
           sim.clearFailure();
+          // The death jingle stopped the music; it restarts cold on the
+          // downbeat, in whatever state the stage is in. Once the time
+          // alarm has sounded, that state is the hurry loop.
+          if (_timeLowStung) _hurry = true;
+          GameAudio.instance.playMusic(
+            stage.world,
+            hurry: _hurry,
+            found: _found,
+          );
         } else if (!overlays.isActive(Overlays.gameOver)) {
           Analytics.instance.log('game_over', {
             'stage': stage.id,
@@ -317,9 +336,28 @@ class BlastGame extends FlameGame {
     _followPlayer(dt);
 
     messages.tick(dt);
-    if (!_hurry && sim.timeLeft <= 30 && sim.timeLeft > 0) {
-      _hurry = true;
-      GameAudio.instance.playMusic(stage.world, hurry: true, found: _found);
+    if (!stage.bonus) {
+      if (!_timeLowStung &&
+          sim.timeLeft <= timeLowSeconds &&
+          sim.timeLeft > 0) {
+        _timeLowStung = true;
+        // The alarm is heard dry; the fast loop enters on its downbeat after.
+        GameAudio.instance
+          ..stopMusic()
+          ..play(Sfx.timeLow);
+      }
+      if (!_hurry &&
+          sim.timeLeft <= timeLowSeconds - timeLowStingSeconds &&
+          sim.timeLeft > 0) {
+        _hurry = true;
+        GameAudio.instance.playMusic(stage.world, hurry: true, found: _found);
+      }
+    }
+    // One click per displayed second, same rounding as the HUD's digit.
+    final secs = sim.timeLeft.ceil();
+    if (secs > 0 && secs <= 10 && secs != _lastTickSecond && player.alive) {
+      _lastTickSecond = secs;
+      GameAudio.instance.play(Sfx.tick);
     }
     _hudTimer += dt;
     if (_hudTimer >= 0.1) {
@@ -386,9 +424,16 @@ class BlastGame extends FlameGame {
             when playerId == player.id:
           audio.play(Sfx.pickup);
           _buzz(HapticFeedback.selectionClick);
-          if (!_found && !stage.bonus && type != core.ItemType.exit) {
+          if (!_found &&
+              !stage.bonus &&
+              !stage.isBoss &&
+              type != core.ItemType.exit) {
             _found = true;
-            audio.playMusic(stage.world, hurry: _hurry, found: true);
+            // Between the time alarm and the hurry loop, the hurry switch
+            // starts the found loop itself.
+            if (!_timeLowStung || _hurry) {
+              audio.playMusic(stage.world, hurry: _hurry, found: true);
+            }
           }
           final (title, body) = itemInfo(type);
           messages.show(
@@ -417,7 +462,9 @@ class BlastGame extends FlameGame {
         case core.PlayerDied():
           lives--;
           _shake = 0.3;
-          audio.play(Sfx.death);
+          audio
+            ..stopMusic()
+            ..play(Sfx.death);
           _buzz(HapticFeedback.vibrate);
           messages.show(
             GameMessage(
@@ -466,6 +513,18 @@ class BlastGame extends FlameGame {
             ..stopMusic()
             ..play(Sfx.stageClear);
           _clearBeat = clearBeatSeconds;
+        case core.TimeUp():
+          _shake = 0.3;
+          audio.play(Sfx.timeUp);
+          _buzz(HapticFeedback.heavyImpact);
+          messages.show(
+            GameMessage(
+              title: "Time's up!",
+              body: 'Hunters are pouring in. Find the exit!',
+              sprite: 'doorWarden',
+              seconds: 4,
+            ),
+          );
         case core.StageFailed():
           break; // handled by the respawn timer
         default:
@@ -490,7 +549,10 @@ class BlastGame extends FlameGame {
   void _endIntro() {
     _introLeft = 0;
     intro.value = null;
-    GameAudio.instance.playMusic(stage.world);
+    // A skip cuts the fanfare instead of starting the loop over it.
+    GameAudio.instance
+      ..stopSfx(Sfx.stageStart)
+      ..playMusic(stage.world);
     final tip = _pendingTip;
     _pendingTip = null;
     if (tip != null) messages.show(tip);
@@ -506,12 +568,18 @@ class BlastGame extends FlameGame {
     if (paused) return;
     input.release();
     pauseEngine();
+    GameAudio.instance
+      ..play(Sfx.uiTap)
+      ..pauseMusic();
     overlays.add(Overlays.pause);
   }
 
   void resume() {
     overlays.remove(Overlays.pause);
     resumeEngine();
+    GameAudio.instance
+      ..play(Sfx.uiTap)
+      ..resumeMusic();
   }
 
   void nextStage() {

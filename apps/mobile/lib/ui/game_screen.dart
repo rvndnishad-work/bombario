@@ -38,7 +38,10 @@ class _GameScreenState extends State<GameScreen> {
 
   @override
   void dispose() {
-    GameAudio.instance.playMusic(0);
+    // Leaving mid-jingle must not carry it onto the menu loop.
+    GameAudio.instance
+      ..stopAllOneShots()
+      ..playMusic(0);
     super.dispose();
   }
 

@@ -16,6 +16,10 @@ void main() {
     await audio.playMusic(3, hurry: true);
     await audio.playMusic(0);
     await audio.stopMusic();
+    await audio.pauseMusic();
+    await audio.resumeMusic();
+    audio.stopSfx(Sfx.stageStart);
+    audio.stopSfx(Sfx.gameOver);
     audio.setVolumes(music: 0.3, sfx: 1.5);
     expect(audio.musicVolume, 0.3);
     expect(audio.sfxVolume, 1.0);
@@ -27,6 +31,7 @@ void main() {
     expect(GameAudio.musicFile(9), 'music_w5.wav');
     expect(GameAudio.musicFile(2, hurry: true), 'music_w2_fast.wav');
     expect(GameAudio.sfxFile(Sfx.bombPlaceOther), 'bomb_place_other.wav');
+    expect(GameAudio.sfxFile(Sfx.timeLow), 'time_low.wav');
   });
 
   test('every Sfx and music track has an asset file', () {

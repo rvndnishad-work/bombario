@@ -50,7 +50,10 @@ class _NetworkGameScreenState extends State<NetworkGameScreen> {
 
   @override
   void dispose() {
-    GameAudio.instance.playMusic(0);
+    // Leaving mid-jingle must not carry it onto the menu loop.
+    GameAudio.instance
+      ..stopAllOneShots()
+      ..playMusic(0);
     widget.session.removeListener(_onSession);
     super.dispose();
   }

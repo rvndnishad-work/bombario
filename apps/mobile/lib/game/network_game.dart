@@ -156,6 +156,12 @@ class NetworkGame extends FlameGame {
       );
     }
     messages.tick(dt);
+    if (_musicAt >= 0 && _clock >= _musicAt) {
+      _musicAt = -1;
+      if (session.phase == SessionPhase.playing) {
+        GameAudio.instance.playMusic(_world, hurry: _hurry, found: _found);
+      }
+    }
 
     // Send input at the simulation rate.
     _accumulator += math.min(dt, 0.25);
@@ -248,31 +254,89 @@ class NetworkGame extends FlameGame {
   bool _hurry = false;
   bool _musicStarted = false;
 
+  /// Game-clock time at which the loop (re)starts after a fanfare or jingle,
+  /// or -1.
+  double _musicAt = -1;
+  bool _timeLowStung = false;
+  int _lastTickSecond = -1;
+  bool _found = false;
+  bool _exitOpen = false;
+
+  int get _world =>
+      int.tryParse((session.stageId ?? '1').split('-').first) ?? 1;
+  core.StageDef? get _stageDef =>
+      session.stageId == null ? null : core.Campaign.byId(session.stageId!);
+  bool get _bonus => _stageDef?.bonus ?? false;
+  bool get _boss => _stageDef?.isBoss ?? false;
+
   /// Room play only sees snapshots, so sounds come from what changed.
   void _sounds(core.WorldSnapshot? before, core.WorldSnapshot now) {
     final audio = GameAudio.instance;
-    final world = int.tryParse((session.stageId ?? '1').split('-').first) ?? 1;
     if (!_musicStarted) {
       _musicStarted = true;
-      audio.playMusic(world);
+      if (now.tick <= 60) {
+        // A fresh match: the fanfare, then the loop.
+        audio
+          ..stopMusic()
+          ..play(Sfx.stageStart);
+        _musicAt = _clock + 1.9;
+      } else {
+        // A reconnect: straight to the loop, in the state the clock says,
+        // without the alarm sting.
+        _hurry = _timeLowStung =
+            !_bonus && now.timeLeft <= 30 && now.timeLeft > 0;
+        audio.playMusic(_world, hurry: _hurry);
+      }
     }
-    if (!_hurry && now.timeLeft <= 30 && now.timeLeft > 0) {
-      _hurry = true;
-      audio.playMusic(world, hurry: true);
+    if (!_bonus) {
+      if (!_timeLowStung && now.timeLeft <= 30 && now.timeLeft > 0) {
+        _timeLowStung = true;
+        audio
+          ..stopMusic()
+          ..play(Sfx.timeLow);
+      }
+      if (!_hurry && now.timeLeft <= 29.3 && now.timeLeft > 0) {
+        _hurry = true;
+        audio.playMusic(_world, hurry: true, found: _found);
+      }
+    }
+    final secs = now.timeLeft.ceil();
+    if (secs > 0 && secs <= 10 && secs != _lastTickSecond) {
+      _lastTickSecond = secs;
+      audio.play(Sfx.tick);
     }
     if (before == null) return;
+    if (!_bonus && before.timeLeft > 0 && now.timeLeft <= 0 && !now.cleared) {
+      audio.play(Sfx.timeUp);
+      _shake = 0.3;
+    }
     if (now.bombs.length > before.bombs.length) {
       // Ours if we pressed Bomb just before this snapshot.
       audio.play(_clock - _myBombAt < 0.4 ? Sfx.bombPlace : Sfx.bombPlaceOther);
     }
     if (now.flames.length > before.flames.length) audio.play(Sfx.explode);
     if (now.pings.length > before.pings.length) audio.play(Sfx.ping);
+    if (session.mode == GameMode.coop &&
+        !_boss &&
+        !_bonus &&
+        !_exitOpen &&
+        before.enemies.any((e) => e.alive) &&
+        !now.enemies.any((e) => e.alive)) {
+      _exitOpen = true;
+      audio.play(Sfx.exitOpen);
+    }
     final id = session.myPlayerId;
     final was = id == null ? null : before.player(id);
     final me = id == null ? null : now.player(id);
     if (was != null && me != null) {
       if (!was.ghost && me.ghost) audio.play(Sfx.ghost);
-      if (was.alive && !me.alive && !me.ghost) audio.play(Sfx.death);
+      if (was.alive && !me.alive && !me.ghost) {
+        // The jingle plays dry; the loop restarts after it.
+        audio
+          ..stopMusic()
+          ..play(Sfx.death);
+        _musicAt = _clock + 1.5;
+      }
       if (was.ghost && me.alive) audio.play(Sfx.revive);
       if (me.alive &&
           (me.maxBombs > was.maxBombs ||
@@ -280,6 +344,10 @@ class NetworkGame extends FlameGame {
               me.speed > was.speed)) {
         audio.play(Sfx.pickup);
         if (settings.haptics) HapticFeedback.selectionClick();
+        if (!_found && session.mode == GameMode.coop && !_bonus && !_boss) {
+          _found = true;
+          audio.playMusic(_world, hurry: _hurry, found: true);
+        }
       }
     }
   }
@@ -299,7 +367,9 @@ class NetworkGame extends FlameGame {
 
   /// Called once when the match ends.
   void recordResult() {
+    _musicAt = -1;
     GameAudio.instance
+      ..stopAllOneShots()
       ..stopMusic()
       ..play(
         session.lastCleared || session.lastWinner == session.myPlayerId
