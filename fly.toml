@@ -1,0 +1,46 @@
+# Fly.io config for the online room server (apps/server).
+# Deploy from the repo root: `fly deploy`, or "Launch an App" from GitHub.
+#
+# Rooms live in the server's memory, so run exactly ONE machine: a second
+# machine would not know the first one's room codes. The volume keeps the
+# Daily Dungeon leaderboards and analytics across restarts and deploys.
+
+app = "bombario-server"
+primary_region = "bom"
+
+[build]
+  dockerfile = "apps/server/Dockerfile"
+
+[env]
+  PORT = "8080"
+  DATA_DIR = "/data"
+
+[mounts]
+  source = "bombario_data"
+  destination = "/data"
+  initial_size = "1gb"
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+  # Sleep when nobody is connected; the first request wakes it in a second
+  # or two. Open WebSockets count as connections, so matches are never cut.
+  auto_stop_machines = "stop"
+  auto_start_machines = true
+  min_machines_running = 0
+
+  [http_service.concurrency]
+    type = "connections"
+    soft_limit = 400
+    hard_limit = 500
+
+  [[http_service.checks]]
+    grace_period = "10s"
+    interval = "30s"
+    method = "GET"
+    path = "/health"
+    timeout = "5s"
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "256mb"
