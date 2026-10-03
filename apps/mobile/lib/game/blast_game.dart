@@ -152,6 +152,8 @@ class BlastGame extends FlameGame {
       name: 'You',
       skin: Cosmetics.equipped(settings.skin, achievements),
     );
+    // A tap walks a quarter tile whatever the speed.
+    input.tilesPerTick = () => player.speed * core.World.tickDt;
     achievements.startStage();
     _ticks = 0;
     Analytics.instance.log('stage_start', {
