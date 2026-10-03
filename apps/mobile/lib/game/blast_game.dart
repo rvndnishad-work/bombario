@@ -2,10 +2,8 @@ import 'dart:math' as math;
 
 import 'package:bombario_core/bombario_core.dart' as core;
 import 'package:flame/components.dart';
-import 'package:flame/events.dart' show KeyboardEvents;
 import 'package:flame/game.dart';
 import 'package:flutter/foundation.dart';
-import 'package:flutter/widgets.dart' show KeyEventResult;
 import 'package:flutter/services.dart';
 
 import '../audio/game_audio.dart';
@@ -32,7 +30,7 @@ abstract final class Overlays {
 ///
 /// The simulation lives entirely in `bombario_core`; this class only steps it at
 /// a fixed 30 Hz, feeds it input, moves the camera and reacts to events.
-class BlastGame extends FlameGame with KeyboardEvents {
+class BlastGame extends FlameGame {
   BlastGame({
     int seed = 1,
     this.daily,
@@ -211,18 +209,6 @@ class BlastGame extends FlameGame with KeyboardEvents {
       pos.y += (_shakeRng.nextDouble() - 0.5) * 6;
     }
     camera.viewfinder.position = pos;
-  }
-
-  @override
-  KeyEventResult onKeyEvent(
-    KeyEvent event,
-    Set<LogicalKeyboardKey> keysPressed,
-  ) {
-    final ours = input.handleKey(
-      event,
-      onPause: () => paused ? resume() : pause(),
-    );
-    return ours ? KeyEventResult.handled : KeyEventResult.ignored;
   }
 
   @override

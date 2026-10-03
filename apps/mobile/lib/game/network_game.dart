@@ -3,10 +3,8 @@ import 'dart:math' as math;
 import 'package:bombario_core/bombario_core.dart' as core;
 import 'package:bombario_net/bombario_net.dart' show GameMode;
 import 'package:flame/components.dart';
-import 'package:flame/events.dart' show KeyboardEvents;
 import 'package:flame/game.dart';
 import 'package:flutter/foundation.dart';
-import 'package:flutter/widgets.dart' show KeyEventResult;
 import 'package:flutter/services.dart';
 
 import '../net/room_session.dart';
@@ -26,7 +24,7 @@ import 'world_renderer.dart';
 /// predicts it to be (it moves the instant the stick does), and everyone else
 /// is interpolated between the last two snapshots so 15 Hz updates still look
 /// like smooth 60 fps movement.
-class NetworkGame extends FlameGame with KeyboardEvents {
+class NetworkGame extends FlameGame {
   NetworkGame(this.session, {AppSettings? settings, Achievements? achievements})
     : settings = settings ?? AppSettings.memory(),
       achievements = achievements ?? Achievements.memory();
@@ -228,12 +226,6 @@ class NetworkGame extends FlameGame with KeyboardEvents {
     }
     camera.viewfinder.position = pos;
   }
-
-  @override
-  KeyEventResult onKeyEvent(
-    KeyEvent event,
-    Set<LogicalKeyboardKey> keysPressed,
-  ) => input.handleKey(event) ? KeyEventResult.handled : KeyEventResult.ignored;
 
   int get _mySlot {
     final snap = session.snapshot;
