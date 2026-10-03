@@ -18,6 +18,7 @@ void main() {
     await tester.pump(const Duration(milliseconds: 50));
     final state = tester.state(find.byType(GameScreen));
     final game = (state as dynamic).game as BlastGame;
+    game.skipIntro();
 
     await tester.sendKeyDownEvent(LogicalKeyboardKey.arrowRight);
     expect(game.input.held, Direction.right);
@@ -25,22 +26,23 @@ void main() {
     await tester.sendKeyDownEvent(LogicalKeyboardKey.arrowDown);
     expect(game.input.held, Direction.down);
     await tester.sendKeyUpEvent(LogicalKeyboardKey.arrowDown);
+    await tester.pump(const Duration(milliseconds: 600));
     expect(game.input.held, Direction.right);
     await tester.sendKeyUpEvent(LogicalKeyboardKey.arrowRight);
+    await tester.pump(const Duration(milliseconds: 600));
     expect(game.input.held, Direction.none);
     await tester.pump(const Duration(milliseconds: 300));
     expect(game.input.moving, Direction.none);
 
-    // A quick tap nudges the player a short step, not a whole tile.
-    final before = game.sim.players.single.x;
+    // An instant press+release (a tap, or the start of a held key on the
+    // emulator) keeps walking through the host's repeat delay, then stops.
     await tester.sendKeyEvent(LogicalKeyboardKey.arrowLeft);
-    expect(game.input.moving, Direction.left);
-    await tester.pump(const Duration(milliseconds: 300));
-    final stepped = before - game.sim.players.single.x;
-    expect(stepped, greaterThan(0.05));
-    expect(stepped, lessThan(0.4));
-    await tester.pump(const Duration(milliseconds: 300));
-    expect(before - game.sim.players.single.x, stepped);
+    expect(game.input.held, Direction.left);
+    await tester.pump(const Duration(milliseconds: 500));
+    expect(game.input.held, Direction.left);
+    await tester.pump(const Duration(milliseconds: 100));
+    expect(game.input.held, Direction.none);
+    await tester.pump(const Duration(milliseconds: 700));
 
     // Held on the emulator: a pair, the repeat delay, then a stream of
     // pairs. The player walks through the repeats and stops soon after

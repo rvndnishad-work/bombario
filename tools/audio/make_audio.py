@@ -392,6 +392,18 @@ SONGS = {
         lead_duty=0.5, harm="power", bass="root8",
         drums=["k-h-s-hkk-h-s-h-", "k-h-s-hkk-hks-ss"],
     ),
+    # Power-up found: the stage's music gives way to this quick, bright
+    # loop that says "now find the exit" (the original changes tune too).
+    "found": dict(
+        tonic=72, mode="major", bpm=150, beats=4,
+        chords=[0, 4, 5, 3, 0, 4, 3, 4],
+        melody="""0:1 2:1 4:1 7:1 9:2 7:2 | 8:1 7:1 5:1 4:1 2:4 |
+                  3:1 5:1 7:1 10:1 9:2 7:2 | 6:2 4:2 1:2 r:2 |
+                  4:1 4:1 7:1 4:1 9:2 11:2 | 12:2 11:1 9:1 7:4 |
+                  5:1 7:1 9:1 7:1 5:2 3:2 | 4:2 6:2 7:2 r:2""",
+        lead_duty=0.25, harm="arp16", bass="octave",
+        drums=["k-hhs-hhk-hhs-hh"],
+    ),
 }
 
 
@@ -602,7 +614,7 @@ def make_music():
     for key, spec in SONGS.items():
         write_wav("music_" + key, render_song(spec), peak=0.8)
         names.append("music_" + key)
-        if key.startswith("w"):
+        if key.startswith("w") or key == "found":
             write_wav("music_%s_fast" % key, render_song(spec, 1.25, hurry=True), peak=0.8)
             names.append("music_%s_fast" % key)
     return names

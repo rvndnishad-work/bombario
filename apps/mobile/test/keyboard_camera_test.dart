@@ -44,8 +44,13 @@ void main() {
   });
 
   group('camera', () {
-    test('every row fits, like the original; tall screens keep columns', () {
+    test('the board covers the screen; rows fit like the original', () {
       final view = Vector2(1600, 800);
+      // A narrow maze is zoomed until it fills the width.
+      expect(
+        FollowCamera.zoomFor(view, 15, 11, 32),
+        closeTo(1600 / (15 * 32), 1e-9),
+      );
       expect(
         FollowCamera.zoomFor(view, 31, 13, 32),
         closeTo(800 / (13 * 32), 1e-9),

@@ -49,7 +49,10 @@ class GameAudio {
   static String sfxFile(Sfx s) => '${_snake(s.name)}.wav';
 
   /// File name of the music loop for [world] (1..5, clamped; 0 = menu).
-  static String musicFile(int world, {bool hurry = false}) {
+  /// [found] is the loop that takes over once the stage's power-up is
+  /// picked up: "now find the exit".
+  static String musicFile(int world, {bool hurry = false, bool found = false}) {
+    if (found) return hurry ? 'music_found_fast.wav' : 'music_found.wav';
     if (world <= 0) return 'music_menu.wav';
     final w = world.clamp(1, 5);
     return hurry ? 'music_w${w}_fast.wav' : 'music_w$w.wav';
@@ -115,9 +118,13 @@ class GameAudio {
   /// Loops the music for [world] (0 = menu). [hurry] picks the faster
   /// variant used in the last 30 seconds. Does nothing if that exact track is
   /// already playing.
-  Future<void> playMusic(int world, {bool hurry = false}) async {
+  Future<void> playMusic(
+    int world, {
+    bool hurry = false,
+    bool found = false,
+  }) async {
     if (!enabled) return;
-    final file = musicFile(world, hurry: hurry);
+    final file = musicFile(world, hurry: hurry, found: found);
     if (file == _currentMusic) return;
     _currentMusic = file;
     try {

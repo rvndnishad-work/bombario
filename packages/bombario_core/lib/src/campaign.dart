@@ -116,7 +116,7 @@ class StageDef {
     final l = layout;
     if (l != null) {
       return LevelData.parse(
-        l,
+        bonus ? l : _onePowerUpEach(l, n),
         items: items.isEmpty ? const [ItemType.bombUp] : items,
         enemyKinds:
             layoutEnemies.isEmpty ? const [EnemyKind.puffball] : layoutEnemies,
@@ -126,11 +126,15 @@ class StageDef {
     }
     final rng = Random(seed);
     const basics = [ItemType.bombUp, ItemType.fireUp, ItemType.speedUp];
-    final hidden = [
-      ...items,
-      for (var i = items.length; i < n + 1; i++)
-        basics[rng.nextInt(basics.length)],
-    ];
+    // One power-up per player, as in the original's one per stage (bonus
+    // stages are a power-up party); the exit is hidden separately.
+    final hidden = bonus
+        ? items
+        : [
+            ...items.take(n),
+            for (var i = items.length; i < n; i++)
+              basics[rng.nextInt(basics.length)],
+          ];
     final mix = bonus
         ? <EnemyKind>[]
         : [
@@ -154,6 +158,16 @@ class StageDef {
       possessed: possessed,
       timeLimit: timeLimit,
       name: '$id $name',
+    );
+  }
+
+  /// Keeps the first [players] power-up bricks (`U`) of a hand-made layout
+  /// and turns the rest into plain bricks.
+  static String _onePowerUpEach(String layout, int players) {
+    var kept = 0;
+    return layout.replaceAllMapped(
+      'U',
+      (_) => kept++ < players ? 'U' : '+',
     );
   }
 
@@ -234,6 +248,7 @@ class StageDef {
         darkness: darkness,
         windInterval: wind,
         cannonInterval: cannons,
+        keepItemsOnDeath: !coop,
       );
 }
 
@@ -283,7 +298,9 @@ abstract final class Campaign {
         EnemyKind.pebble,
         EnemyKind.puffball,
       ],
-      items: [ItemType.bombUp, ItemType.bombUp],
+      // Fire first, as in the original's stage 1: longer flames are the
+      // power-up you feel straight away.
+      items: [ItemType.fireUp, ItemType.bombUp],
       friendlyStun: true,
       tip: 'Bomb the bricks, clear the enemies, then meet at the exit.',
     ),

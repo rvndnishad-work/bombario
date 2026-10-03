@@ -37,8 +37,10 @@ void main() {
         GameAudio.musicFile(w),
         GameAudio.musicFile(w, hurry: true),
       ],
+      GameAudio.musicFile(1, found: true),
+      GameAudio.musicFile(1, hurry: true, found: true),
     };
-    expect(files, hasLength(Sfx.values.length + 11));
+    expect(files, hasLength(Sfx.values.length + 13));
     for (final f in files) {
       final file = File('assets/audio/$f');
       expect(file.existsSync(), isTrue, reason: 'missing assets/audio/$f');
