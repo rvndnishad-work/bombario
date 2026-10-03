@@ -5,6 +5,7 @@ import 'package:bombario_core/bombario_core.dart' as core;
 import 'package:flame/components.dart';
 
 import '../progress/cosmetics.dart';
+import 'death_effects.dart';
 import 'sprite_atlas.dart';
 
 /// Draws a [core.WorldSnapshot] in immediate mode with the pixel-art sprites
@@ -136,6 +137,9 @@ class WorldRenderer extends PositionComponent {
 
   double _time = 0;
 
+  /// Brick bursts and enemy deaths, spotted between snapshots.
+  final DeathEffects effects = DeathEffects();
+
   /// Walk cycle per player id, advanced by how far each player has moved so
   /// the feet keep pace with their speed and stop when they stop.
   final Map<int, _Stride> _strides = {};
@@ -183,6 +187,7 @@ class WorldRenderer extends PositionComponent {
   @override
   void render(Canvas canvas) {
     final sim = snapshot();
+    effects.observe(sim, _time, (e) => enemySprites[e.kind]);
     _drawTiles(canvas, sim);
     _drawRegrowing(canvas, sim);
     _drawSonar(canvas, sim);
@@ -191,7 +196,9 @@ class WorldRenderer extends PositionComponent {
     _drawTombstones(canvas, sim);
     _drawBombs(canvas, sim);
     _drawFlames(canvas, sim);
+    effects.drawBricks(canvas, atlas, tileSize, _time);
     _drawEnemies(canvas, sim);
+    effects.drawEnemies(canvas, atlas, tileSize, _time);
     _drawPlayers(canvas, sim);
     _drawFallingRocks(canvas, sim);
     _drawWind(canvas, sim);
