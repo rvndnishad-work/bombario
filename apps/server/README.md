@@ -26,15 +26,16 @@ It installs Docker, adds swap for the build, clones the repo to
 serves ports 80/443 on the droplet, it runs only the game server, joins that
 Caddy's network and appends one site block to its Caddyfile (backed up,
 validated, then reloaded); other sites are untouched. Without `DOMAIN=...` the address is
-`https://<ip-with-dashes>.sslip.io`. Run the same command again to update.
+`https://<ip-with-dashes>.sslip.io`. Run the same command again to update. The live server is
+`https://64-227-174-84.sslip.io`, which is the app's default address.
 Logs: `cd /opt/bombario/deploy/droplet && docker compose logs -f`.
 
 ## Deploying to Fly.io
 
 `fly.toml` at the repo root deploys this server as the Fly app
 `bombario-server` in Mumbai (`bom`), with a 1 GB volume at `/data` for
-leaderboards and analytics. The app's default server address is
-`https://bombario-server.fly.dev`; change both if the app name differs.
+leaderboards and analytics. Not in use: the live server is the droplet
+above. Point `OnlineServer.defaultUrl` in the app at Fly before switching.
 
 ```sh
 fly launch --no-deploy --copy-config   # first time only, from the repo root
