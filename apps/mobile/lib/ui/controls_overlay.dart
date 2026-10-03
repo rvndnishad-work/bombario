@@ -1,15 +1,23 @@
 import 'package:bombario_core/bombario_core.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-import '../game/blast_game.dart';
+import '../game/input_controller.dart';
 
 /// Touch controls: a floating D-pad under the left thumb, bomb and action
 /// buttons under the right thumb. Pure Flutter widgets over the game.
 class ControlsOverlay extends StatefulWidget {
-  const ControlsOverlay({super.key, required this.game});
+  const ControlsOverlay({
+    super.key,
+    required this.input,
+    required this.hasRemote,
+  });
 
-  final BlastGame game;
+  final InputController input;
+
+  /// Whether the player holds Remote, which shows the detonate button.
+  final ValueListenable<bool> hasRemote;
 
   @override
   State<ControlsOverlay> createState() => _ControlsOverlayState();
@@ -38,13 +46,13 @@ class _ControlsOverlayState extends State<ControlsOverlay> {
     }
     if (next != _current) {
       setState(() => _current = next);
-      widget.game.input.setDirection(next);
+      widget.input.setDirection(next);
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final game = widget.game;
+    final input = widget.input;
     return Stack(
       children: [
         // Left half: floating D-pad.
@@ -67,8 +75,10 @@ class _ControlsOverlayState extends State<ControlsOverlay> {
                         Positioned(
                           left: _padOrigin!.dx - _padRadius,
                           top: _padOrigin!.dy - _padRadius,
-                          child:
-                              _DPadVisual(radius: _padRadius, active: _current),
+                          child: _DPadVisual(
+                            radius: _padRadius,
+                            active: _current,
+                          ),
                         ),
                     ],
                   ),
@@ -85,10 +95,10 @@ class _ControlsOverlayState extends State<ControlsOverlay> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              ListenableBuilder(
-                listenable: game.hud,
-                builder: (context, _) => AnimatedOpacity(
-                  opacity: game.hud.remote ? 1 : 0.15,
+              ValueListenableBuilder<bool>(
+                valueListenable: widget.hasRemote,
+                builder: (context, remote, _) => AnimatedOpacity(
+                  opacity: remote ? 1 : 0.15,
                   duration: const Duration(milliseconds: 200),
                   child: _RoundButton(
                     label: '⚡',
@@ -96,7 +106,7 @@ class _ControlsOverlayState extends State<ControlsOverlay> {
                     color: Colors.amber,
                     onPressed: () {
                       HapticFeedback.selectionClick();
-                      game.input.pressAction();
+                      input.pressAction();
                     },
                   ),
                 ),
@@ -108,7 +118,7 @@ class _ControlsOverlayState extends State<ControlsOverlay> {
                 color: Colors.redAccent,
                 onPressed: () {
                   HapticFeedback.lightImpact();
-                  game.input.pressBomb();
+                  input.pressBomb();
                 },
               ),
             ],
@@ -123,7 +133,7 @@ class _ControlsOverlayState extends State<ControlsOverlay> {
       _padOrigin = null;
       _current = Direction.none;
     });
-    widget.game.input.release();
+    widget.input.release();
   }
 }
 
@@ -136,13 +146,13 @@ class _DPadVisual extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     Widget arrow(Direction d, IconData icon, Alignment alignment) => Align(
-          alignment: alignment,
-          child: Icon(
-            icon,
-            size: 36,
-            color: active == d ? Colors.white : Colors.white54,
-          ),
-        );
+      alignment: alignment,
+      child: Icon(
+        icon,
+        size: 36,
+        color: active == d ? Colors.white : Colors.white54,
+      ),
+    );
     return IgnorePointer(
       child: Container(
         width: radius * 2,
@@ -155,12 +165,21 @@ class _DPadVisual extends StatelessWidget {
         child: Stack(
           children: [
             arrow(Direction.up, Icons.keyboard_arrow_up, Alignment.topCenter),
-            arrow(Direction.down, Icons.keyboard_arrow_down,
-                Alignment.bottomCenter),
-            arrow(Direction.left, Icons.keyboard_arrow_left,
-                Alignment.centerLeft),
-            arrow(Direction.right, Icons.keyboard_arrow_right,
-                Alignment.centerRight),
+            arrow(
+              Direction.down,
+              Icons.keyboard_arrow_down,
+              Alignment.bottomCenter,
+            ),
+            arrow(
+              Direction.left,
+              Icons.keyboard_arrow_left,
+              Alignment.centerLeft,
+            ),
+            arrow(
+              Direction.right,
+              Icons.keyboard_arrow_right,
+              Alignment.centerRight,
+            ),
           ],
         ),
       ),

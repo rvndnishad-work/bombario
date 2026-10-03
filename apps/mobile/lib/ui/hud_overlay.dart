@@ -37,8 +37,11 @@ class HudOverlay extends StatelessWidget {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     _Stat('♥', '${h.lives}'),
-                    _Stat('⏱', '$minutes:$seconds',
-                        color: h.timeLeft <= 30 ? Colors.redAccent : null),
+                    _Stat(
+                      '⏱',
+                      '$minutes:$seconds',
+                      color: h.timeLeft <= 30 ? Colors.redAccent : null,
+                    ),
                     _Stat('STAGE', '${h.stage}'),
                     _Stat('💣', '${h.bombs}'),
                     _Stat('🔥', '${h.fire}'),
@@ -68,8 +71,10 @@ class _Stat extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 8),
       child: Row(
         children: [
-          Text(label,
-              style: const TextStyle(color: Colors.white70, fontSize: 13)),
+          Text(
+            label,
+            style: const TextStyle(color: Colors.white70, fontSize: 13),
+          ),
           const SizedBox(width: 4),
           Text(value, style: TextStyle(color: color)),
         ],

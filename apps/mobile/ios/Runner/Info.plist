@@ -66,5 +66,11 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
+	<key>NSLocalNetworkUsageDescription</key>
+	<string>Bombario finds and joins game rooms hosted by friends on your Wi-Fi.</string>
+	<key>NSBonjourServices</key>
+	<array>
+		<string>_bombario._tcp</string>
+	</array>
 </dict>
 </plist>

@@ -28,8 +28,12 @@ class HudState extends ChangeNotifier {
   bool remote = false;
   int enemiesLeft = 0;
 
-  void updateFrom(core.World world, core.Player player,
-      {required int lives, required int stage}) {
+  void updateFrom(
+    core.World world,
+    core.Player player, {
+    required int lives,
+    required int stage,
+  }) {
     this.lives = lives;
     this.stage = stage;
     score = player.score;
@@ -55,6 +59,7 @@ class BlastGame extends FlameGame {
 
   final InputController input = InputController();
   final HudState hud = HudState();
+  final ValueNotifier<bool> hasRemote = ValueNotifier(false);
 
   int _seed;
   int stage = 1;
@@ -116,7 +121,10 @@ class BlastGame extends FlameGame {
 
     final old = _renderer;
     if (old != null) world.remove(old);
-    final renderer = WorldRenderer(sim, tileSize: tileSize);
+    final renderer = WorldRenderer(
+      () => core.WorldSnapshot.of(sim),
+      tileSize: tileSize,
+    );
     _renderer = renderer;
     world.add(renderer);
 
@@ -205,6 +213,7 @@ class BlastGame extends FlameGame {
     if (_hudTimer >= 0.1) {
       _hudTimer = 0;
       hud.updateFrom(sim, player, lives: lives, stage: stage);
+      hasRemote.value = player.remote;
     }
   }
 
