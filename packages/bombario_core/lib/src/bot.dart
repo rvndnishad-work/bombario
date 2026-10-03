@@ -106,6 +106,15 @@ class Bot {
   int? _wander;
   int _wanderUntil = 0;
 
+  /// Last tick something changed for the better (an enemy or brick gone, a
+  /// teammate revived), and until when hunting is off after a long chase
+  /// that went nowhere.
+  int _lastProgress = 0;
+  int _huntPausedUntil = 0;
+  int _lastEnemies = -1;
+  int _lastBricks = -1;
+  int _lastGhosts = -1;
+
   // Per-tick maps, indexed by y * width + x.
   late final int _w = world.grid.width;
   late final int _n = world.grid.width * world.grid.height;
@@ -121,6 +130,9 @@ class Bot {
   bool _enemiesAbout = false;
 
   static const double _forever = 1e9;
+
+  /// Tiles ahead of a walking enemy the bot treats as close to it.
+  static const int _laneLookahead = 2;
 
   /// The input for this tick.
   PlayerInput think() {
@@ -142,7 +154,17 @@ class Bot {
     if (!_safeToStand(here, 0, relaxed: false)) {
       final route = _search(p, here, wait: true, relaxed: false) ??
           _search(p, here, wait: true, relaxed: true);
-      return _input(p, route?.first ?? _awayStep(p, here), action: action);
+      final step = route?.first ?? _awayStep(p, here);
+      // Cornered by an enemy: a fresh bomb turns it around (or it walks
+      // into the blast), which beats waiting to be caught.
+      if (route == null &&
+          step == Direction.none &&
+          _enemyDistance(here) < 1.5 &&
+          p.bombsPlaced < p.maxBombs &&
+          world.bombAt(p.tileX, p.tileY) == null) {
+        return _input(p, Direction.none, bomb: true, action: action);
+      }
+      return _input(p, step, action: action);
     }
 
     final (dir, bomb) = _plan(p, here);
@@ -165,6 +187,11 @@ class Bot {
       if (graves.contains(here)) return (Direction.none, false);
       final r = _pathTo(p, here, graves.contains);
       if (r != null) return (r.first, false);
+      // Walled off by bricks: blast a way through to them.
+      if (graves.isNotEmpty) {
+        final dig = _digToward(p, here, graves, deciding);
+        if (dig != null) return dig;
+      }
     }
 
     // Power-ups lying close by.
@@ -177,6 +204,8 @@ class Bot {
       if (r != null) return (r.first, false);
     }
 
+    _trackProgress();
+    final hunting = _tick >= _huntPausedUntil;
     final targets = _targets(p, versus);
     final canBomb = deciding &&
         p.bombsPlaced < p.maxBombs &&
@@ -185,7 +214,7 @@ class Bot {
 
     // Enemies can't walk through bombs, so a co-op bot also bombs one a
     // tile beyond its reach: it either walks into the blast or is held off.
-    final lure = versus ? 0 : 1;
+    final lure = versus || !hunting ? 0 : 1;
 
     // A rival or enemy in reach of a bomb dropped right here?
     if (canBomb && targets.isNotEmpty) {
@@ -207,7 +236,7 @@ class Bot {
     }
 
     // Hunt: walk to a tile that lines up a bomb on the target.
-    if (targets.isNotEmpty) {
+    if (hunting && targets.isNotEmpty) {
       final spots = <int>{};
       for (final t in targets) {
         for (final s
@@ -252,6 +281,102 @@ class Bot {
     }
 
     return (_wanderStep(p, here), false);
+  }
+
+  /// Notices progress; after [_stallSeconds] of none (enemies that keep
+  /// slipping away from the bomb, say) hunting stops for a while so the bot
+  /// breaks bricks, revives and heads for the exit instead of circling.
+  void _trackProgress() {
+    final enemies = world.enemies.where((e) => e.alive).length;
+    var bricks = 0;
+    final g = world.grid;
+    for (var y = 0; y < g.height; y++) {
+      for (var x = 0; x < g.width; x++) {
+        if (g.at(x, y) == TileType.brick) bricks++;
+      }
+    }
+    final ghosts = world.ghosts.length;
+    if (enemies < _lastEnemies ||
+        bricks < _lastBricks ||
+        ghosts < _lastGhosts) {
+      _lastProgress = _tick;
+    }
+    _lastEnemies = enemies;
+    _lastBricks = bricks;
+    _lastGhosts = ghosts;
+    final rate = World.tickRate.round();
+    if (_tick - _lastProgress > _stallSeconds * rate) {
+      _huntPausedUntil = _tick + _pauseSeconds * rate;
+      _lastProgress = _tick;
+    }
+  }
+
+  static const int _stallSeconds = 15;
+  static const int _pauseSeconds = 10;
+
+  /// Breaks the brick that brings the bot closest to [goals] it can't walk
+  /// to. Null when no brick stands in the way.
+  (Direction, bool)? _digToward(
+      Player p, int here, Set<int> goals, bool deciding) {
+    final g = world.grid;
+    // Steps to the goals with every brick knocked down.
+    final dist = Int32List(_n)..fillRange(0, _n, -1);
+    final queue = <int>[];
+    for (final t in goals) {
+      dist[t] = 0;
+      queue.add(t);
+    }
+    for (var h = 0; h < queue.length; h++) {
+      final cur = queue[h];
+      for (final d in Direction.cardinal) {
+        final x = cur % _w + d.dx, y = cur ~/ _w + d.dy;
+        if (!g.inBounds(x, y)) continue;
+        final t = g.at(x, y);
+        if (t == TileType.pillar || t == TileType.pit) continue;
+        final n = y * _w + x;
+        if (dist[n] != -1) continue;
+        dist[n] = dist[cur] + 1;
+        queue.add(n);
+      }
+    }
+    // The brick on the bot's side of the wall nearest the goals.
+    final reach = <int>{};
+    _bfs(p, here, (i, _) {
+      reach.add(i);
+      return false;
+    });
+    int? brick;
+    for (final i in reach) {
+      for (final d in Direction.cardinal) {
+        final x = i % _w + d.dx, y = i ~/ _w + d.dy;
+        if (!g.inBounds(x, y) || g.at(x, y) != TileType.brick) continue;
+        final n = y * _w + x;
+        if (dist[n] < 0) continue;
+        if (brick == null || dist[n] < dist[brick]) brick = n;
+      }
+    }
+    if (brick == null) return null;
+    // Already about to burn: keep clear and let it.
+    if (_hard[brick].isNotEmpty) return (Direction.none, false);
+    final spots = _rays(brick, p.fireRange, includeOrigin: false)
+        .where((s) =>
+            reach.contains(s) &&
+            _near[s] == 0 &&
+            _hard[s].isEmpty &&
+            !_isBadSpot(s))
+        .toSet();
+    if (spots.contains(here)) {
+      final canBomb = deciding &&
+          p.bombsPlaced < p.maxBombs &&
+          world.bombAt(p.tileX, p.tileY) == null;
+      if (!canBomb) return (Direction.none, false);
+      final blast = _blastFrom(here, p.fireRange);
+      if (_bombEscape(p, here, blast) != null) return (Direction.none, true);
+      _badSpots[here] = _tick + World.tickRate.round() * 2;
+      return null;
+    }
+    final r = _pathTo(p, here, spots.contains);
+    return r == null ? null : (r.first, false);
   }
 
   /// The things worth bombing.
@@ -566,7 +691,16 @@ class Bot {
   PlayerInput _input(Player p, Direction dir,
       {bool bomb = false, bool action = false}) {
     var d = dir;
-    if (d != Direction.none && !p.ghost) {
+    if (d == Direction.none && !p.ghost) {
+      // Settle on the tile's centre rather than stopping on its edge, half
+      // in the next lane where enemies and blasts reach.
+      final threshold = max(0.06, p.speed * World.tickDt * 0.55);
+      if (p.offsetX.abs() > threshold) {
+        d = p.offsetX > 0 ? Direction.left : Direction.right;
+      } else if (p.offsetY.abs() > threshold) {
+        d = p.offsetY > 0 ? Direction.up : Direction.down;
+      }
+    } else if (d != Direction.none && !p.ghost) {
       final off = d.isHorizontal ? p.offsetY : p.offsetX;
       final threshold = max(0.06, p.speed * World.tickDt * 0.55);
       if (off.abs() > threshold) {
@@ -737,6 +871,16 @@ class Bot {
       final t = e.target;
       if (t != null && e.harmful && g.inBounds(t.x, t.y)) {
         _blocked[_idx(t)] = 1;
+      }
+      // Keep out of the lane it is walking down, so the bot steps aside
+      // before it is cornered rather than once it is a tile away.
+      final d = e.direction;
+      if (e.harmful && d != Direction.none) {
+        for (var r = 1; r <= _laneLookahead; r++) {
+          final x = e.tileX + d.dx * r, y = e.tileY + d.dy * r;
+          if (!g.inBounds(x, y) || !g.isWalkable(x, y)) break;
+          _near[y * _w + x] = 1;
+        }
       }
     }
   }
