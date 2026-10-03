@@ -2555,3 +2555,21 @@ oH33333BB33333do
 oddddddddddddddo
 oooooooooooooooo
 
+
+sprite pu-life
+oooooooooooooooo
+oHHHHHHHHHHHHHHo
+oH333333333333do
+oH333333333333do
+oH333333333333do
+oH3GGGGGGGGGG3do
+oHGkGGkGkGkkGGdo
+oHkkGGkGkGkGkGdo
+oHGkGGkGkGkkGGdo
+oHGkGGkGkGkGGGdo
+oHkkkGkkkGkGGGdo
+oH3GGGGGGGGGG3do
+oH333333333333do
+oH333333333333do
+oddddddddddddddo
+oooooooooooooooo

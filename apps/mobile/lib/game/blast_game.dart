@@ -49,6 +49,12 @@ class BlastGame extends FlameGame {
 
   static const double tileSize = 32;
   static const int startingLives = 3;
+
+  /// Lives from every source (1-Ups, points, ads) stop here.
+  static const int maxLives = core.World.maxLives;
+
+  /// A life for every this many points, paid when a stage is cleared.
+  static const int pointsPerLife = 10000;
   static const double respawnDelay = 1.5;
 
   /// The board waits behind a "Stage N" card this long before play starts,
@@ -94,6 +100,20 @@ class BlastGame extends FlameGame {
   /// Index into [core.Campaign.stages].
   int stageIndex = 0;
   int lives = startingLives;
+
+  /// Score at which the next points life is due.
+  int _nextLifeAt = pointsPerLife;
+
+  /// Lives the last cleared stage paid for points, for the results card.
+  int livesForPoints = 0;
+
+  /// Adds up to [n] lives without passing [maxLives]; returns how many fit.
+  int gainLives(int n) {
+    final room = math.max(0, maxLives - lives);
+    final gained = math.min(n, room);
+    lives += gained;
+    return gained;
+  }
 
   core.StageDef get stage => daily?.stage ?? core.Campaign.stages[stageIndex];
   bool get isLastStage =>
@@ -385,6 +405,7 @@ class BlastGame extends FlameGame {
     core.ItemType.teamBoost => ('Team Boost', 'Powers up your teammates.'),
     core.ItemType.tether => ('Tether', 'Revive a teammate from a distance.'),
     core.ItemType.frost => ('Frost', 'Your next bombs freeze.'),
+    core.ItemType.extraLife => ('1-Up', 'One more life!'),
     core.ItemType.exit => ('Exit', ''),
   };
 
@@ -458,6 +479,21 @@ class BlastGame extends FlameGame {
             when playerId == player.id:
           audio.play(Sfx.pickup);
           _buzz(HapticFeedback.selectionClick);
+          if (type == core.ItemType.extraLife) {
+            final gained = gainLives(1);
+            messages.show(
+              GameMessage(
+                title: '1-Up!',
+                body: gained > 0
+                    ? 'One more life. You have $lives.'
+                    : 'Already at the most lives ($maxLives).',
+                sprite: 'pu-life',
+                seconds: 2.5,
+              ),
+            );
+            _refreshHud();
+            continue;
+          }
           if (!_found &&
               !stage.bonus &&
               !stage.isBoss &&
@@ -547,6 +583,13 @@ class BlastGame extends FlameGame {
             ..stopMusic()
             ..play(Sfx.stageClear);
           _clearBeat = clearBeatSeconds;
+          // Points pay out lives when the stage is won.
+          var earned = 0;
+          while (player.score >= _nextLifeAt) {
+            earned++;
+            _nextLifeAt += pointsPerLife;
+          }
+          livesForPoints = gainLives(earned);
         case core.TimeUp():
           _shake = 0.3;
           audio.play(Sfx.timeUp);
@@ -616,6 +659,33 @@ class BlastGame extends FlameGame {
       ..resumeMusic();
   }
 
+  /// Whether the game-over card may offer a life for watching an ad: not
+  /// in the Daily Dungeon, where everyone races on the same terms.
+  bool get canContinue => daily == null && lives == 0;
+
+  /// Back into the stage where it was lost, with one life (the ad reward).
+  void continueWithExtraLife() {
+    if (!canContinue) return;
+    lives = 1;
+    overlays.remove(Overlays.gameOver);
+    sim.respawn(player);
+    sim.clearFailure();
+    _respawnTimer = 0;
+    if (_timeLowStung) _hurry = true;
+    GameAudio.instance
+      ..stopAllOneShots()
+      ..playMusic(stage.world, hurry: _hurry, found: _found);
+    messages.show(
+      GameMessage(
+        title: 'Back in!',
+        body: 'One extra life. Make it count.',
+        sprite: 'pu-life',
+        seconds: 2.5,
+      ),
+    );
+    _refreshHud();
+  }
+
   void nextStage() {
     overlays.remove(Overlays.stageCleared);
     // After the last stage, loop back to the start with everything kept.
@@ -628,6 +698,8 @@ class BlastGame extends FlameGame {
     stageIndex = 0;
     _hasPlayer = false;
     lives = startingLives;
+    _nextLifeAt = pointsPerLife;
+    livesForPoints = 0;
     // The daily keeps its seed: everyone races the same dungeon.
     _seed = _shakeRng.nextInt(1 << 30);
     _startStage();

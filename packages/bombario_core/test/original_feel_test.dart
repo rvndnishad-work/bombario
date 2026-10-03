@@ -186,4 +186,46 @@ void main() {
       }
     }
   });
+
+  test('some stages hide a 1-Up under a brick, never bonus stages', () {
+    bool hasLife(LevelData l) {
+      for (var y = 0; y < l.grid.height; y++) {
+        for (var x = 0; x < l.grid.width; x++) {
+          if (l.grid.hiddenAt(x, y) == ItemType.extraLife) {
+            expect(l.grid.at(x, y), TileType.brick);
+            return true;
+          }
+        }
+      }
+      return false;
+    }
+
+    final stage = Campaign.byId('1-2')!;
+    final found = [
+      for (var seed = 0; seed < 200; seed++)
+        hasLife(stage.level(seed: seed, players: 1)),
+    ].where((f) => f).length;
+    // About one stage in four.
+    expect(found, inInclusiveRange(30, 70));
+    final bonus = Campaign.stages.firstWhere((s) => s.bonus);
+    for (var seed = 0; seed < 40; seed++) {
+      expect(hasLife(bonus.level(seed: seed, players: 1)), isFalse);
+    }
+  });
+
+  test('a 1-Up adds a team life in co-op, up to seven', () {
+    final w = makeWorld('''
+#######
+#P....#
+#######
+''', config: const WorldConfig(ghosts: true, sharedLives: 6));
+    final p = w.addPlayer();
+    for (var i = 0; i < 3; i++) {
+      w.floorItems
+          .add(FloorItem(x: p.tileX, y: p.tileY, type: ItemType.extraLife));
+      w.tick(const {});
+    }
+    expect(w.livesLeft, World.maxLives);
+    expect(p.items, isNot(contains(ItemType.extraLife)));
+  });
 }

@@ -108,6 +108,7 @@ class WorldRenderer extends PositionComponent {
     core.ItemType.teamBoost => 'pu-teamboost',
     core.ItemType.tether => 'pu-tether',
     core.ItemType.frost => 'pu-frost',
+    core.ItemType.extraLife => 'pu-life',
     core.ItemType.exit => 'exit',
   };
 

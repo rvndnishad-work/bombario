@@ -224,6 +224,9 @@ class World {
   static const double tickRate = 30;
   static const double tickDt = 1 / tickRate;
 
+  /// No way of earning lives (1-Ups, points, rewards) goes past this.
+  static const int maxLives = 7;
+
   final LevelData level;
   final Grid grid;
   final WorldConfig config;
@@ -2371,6 +2374,9 @@ class World {
                 mate.applyItem(ItemType.bombUp);
                 mate.applyItem(ItemType.fireUp);
               }
+            case ItemType.extraLife:
+              // Solo lives live in the app; co-op's pool lives here.
+              if (config.ghosts) livesLeft = min(maxLives, livesLeft + 1);
             default:
               break;
           }

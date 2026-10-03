@@ -108,11 +108,37 @@ class StageDef {
   static int scaleBossHp(int hp, int players) =>
       (hp * (1 + 0.6 * (max(1, players) - 1))).round();
 
+  /// One stage in this many (by seed) hides a 1-Up under a brick.
+  static const int extraLifeOdds = 4;
+
   /// Builds the stage for [players] players.
   LevelData level({required int seed, required int players}) {
     final n = players.clamp(1, 4);
     final b = boss;
     if (b != null) return _bossArena(b, seed, n);
+    final built = _build(seed, n);
+    if (!bonus) _maybeHideExtraLife(built, seed);
+    return built;
+  }
+
+  /// Like the original's secret bonuses: on some stages one plain brick
+  /// hides a 1-Up, for whoever finds it.
+  static void _maybeHideExtraLife(LevelData level, int seed) {
+    final rng = Random(seed * 31 + 7);
+    if (rng.nextInt(extraLifeOdds) != 0) return;
+    final grid = level.grid;
+    final spots = [
+      for (var y = 0; y < grid.height; y++)
+        for (var x = 0; x < grid.width; x++)
+          if (grid.at(x, y) == TileType.brick && grid.hiddenAt(x, y) == null)
+            GridPos(x, y),
+    ];
+    if (spots.isEmpty) return;
+    final spot = spots[rng.nextInt(spots.length)];
+    grid.hide(spot.x, spot.y, ItemType.extraLife);
+  }
+
+  LevelData _build(int seed, int n) {
     final l = layout;
     if (l != null) {
       return LevelData.parse(

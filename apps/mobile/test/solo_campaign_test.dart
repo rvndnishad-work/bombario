@@ -1,3 +1,4 @@
+import 'package:bombario/ads/rewarded_ads.dart';
 import 'package:bombario/game/blast_game.dart';
 import 'package:bombario/game/sprite_atlas.dart';
 import 'package:bombario/ui/game_screen.dart';
@@ -104,4 +105,98 @@ void main() {
     expect(find.textContaining('6 enemies left'), findsOneWidget);
     expect(game.sim.cleared, isFalse);
   });
+
+  testWidgets('watching an ad on game over puts you back with one life', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1600, 800);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    final ads = _FakeAds();
+    RewardedAds.instance = ads;
+    addTearDown(() => RewardedAds.instance = const NoRewardedAds());
+    await tester.runAsync(SpriteAtlas.load);
+    await tester.pumpWidget(const MaterialApp(home: GameScreen(seed: 3)));
+    await tester.pump(const Duration(milliseconds: 50));
+    final game =
+        (tester.state(find.byType(GameScreen)) as dynamic).game as BlastGame;
+    game.skipIntro();
+
+    game.lives = 1;
+    game.player.invincibleFor = 0;
+    game.sim.spawnEnemy(game.player.tile, game.sim.enemies.first.kind);
+    for (var i = 0; i < 140; i++) {
+      await tester.pump(const Duration(milliseconds: 50));
+      if (game.overlays.isActive(Overlays.gameOver)) break;
+    }
+    expect(game.overlays.isActive(Overlays.gameOver), isTrue);
+    await tester.pump();
+
+    // A skipped ad gives nothing.
+    ads.reward = false;
+    await tester.tap(find.byKey(const Key('extra-life-ad')));
+    await tester.pump();
+    expect(find.textContaining('No ad right now'), findsOneWidget);
+    expect(game.lives, 0);
+
+    // A watched one puts the player back on the same stage.
+    ads.reward = true;
+    await tester.tap(find.byKey(const Key('extra-life-ad')));
+    await tester.pump();
+    expect(game.overlays.isActive(Overlays.gameOver), isFalse);
+    expect(game.lives, 1);
+    expect(game.player.alive, isTrue);
+    expect(game.stage.id, '1-1');
+    expect(ads.shown, 2);
+    // Clear the enemy we dropped on the spawn before time moves on.
+    for (final e in game.sim.enemies) {
+      e.alive = false;
+    }
+    await tester.pump(const Duration(milliseconds: 100));
+  });
+
+  testWidgets('lives never pass seven, from 1-Ups or points', (tester) async {
+    tester.view.physicalSize = const Size(1600, 800);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    await tester.runAsync(SpriteAtlas.load);
+    await tester.pumpWidget(const MaterialApp(home: GameScreen(seed: 3)));
+    await tester.pump(const Duration(milliseconds: 50));
+    final game =
+        (tester.state(find.byType(GameScreen)) as dynamic).game as BlastGame;
+    game.skipIntro();
+    await tester.pump(const Duration(milliseconds: 50));
+
+    // A 1-Up under the player's feet.
+    final me = game.sim.players.single;
+    game.sim.floorItems.add(
+      core.FloorItem(x: me.tileX, y: me.tileY, type: core.ItemType.extraLife),
+    );
+    await tester.pump(const Duration(milliseconds: 100));
+    expect(game.lives, BlastGame.startingLives + 1);
+    expect(find.text('1-Up!'), findsOneWidget);
+
+    final before = game.lives;
+    expect(game.gainLives(10), BlastGame.maxLives - before);
+    expect(game.lives, BlastGame.maxLives);
+    expect(game.gainLives(1), 0);
+    expect(game.lives, 7);
+  });
+}
+
+class _FakeAds implements RewardedAds {
+  bool reward = true;
+  int shown = 0;
+
+  @override
+  bool get supported => true;
+
+  @override
+  Future<void> start() async {}
+
+  @override
+  Future<bool> showForReward() async {
+    shown++;
+    return reward;
+  }
 }
