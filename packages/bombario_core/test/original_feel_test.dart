@@ -145,4 +145,45 @@ void main() {
     expect(p.wallPass, isFalse);
     expect(w.floorItems, isEmpty);
   });
+
+  test('each start deals stage 1-1 bricks out afresh, pillars stay put', () {
+    final stage = Campaign.byId('1-1')!;
+    LevelData at(int seed) => stage.level(seed: seed, players: 1);
+    String tiles(LevelData l, TileType t) => [
+          for (var y = 0; y < l.grid.height; y++)
+            for (var x = 0; x < l.grid.width; x++)
+              if (l.grid.at(x, y) == t) '$x,$y',
+        ].join(' ');
+    int count(LevelData l, TileType t) =>
+        tiles(l, t).split(' ').where((s) => s.isNotEmpty).length;
+    final a = at(1), b = at(2);
+    expect(tiles(a, TileType.pillar), tiles(b, TileType.pillar));
+    expect(tiles(a, TileType.brick), isNot(tiles(b, TileType.brick)));
+    expect(count(a, TileType.brick), count(b, TileType.brick));
+    // Same seed, same maze: rooms and replays stay in step.
+    expect(tiles(at(7), TileType.brick), tiles(at(7), TileType.brick));
+    for (final l in [a, b, at(3), at(4)]) {
+      final spawn = l.playerSpawns.first;
+      // The spawn corner is clear and enemies start well away.
+      for (final (dx, dy) in [(0, 0), (1, 0), (0, 1), (2, 0), (0, 2)]) {
+        expect(l.grid.at(spawn.x + dx, spawn.y + dy), isNot(TileType.brick));
+      }
+      expect(l.enemySpawns, hasLength(6));
+      for (final e in l.enemySpawns) {
+        expect((e.pos.x - spawn.x).abs() + (e.pos.y - spawn.y).abs(),
+            greaterThanOrEqualTo(5));
+      }
+      // One power-up and the exit, each under a brick.
+      final hidden = [
+        for (var y = 0; y < l.grid.height; y++)
+          for (var x = 0; x < l.grid.width; x++)
+            if (l.grid.hiddenAt(x, y) case final item?) (x, y, item),
+      ];
+      expect(hidden.map((h) => h.$3),
+          unorderedEquals([ItemType.fireUp, ItemType.exit]));
+      for (final (x, y, _) in hidden) {
+        expect(l.grid.at(x, y), TileType.brick);
+      }
+    }
+  });
 }
