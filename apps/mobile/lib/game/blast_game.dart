@@ -321,6 +321,25 @@ class BlastGame extends FlameGame {
     }
   }
 
+  /// What a power-up is called and what it just did, for the pickup popup.
+  static (String, String) itemInfo(core.ItemType type) => switch (type) {
+    core.ItemType.bombUp => ('Bomb Up', 'One more bomb at a time.'),
+    core.ItemType.fireUp => ('Fire Up', 'Your flames reach one tile further.'),
+    core.ItemType.speedUp => ('Speed Up', 'You walk faster.'),
+    core.ItemType.wallPass => ('Wall Pass', 'Walk through bricks.'),
+    core.ItemType.remote => ('Detonator', 'Action sets off your oldest bomb.'),
+    core.ItemType.bombPass => ('Bomb Pass', 'Walk through bombs.'),
+    core.ItemType.flamePass => ('Flame Pass', 'Flames can\'t hurt you.'),
+    core.ItemType.mystery => ('Mystery', 'Invincible for a while!'),
+    core.ItemType.kick => ('Kick', 'Walk into a bomb to send it sliding.'),
+    core.ItemType.heart => ('Heart', 'Takes one hit for you.'),
+    core.ItemType.sonar => ('Sonar', 'Shows what hides under nearby bricks.'),
+    core.ItemType.teamBoost => ('Team Boost', 'Powers up your teammates.'),
+    core.ItemType.tether => ('Tether', 'Revive a teammate from a distance.'),
+    core.ItemType.frost => ('Frost', 'Your next bombs freeze.'),
+    core.ItemType.exit => ('Exit', ''),
+  };
+
   /// A footstep every half tile walked, pitched by axis like the original.
   void _footsteps(double x0, double y0) {
     if (!player.alive || sim.cleared) return;
@@ -356,9 +375,19 @@ class BlastGame extends FlameGame {
           audio.play(
             bomb.ownerId == player.id ? Sfx.bombPlace : Sfx.bombPlaceOther,
           );
-        case core.ItemPicked(:final playerId) when playerId == player.id:
+        case core.ItemPicked(:final playerId, :final type)
+            when playerId == player.id:
           audio.play(Sfx.pickup);
           _buzz(HapticFeedback.selectionClick);
+          final (title, body) = itemInfo(type);
+          messages.show(
+            GameMessage(
+              title: title,
+              body: body,
+              sprite: WorldRenderer.itemSprite(type),
+              seconds: 2.5,
+            ),
+          );
         case core.BombKicked():
           audio.play(Sfx.kick);
         case core.EnemyFrozen() || core.PlayerFrozen():

@@ -283,7 +283,9 @@ abstract final class Campaign {
         EnemyKind.pebble,
         EnemyKind.puffball,
       ],
-      items: [ItemType.bombUp, ItemType.bombUp],
+      // Fire first, as in the original's stage 1: longer flames are the
+      // power-up you feel straight away.
+      items: [ItemType.fireUp, ItemType.bombUp],
       friendlyStun: true,
       tip: 'Bomb the bricks, clear the enemies, then meet at the exit.',
     ),
