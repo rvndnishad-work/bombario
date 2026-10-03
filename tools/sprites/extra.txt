@@ -2573,3 +2573,30 @@ oH333333333333do
 oH333333333333do
 oddddddddddddddo
 oooooooooooooooo
+
+
+# ---- Stage looks: the terrain changes colour every five stages (1-5 keep
+# the plain look above, 6-10 use l1, 11-15 l2, ... 46-50 l9). Each world
+# keeps its feel; its second half gets a variation. Order of swaps:
+# floor, floor shade, crack | wall light, mid, dark, darkest | brick light,
+# mid, dark.
+lookset floor cracked pit wall brick vent vent-warn plate warp
+
+# World 1 meadow, 6-10: autumn field, sandstone, red brick.
+look l1 #62b060:#a8a24c #55a053:#9a9442 #2e5e33:#5a5420 #9aa3b8:#c4b498 #6f7890:#97866a #3a4050:#54483a #2d3242:#3e352b #d9834e:#e07a5a #b45a2c:#c24a36 #6e3317:#6a2018
+# World 2 cavern, 11-15: brown earth, slate, sandstone blocks.
+look l2 #62b060:#8a6a4a #55a053:#7c5e40 #2e5e33:#3e2c1c #9aa3b8:#8c9ab8 #6f7890:#5e6a88 #3a4050:#30364a #2d3242:#232839 #d9834e:#d2a874 #b45a2c:#a8804e #6e3317:#583c20
+# World 2 cavern, 16-20: crystal cave, violet rock, teal blocks.
+look l3 #62b060:#4f6a8c #55a053:#45607f #2e5e33:#22324a #9aa3b8:#a898d0 #6f7890:#7464a6 #3a4050:#3a3062 #2d3242:#2a2448 #d9834e:#6ccac4 #b45a2c:#3a9a96 #6e3317:#1e5458
+# World 3 factory, 21-25: concrete floor, rusted iron, red brick.
+look l4 #62b060:#8c8c84 #55a053:#7e7e76 #2e5e33:#44443e #9aa3b8:#cc9a68 #6f7890:#98683e #3a4050:#543820 #2d3242:#3e2818 #d9834e:#d4705a #b45a2c:#a8402e #6e3317:#561a12
+# World 3 factory, 26-30: night shift, green machinery, wooden crates.
+look l5 #62b060:#5a6470 #55a053:#505a66 #2e5e33:#2a3038 #9aa3b8:#6cb4a8 #6f7890:#3e8078 #3a4050:#204440 #2d3242:#163430 #d9834e:#d0a86c #b45a2c:#a07844 #6e3317:#563a1c
+# World 4 haunted, 31-35: graveyard moss, tombstone grey, coffin wood.
+look l6 #62b060:#5e7a5a #55a053:#546e50 #2e5e33:#2a3a28 #9aa3b8:#9a9aaa #6f7890:#6a6a7a #3a4050:#36363f #2d3242:#27272e #d9834e:#b08a62 #b45a2c:#8a6844 #6e3317:#463220
+# World 4 haunted, 36-40: crypt, bone stone, mossy brick.
+look l7 #62b060:#4e6a6a #55a053:#446060 #2e5e33:#223434 #9aa3b8:#c0b494 #6f7890:#8c8064 #3a4050:#463e2e #2d3242:#342e22 #d9834e:#78b890 #b45a2c:#4a8a64 #6e3317:#20402e
+# World 5 sky, 41-45: sun-baked temple, white marble, terracotta.
+look l8 #62b060:#c4b48a #55a053:#b6a67c #2e5e33:#6a5c3a #9aa3b8:#f0eef8 #6f7890:#c0c4d6 #3a4050:#7c84a0 #2d3242:#5a6078 #d9834e:#eaa0a8 #b45a2c:#c86a7a #6e3317:#783444
+# World 5 sky, 46-50: dusk citadel, rose stone, blue brick.
+look l9 #62b060:#6e6290 #55a053:#625684 #2e5e33:#322a4a #9aa3b8:#c27a8c #6f7890:#8c4c60 #3a4050:#48242e #2d3242:#341a22 #d9834e:#7c9ad0 #b45a2c:#4a6aa8 #6e3317:#223658

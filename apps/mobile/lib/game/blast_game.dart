@@ -216,6 +216,7 @@ class BlastGame extends FlameGame {
       tileSize: tileSize,
       atlas: _atlas,
       highContrast: () => settings.highContrastFlames,
+      look: WorldRenderer.lookFor(def),
     );
     _renderer = renderer;
     world.add(renderer);

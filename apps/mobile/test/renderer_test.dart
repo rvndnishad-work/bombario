@@ -75,6 +75,25 @@ void main() {
     recorder.endRecording().dispose();
   });
 
+  test('the terrain changes colour every five stages', () {
+    final looks = [for (final s in Campaign.stages) WorldRenderer.lookFor(s)];
+    expect(looks, hasLength(50));
+    for (var i = 0; i < looks.length; i++) {
+      // Stages 1-5 share a look, 6-10 the next, and so on.
+      expect(looks[i], looks[i - i % 5], reason: Campaign.stages[i].id);
+      if (i % 5 == 0 && i > 0) {
+        expect(looks[i], isNot(looks[i - 1]), reason: Campaign.stages[i].id);
+      }
+    }
+    expect(looks.toSet(), hasLength(10));
+    expect(WorldRenderer.lookFor(null), '');
+    for (final look in looks.where((l) => l.isNotEmpty)) {
+      for (final tile in ['floor', 'cracked', 'pit', 'wall', 'brick', 'vent']) {
+        expect(SpriteAtlas.has('$tile$look'), isTrue, reason: '$tile$look');
+      }
+    }
+  });
+
   test('every item, enemy, player and ping has a sprite', () {
     for (final t in ItemType.values) {
       expect(

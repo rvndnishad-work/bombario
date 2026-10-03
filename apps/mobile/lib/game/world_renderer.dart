@@ -23,7 +23,10 @@ class WorldRenderer extends PositionComponent {
     required this.tileSize,
     required this.atlas,
     bool Function()? highContrast,
-  }) : highContrast = highContrast ?? _off;
+    this.look = '',
+  }) : highContrast = highContrast ?? _off {
+    effects.brickSprite = themed('brick');
+  }
 
   static bool _off() => false;
 
@@ -34,6 +37,28 @@ class WorldRenderer extends PositionComponent {
 
   /// Accessibility: outlines every flame tile in white (§9.6).
   final bool Function() highContrast;
+
+  /// Sprite suffix for the terrain's colours (see [lookFor]), '' for the
+  /// plain look.
+  final String look;
+
+  /// The terrain look for [stage]: it changes every five stages, so 1-5 use
+  /// the plain colours, 6-10 `-l1`, 11-15 `-l2`, up to 46-50 `-l9`. Stages
+  /// outside the campaign (versus, the Daily Dungeon) take their world's
+  /// first look.
+  static String lookFor(core.StageDef? stage) {
+    if (stage == null) return '';
+    final world = stage.world.clamp(1, 5);
+    final band = (world - 1) * 2 + (stage.number > 5 ? 1 : 0);
+    return band == 0 ? '' : '-l$band';
+  }
+
+  /// [name] in this stage's look, when the atlas has it.
+  String themed(String name) {
+    if (look.isEmpty) return name;
+    final themed = '$name$look';
+    return SpriteAtlas.has(themed) ? themed : name;
+  }
 
   /// Suit colours by player slot: blue, red, green, yellow (the mockups').
   static const playerColors = [
@@ -250,18 +275,22 @@ class WorldRenderer extends PositionComponent {
           atlas.draw(canvas, 'brick-possessed', r);
           continue;
         }
-        atlas.draw(canvas, switch (tile) {
-          core.TileType.floor => 'floor',
-          core.TileType.cracked => 'cracked',
-          core.TileType.pit => 'pit',
-          core.TileType.pillar => 'wall',
-          core.TileType.brick => 'brick',
-        }, r);
+        atlas.draw(
+          canvas,
+          themed(switch (tile) {
+            core.TileType.floor => 'floor',
+            core.TileType.cracked => 'cracked',
+            core.TileType.pit => 'pit',
+            core.TileType.pillar => 'wall',
+            core.TileType.brick => 'brick',
+          }),
+          r,
+        );
         if (tile == core.TileType.floor || tile == core.TileType.cracked) {
           final name = feature == core.TileFeature.vent && ventHot
               ? 'vent-warn'
               : featureSprite(feature);
-          if (name != null) atlas.draw(canvas, name, r);
+          if (name != null) atlas.draw(canvas, themed(name), r);
         }
       }
     }
@@ -419,7 +448,7 @@ class WorldRenderer extends PositionComponent {
           final shake = math.sin(_time * 50) * 1.5;
           atlas.draw(
             canvas,
-            'wall',
+            themed('wall'),
             _tileRect(h.x, h.y).translate(shake, 0),
             paint: SpriteAtlas.faded(0.5),
           );
