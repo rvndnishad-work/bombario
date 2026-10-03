@@ -289,7 +289,7 @@ class World {
 
   // ---------------------------------------------------------------- setup
 
-  Player addPlayer({String name = ''}) {
+  Player addPlayer({String name = '', String skin = Player.defaultSkin}) {
     final spawn =
         level.playerSpawns[players.length % level.playerSpawns.length];
     final p = Player(
@@ -297,6 +297,7 @@ class World {
       x: spawn.x + 0.5,
       y: spawn.y + 0.5,
       name: name,
+      skin: skin,
     );
     players.add(p);
     return p;
