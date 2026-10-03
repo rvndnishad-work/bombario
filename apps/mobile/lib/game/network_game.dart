@@ -10,9 +10,13 @@ import '../net/room_session.dart';
 import 'input_controller.dart';
 import 'world_renderer.dart';
 
-/// Networked match: renders the server's snapshots and sends this player's
-/// input. No prediction yet (LAN latency is a few milliseconds); Phase 2 adds
-/// prediction and interpolation for online rooms.
+/// Networked match: sends this player's input and renders the server's
+/// snapshots.
+///
+/// Two tricks hide the network: the local player is drawn where this phone
+/// predicts it to be (it moves the instant the stick does), and everyone else
+/// is interpolated between the last two snapshots so 15 Hz updates still look
+/// like smooth 60 fps movement.
 class NetworkGame extends FlameGame {
   NetworkGame(this.session);
 
@@ -23,6 +27,17 @@ class NetworkGame extends FlameGame {
   final ValueNotifier<bool> hasRemote = ValueNotifier(false);
 
   core.WorldSnapshot? _last;
+  core.WorldSnapshot? _prev;
+  double _clock = 0;
+  double _lastAt = 0;
+  core.WorldSnapshot? _view;
+
+  /// Snapshots arrive every other simulation tick.
+  static const double snapshotInterval = 2 * core.World.tickDt;
+
+  /// Movement larger than this between snapshots is a teleport (respawn),
+  /// not something to slide across.
+  static const double maxLerp = 1.5;
   double _accumulator = 0;
   double _shake = 0;
   int _seenFlames = 0;
@@ -32,7 +47,7 @@ class NetworkGame extends FlameGame {
   Color backgroundColor() => const Color(0xFF1B1B1B);
 
   core.WorldSnapshot get _snapshot =>
-      session.snapshot ?? _last ?? _emptySnapshot;
+      _view ?? session.snapshot ?? _last ?? _emptySnapshot;
 
   static final _emptySnapshot = core.WorldSnapshot(
     tick: 0,
@@ -70,8 +85,11 @@ class NetworkGame extends FlameGame {
   @override
   void update(double dt) {
     super.update(dt);
+    _clock += dt;
     final snap = session.snapshot;
     if (snap != null && snap != _last) {
+      _prev = _last;
+      _lastAt = _clock;
       if (_last == null || snap.grid.width != _last!.grid.width) _fitCamera();
       // Any new flame tile means something exploded: shake a little.
       if (snap.flames.length > _seenFlames) _shake = 0.15;
@@ -90,8 +108,49 @@ class NetworkGame extends FlameGame {
       session.sendInput(input.consume());
     }
 
+    _view = _smoothed();
     _shake = math.max(0, _shake - dt);
     _follow();
+  }
+
+  core.WorldSnapshot? _smoothed() {
+    final cur = _last;
+    if (cur == null) return null;
+    final prev = _prev;
+    final t = ((_clock - _lastAt) / snapshotInterval).clamp(0.0, 1.0);
+    final myId = session.myPlayerId;
+    final me = session.me;
+
+    (double, double) lerp(double px, double py, double x, double y) {
+      if ((x - px).abs() > maxLerp || (y - py).abs() > maxLerp) return (x, y);
+      return (px + (x - px) * t, py + (y - py) * t);
+    }
+
+    return cur.copyWith(
+      players: [
+        for (final p in cur.players)
+          if (p.id == myId && me != null)
+            me
+          else if (prev?.player(p.id) case final old?)
+            () {
+              final (x, y) = lerp(old.x, old.y, p.x, p.y);
+              return p.copyWith(x: x, y: y);
+            }()
+          else
+            p,
+      ],
+      enemies: [
+        for (final e in cur.enemies)
+          if (prev?.enemies.where((o) => o.id == e.id).firstOrNull
+              case final old?)
+            () {
+              final (x, y) = lerp(old.x, old.y, e.x, e.y);
+              return core.EnemyState(e.id, x, y, e.alive, e.kind);
+            }()
+          else
+            e,
+      ],
+    );
   }
 
   void _follow() {

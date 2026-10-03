@@ -11,5 +11,6 @@ export 'src/events.dart';
 export 'src/grid.dart';
 export 'src/input.dart';
 export 'src/level.dart';
+export 'src/movement.dart';
 export 'src/snapshot.dart';
 export 'src/world.dart';

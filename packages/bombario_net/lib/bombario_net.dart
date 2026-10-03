@@ -6,5 +6,7 @@
 library;
 
 export 'src/game_client.dart';
+export 'src/prediction.dart';
 export 'src/protocol.dart';
+export 'src/room.dart';
 export 'src/room_server.dart';

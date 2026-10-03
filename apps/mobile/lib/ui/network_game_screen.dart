@@ -38,8 +38,11 @@ class _NetworkGameScreenState extends State<NetworkGameScreen> {
   @override
   Widget build(BuildContext context) {
     final s = widget.session;
+    // `lobby` here means the match ended while this phone was reconnecting.
     final ended =
-        s.phase == SessionPhase.ended || s.phase == SessionPhase.disconnected;
+        s.phase == SessionPhase.ended ||
+        s.phase == SessionPhase.disconnected ||
+        s.phase == SessionPhase.lobby;
     return Scaffold(
       body: Stack(
         children: [
@@ -52,6 +55,27 @@ class _NetworkGameScreenState extends State<NetworkGameScreen> {
             initialActiveOverlays: const ['controls'],
           ),
           _NetworkHud(session: s),
+          if (s.phase == SessionPhase.reconnecting)
+            const Center(
+              child: Card(
+                color: Colors.black87,
+                child: Padding(
+                  padding: EdgeInsets.all(20),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      ),
+                      SizedBox(width: 12),
+                      Text('Connection lost, reconnecting…'),
+                    ],
+                  ),
+                ),
+              ),
+            ),
           if (ended)
             Center(
               child: Card(
@@ -85,6 +109,7 @@ class _NetworkGameScreenState extends State<NetworkGameScreen> {
 
   String _title(RoomSession s) {
     if (s.phase == SessionPhase.disconnected) return 'Connection lost';
+    if (s.phase == SessionPhase.lobby) return 'Match over';
     if (s.lastCleared) return 'Stage cleared!';
     final w = s.lastWinner;
     if (w == null) return 'Stage failed';

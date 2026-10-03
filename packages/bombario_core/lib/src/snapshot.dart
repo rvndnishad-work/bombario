@@ -40,6 +40,27 @@ class WorldSnapshot {
 
   bool get over => cleared || failed || winnerId != null;
 
+  WorldSnapshot copyWith({
+    List<PlayerState>? players,
+    List<EnemyState>? enemies,
+  }) =>
+      WorldSnapshot(
+        tick: tick,
+        timeLeft: timeLeft,
+        grid: grid,
+        players: players ?? this.players,
+        bombs: bombs,
+        flames: flames,
+        items: items,
+        enemies: enemies ?? this.enemies,
+        cleared: cleared,
+        failed: failed,
+        winnerId: winnerId,
+        exitHoldProgress: exitHoldProgress,
+      );
+
+  bool bombAt(int x, int y) => bombs.any((b) => b.x == x && b.y == y);
+
   PlayerState? player(int id) {
     for (final p in players) {
       if (p.id == id) return p;
@@ -47,11 +68,21 @@ class WorldSnapshot {
     return null;
   }
 
-  static WorldSnapshot of(World w, {int tick = 0}) => WorldSnapshot(
+  /// [ackedInputs] maps a player id to the last input sequence number the
+  /// server applied for them, which clients use to reconcile prediction.
+  static WorldSnapshot of(
+    World w, {
+    int tick = 0,
+    Map<int, int> ackedInputs = const {},
+  }) =>
+      WorldSnapshot(
         tick: tick,
         timeLeft: w.timeLeft,
         grid: w.grid,
-        players: [for (final p in w.players) PlayerState.of(p)],
+        players: [
+          for (final p in w.players)
+            PlayerState.of(p, ackedInput: ackedInputs[p.id] ?? 0),
+        ],
         bombs: [for (final b in w.bombs) BombState(b.x, b.y, b.fuse, b.remote)],
         flames: [for (final f in w.flames) FlameState(f.x, f.y)],
         items: [for (final i in w.floorItems) ItemState(i.x, i.y, i.type)],
@@ -167,6 +198,10 @@ class PlayerState {
     required this.fireRange,
     required this.remote,
     required this.score,
+    this.speed = Player.baseSpeed,
+    this.wallPass = false,
+    this.bombPass = false,
+    this.ackedInput = 0,
   });
 
   final int id;
@@ -180,8 +215,14 @@ class PlayerState {
   final int fireRange;
   final bool remote;
   final int score;
+  final double speed;
+  final bool wallPass;
+  final bool bombPass;
 
-  static PlayerState of(Player p) => PlayerState(
+  /// Sequence number of the last input the server applied for this player.
+  final int ackedInput;
+
+  static PlayerState of(Player p, {int ackedInput = 0}) => PlayerState(
         id: p.id,
         name: p.name,
         x: p.x,
@@ -193,7 +234,38 @@ class PlayerState {
         fireRange: p.fireRange,
         remote: p.remote,
         score: p.score,
+        speed: p.speed,
+        wallPass: p.wallPass,
+        bombPass: p.bombPass,
+        ackedInput: ackedInput,
       );
+
+  PlayerState copyWith({double? x, double? y, Direction? facing}) =>
+      PlayerState(
+        id: id,
+        name: name,
+        x: x ?? this.x,
+        y: y ?? this.y,
+        alive: alive,
+        facing: facing ?? this.facing,
+        invincible: invincible,
+        maxBombs: maxBombs,
+        fireRange: fireRange,
+        remote: remote,
+        score: score,
+        speed: speed,
+        wallPass: wallPass,
+        bombPass: bombPass,
+        ackedInput: ackedInput,
+      );
+
+  /// A mutable [Player] body with this state, for client-side prediction.
+  Player toPlayer() => Player(id: id, x: x, y: y, name: name)
+    ..alive = alive
+    ..facing = facing
+    ..speed = speed
+    ..wallPass = wallPass
+    ..bombPass = bombPass;
 
   Map<String, dynamic> toJson() => {
         'id': id,
@@ -207,6 +279,10 @@ class PlayerState {
         'r': fireRange,
         'd': remote,
         's': score,
+        'v': speed,
+        'w': wallPass,
+        'p': bombPass,
+        'q': ackedInput,
       };
 
   static PlayerState fromJson(Map<String, dynamic> j) => PlayerState(
@@ -221,6 +297,10 @@ class PlayerState {
         fireRange: j['r'] as int,
         remote: j['d'] as bool,
         score: j['s'] as int,
+        speed: (j['v'] as num?)?.toDouble() ?? Player.baseSpeed,
+        wallPass: j['w'] as bool? ?? false,
+        bombPass: j['p'] as bool? ?? false,
+        ackedInput: j['q'] as int? ?? 0,
       );
 }
 

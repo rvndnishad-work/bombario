@@ -1,7 +1,9 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:bombario_core/bombario_core.dart';
 import 'package:bombario_net/bombario_net.dart';
+import 'package:bombario/net/online.dart';
 import 'package:bombario/net/room_session.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -75,5 +77,102 @@ void main() {
     expect(host.phase, SessionPhase.lobby);
     expect(host.lobby.players.every((p) => !p.ready), isTrue);
     expect(host.mode, GameMode.versus);
+  });
+
+  group('online', () {
+    late RoomServer cloud;
+    late Uri base;
+
+    setUp(() async {
+      // The test binding answers every HTTP request with a 400; these tests
+      // talk to a real local server.
+      HttpOverrides.global = null;
+      cloud = await RoomServer.start(seed: 9, serveDefaultRoom: false);
+      base = OnlineServer.parse('127.0.0.1:${cloud.port}');
+    });
+
+    tearDown(() => cloud.close());
+
+    test('create a room, share the code, join it and reconnect', () async {
+      final host = await RoomSession.createOnline(
+        server: base,
+        playerName: 'Host',
+      );
+      addTearDown(host.leave);
+      await waitFor(() => host.phase == SessionPhase.lobby, what: 'lobby');
+      expect(host.online, isTrue);
+      expect(host.isHost, isTrue);
+      final code = host.code!;
+      expect(code, hasLength(6));
+
+      // Friends type codes however they like.
+      final guest = await RoomSession.joinOnline(
+        server: base,
+        code: ' ${code.toLowerCase()} ',
+        playerName: 'Guest',
+      );
+      addTearDown(guest.leave);
+      await waitFor(() => host.lobby.players.length == 2, what: 'joined');
+      expect(guest.code, code);
+
+      guest.setReady(true);
+      await waitFor(() => host.lobby.everyoneReady, what: 'ready');
+      host.start();
+      await waitFor(
+        () => guest.phase == SessionPhase.playing && guest.snapshot != null,
+        what: 'playing',
+      );
+      final seat = guest.myPlayerId;
+
+      // The guest's phone loses its connection and comes back.
+      await guest.dropConnection();
+      await waitFor(
+        () => host.lobby.players.any((p) => !p.connected),
+        what: 'seat held',
+      );
+      await waitFor(
+        () =>
+            guest.phase == SessionPhase.playing &&
+            host.lobby.players.every((p) => p.connected),
+        what: 'resumed',
+      );
+      expect(guest.myPlayerId, seat);
+      // Prediction runs for the resumed player.
+      for (var i = 0; i < 5; i++) {
+        guest.sendInput(const PlayerInput(direction: Direction.right));
+        await Future<void>.delayed(const Duration(milliseconds: 33));
+      }
+      expect(guest.me, isNotNull);
+    });
+
+    test('a wrong code gets a friendly error', () async {
+      await expectLater(
+        RoomSession.joinOnline(server: base, code: 'ZZZZZZ', playerName: 'X'),
+        throwsA(
+          isA<OnlineException>().having(
+            (e) => e.message,
+            'message',
+            contains('No room'),
+          ),
+        ),
+      );
+    });
+
+    test('socket addresses follow the server scheme', () {
+      expect(
+        OnlineServer.socketUri(
+          OnlineServer.parse('https://x.dev'),
+          'ABC234',
+        ).toString(),
+        'wss://x.dev/rooms/ABC234',
+      );
+      expect(
+        OnlineServer.socketUri(
+          OnlineServer.parse('localhost:8080'),
+          'ABC234',
+        ).toString(),
+        'ws://localhost:8080/rooms/ABC234',
+      );
+    });
   });
 }
