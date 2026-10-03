@@ -11,9 +11,9 @@ import 'package:flutter/foundation.dart';
 class OnlineServer {
   static const String defaultUrl = String.fromEnvironment(
     'BOMBARIO_SERVER',
-    // The Fly.io deployment (fly.toml). For a laptop server use
+    // The DigitalOcean droplet (deploy/droplet). For a laptop server use
     // --dart-define=BOMBARIO_SERVER=http://<laptop-ip>:8080.
-    defaultValue: 'https://bombario-server.fly.dev',
+    defaultValue: 'https://64-227-174-84.sslip.io',
   );
 
   /// Current server address for this app run.

@@ -30,7 +30,8 @@ Phase 5 (launch features):
 - [x] Anonymous analytics batched to `POST /events` (JSONL per day under `DATA_DIR`), with a switch in Settings
 - [x] Player name is saved between launches
 - [ ] Scores are reported by the app and can be faked until accounts exist
-- [ ] Store listings, in-app purchases and a deployed public server
+- [x] Public server on a DigitalOcean droplet (`deploy/droplet`), the app's default
+- [ ] Store listings and in-app purchases
 
 Phase 4 (content and polish):
 - [x] Worlds 3 to 5 (Factory, Haunted Manor, Sky Fortress): 30 more stages, so the campaign runs 1-1 to 5-10
