@@ -49,4 +49,28 @@ void main() {
     expect(game.stage.id, '1-10');
     expect(game.sim.enemies.first.kind.boss, isTrue);
   });
+
+  testWidgets('losing the last life shows the game-over menu', (tester) async {
+    tester.view.physicalSize = const Size(1600, 800);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    await tester.runAsync(SpriteAtlas.load);
+    await tester.pumpWidget(const MaterialApp(home: GameScreen(seed: 3)));
+    await tester.pump(const Duration(milliseconds: 50));
+    final state = tester.state(find.byType(GameScreen));
+    final game = (state as dynamic).game as BlastGame;
+
+    // Down to the last life, then an enemy lands on the player.
+    game.lives = 1;
+    game.player.invincibleFor = 0;
+    game.sim.spawnEnemy(game.player.tile, game.sim.enemies.first.kind);
+    for (var i = 0; i < 80 && game.lives > 0; i++) {
+      await tester.pump(const Duration(milliseconds: 50));
+    }
+    expect(game.lives, 0);
+    for (var i = 0; i < 60; i++) {
+      await tester.pump(const Duration(milliseconds: 50));
+    }
+    expect(game.overlays.isActive(Overlays.gameOver), isTrue);
+  });
 }
