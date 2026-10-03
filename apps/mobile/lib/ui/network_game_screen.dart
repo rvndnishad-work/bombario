@@ -50,7 +50,10 @@ class _NetworkGameScreenState extends State<NetworkGameScreen> {
 
   @override
   void dispose() {
-    GameAudio.instance.playMusic(0);
+    // Leaving mid-jingle must not carry it onto the menu loop.
+    GameAudio.instance
+      ..stopAllOneShots()
+      ..playMusic(0);
     widget.session.removeListener(_onSession);
     super.dispose();
   }
@@ -80,24 +83,29 @@ class _NetworkGameScreenState extends State<NetworkGameScreen> {
                 onPause: () => setState(() => _menuOpen = true),
                 child: Stack(
                   children: [
-                    GameWidget(
-                      game: _game,
-                      // Keys go to KeyboardControls; a focused GameWidget
-                      // would swallow them.
-                      autofocus: false,
-                      overlayBuilderMap: {
-                        'controls': (context, NetworkGame game) =>
-                            ControlsOverlay(
-                              input: game.input,
-                              actionLabel: game.actionLabel,
-                              pings: s.mode == GameMode.coop,
-                              opacity: settings.controlsOpacity,
-                              scale: settings.controlsScale,
-                              leftHanded: settings.leftHanded,
-                              haptics: settings.haptics,
-                            ),
-                      },
-                      initialActiveOverlays: const ['controls'],
+                    // The camera can draw past the board's edges (a tall
+                    // maze scrolls vertically); clip it so it never paints
+                    // over the toolbar or outside the menus' dimming.
+                    ClipRect(
+                      child: GameWidget(
+                        game: _game,
+                        // Keys go to KeyboardControls; a focused GameWidget
+                        // would swallow them.
+                        autofocus: false,
+                        overlayBuilderMap: {
+                          'controls': (context, NetworkGame game) =>
+                              ControlsOverlay(
+                                input: game.input,
+                                actionLabel: game.actionLabel,
+                                pings: s.mode == GameMode.coop,
+                                opacity: settings.controlsOpacity,
+                                scale: settings.controlsScale,
+                                leftHanded: settings.leftHanded,
+                                haptics: settings.haptics,
+                              ),
+                        },
+                        initialActiveOverlays: const ['controls'],
+                      ),
                     ),
                     MessagePopups(messages: _game.messages),
                     if (s.phase == SessionPhase.reconnecting)

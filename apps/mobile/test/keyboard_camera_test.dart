@@ -92,6 +92,41 @@ void main() {
       }
       expect(at(48, 980).y, closeTo(800, 1e-6));
     });
+
+    test('looks ahead the way the player walks', () {
+      final cam = FollowCamera();
+      final view = Vector2(800, 400); // 25 x 12.5 tiles at zoom 1
+      Vector2 at(double y) => cam.follow(
+        view: view,
+        zoom: 1,
+        targetX: 400,
+        targetY: y,
+        mazeW: 800,
+        mazeH: 3200,
+        tileSize: 32,
+        dt: 1 / 60,
+      );
+      // Walking up the middle of a tall maze: the camera ends up above the
+      // player, so more rows show ahead than behind.
+      var y = 2000.0;
+      at(y);
+      for (var i = 0; i < 180; i++) {
+        y -= 2;
+        at(y);
+      }
+      var cam1 = at(y);
+      expect(cam1.y, lessThan(y - 32 * 2));
+      expect(cam.lead.y, lessThan(-32 * 3));
+      // Turning to walk down swings the view below the player.
+      for (var i = 0; i < 240; i++) {
+        y += 2;
+        at(y);
+      }
+      cam1 = at(y);
+      expect(cam1.y, greaterThan(y + 32 * 2));
+      // Never further than the player could see past the edge.
+      expect(cam.lead.y, lessThanOrEqualTo(FollowCamera.maxLead * 32));
+    });
   });
 
   test('screen shake is reduced unless the player turns it back on', () {

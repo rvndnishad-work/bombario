@@ -49,6 +49,15 @@ class BlastGame extends FlameGame {
 
   static const double tileSize = 32;
   static const int startingLives = 3;
+
+  /// Lives from every source (1-Ups, points, ads) stop here.
+  static const int maxLives = core.World.maxLives;
+
+  /// A life for every this many points, paid when a stage is cleared.
+  static const int pointsPerLife = 10000;
+
+  /// Ad lives one run may claim; after that Game Over means starting over.
+  static const int maxAdLives = 2;
   static const double respawnDelay = 1.5;
 
   /// The board waits behind a "Stage N" card this long before play starts,
@@ -57,7 +66,12 @@ class BlastGame extends FlameGame {
 
   /// After the exit, the board holds still while the clear jingle plays
   /// before the results card comes up.
-  static const double clearBeatSeconds = 1.6;
+  static const double clearBeatSeconds = 1.9;
+
+  /// With this much time left the music stops for the alarm sting, and
+  /// [timeLowStingSeconds] later the hurry loop takes over.
+  static const double timeLowSeconds = 30;
+  static const double timeLowStingSeconds = 0.7;
 
   /// The stage card's text while it shows, else null.
   final ValueNotifier<StageIntro?> intro = ValueNotifier(null);
@@ -68,6 +82,7 @@ class BlastGame extends FlameGame {
   /// Tiles walked since the last footstep, and whether the exit has opened.
   double _stride = 0;
   bool _exitOpen = false;
+  bool _onLockedExit = false;
 
   /// The stage's power-up has been picked up, so the "find the exit" music
   /// plays instead of the world's.
@@ -89,6 +104,23 @@ class BlastGame extends FlameGame {
   int stageIndex = 0;
   int lives = startingLives;
 
+  /// Score at which the next points life is due.
+  int _nextLifeAt = pointsPerLife;
+
+  /// Lives the last cleared stage paid for points, for the results card.
+  int livesForPoints = 0;
+
+  /// Lives claimed by watching ads this run (see [maxAdLives]).
+  int adLivesUsed = 0;
+
+  /// Adds up to [n] lives without passing [maxLives]; returns how many fit.
+  int gainLives(int n) {
+    final room = math.max(0, maxLives - lives);
+    final gained = math.min(n, room);
+    lives += gained;
+    return gained;
+  }
+
   core.StageDef get stage => daily?.stage ?? core.Campaign.stages[stageIndex];
   bool get isLastStage =>
       daily != null || stageIndex == core.Campaign.stages.length - 1;
@@ -109,6 +141,8 @@ class BlastGame extends FlameGame {
   double _hudTimer = 0;
   double _shake = 0;
   bool _hurry = false;
+  bool _timeLowStung = false;
+  int _lastTickSecond = -1;
   final math.Random _shakeRng = math.Random();
   final FollowCamera _camera = FollowCamera();
 
@@ -161,11 +195,15 @@ class BlastGame extends FlameGame {
       if (daily != null) 'mode': 'daily',
     });
     _hurry = false;
+    _timeLowStung = false;
+    _lastTickSecond = -1;
     _stride = 0;
     _exitOpen = false;
+    _onLockedExit = false;
     _found = false;
     // The fanfare plays under the stage card; the world's music follows it.
     GameAudio.instance
+      ..stopAllOneShots()
       ..stopMusic()
       ..play(Sfx.stageStart);
     _hasPlayer = true;
@@ -271,10 +309,15 @@ class BlastGame extends FlameGame {
 
     // Out of lives: the board freezes, but the respawn timer below still has
     // to run so the game-over menu appears.
-    final outOfLives = sim.failed && lives == 0;
+    final outOfLives =
+        (sim.failed && lives == 0) || overlays.isActive(Overlays.gameOver);
 
     // Fixed-step simulation so the rules behave identically everywhere.
-    _accumulator += math.min(dt, 0.25) * settings.soloSpeed;
+    // While frozen behind Game Over nothing piles up, or an ad continue
+    // would replay all that time in a burst.
+    _accumulator = outOfLives
+        ? 0
+        : _accumulator + math.min(dt, 0.25) * settings.soloSpeed;
     while (!outOfLives && _accumulator >= core.World.tickDt) {
       _accumulator -= core.World.tickDt;
       final x0 = player.x, y0 = player.y;
@@ -299,6 +342,15 @@ class BlastGame extends FlameGame {
         if (lives > 0) {
           sim.respawn(player);
           sim.clearFailure();
+          // The death jingle stopped the music; it restarts cold on the
+          // downbeat, in whatever state the stage is in. Once the time
+          // alarm has sounded, that state is the hurry loop.
+          if (_timeLowStung) _hurry = true;
+          GameAudio.instance.playMusic(
+            stage.world,
+            hurry: _hurry,
+            found: _found,
+          );
         } else if (!overlays.isActive(Overlays.gameOver)) {
           Analytics.instance.log('game_over', {
             'stage': stage.id,
@@ -315,11 +367,31 @@ class BlastGame extends FlameGame {
 
     _shake = math.max(0, _shake - dt);
     _followPlayer(dt);
+    _checkLockedExit();
 
     messages.tick(dt);
-    if (!_hurry && sim.timeLeft <= 30 && sim.timeLeft > 0) {
-      _hurry = true;
-      GameAudio.instance.playMusic(stage.world, hurry: true, found: _found);
+    if (!stage.bonus) {
+      if (!_timeLowStung &&
+          sim.timeLeft <= timeLowSeconds &&
+          sim.timeLeft > 0) {
+        _timeLowStung = true;
+        // The alarm is heard dry; the fast loop enters on its downbeat after.
+        GameAudio.instance
+          ..stopMusic()
+          ..play(Sfx.timeLow);
+      }
+      if (!_hurry &&
+          sim.timeLeft <= timeLowSeconds - timeLowStingSeconds &&
+          sim.timeLeft > 0) {
+        _hurry = true;
+        GameAudio.instance.playMusic(stage.world, hurry: true, found: _found);
+      }
+    }
+    // One click per displayed second, same rounding as the HUD's digit.
+    final secs = sim.timeLeft.ceil();
+    if (secs > 0 && secs <= 10 && secs != _lastTickSecond && player.alive) {
+      _lastTickSecond = secs;
+      GameAudio.instance.play(Sfx.tick);
     }
     _hudTimer += dt;
     if (_hudTimer >= 0.1) {
@@ -344,6 +416,7 @@ class BlastGame extends FlameGame {
     core.ItemType.teamBoost => ('Team Boost', 'Powers up your teammates.'),
     core.ItemType.tether => ('Tether', 'Revive a teammate from a distance.'),
     core.ItemType.frost => ('Frost', 'Your next bombs freeze.'),
+    core.ItemType.extraLife => ('1-Up', 'One more life!'),
     core.ItemType.exit => ('Exit', ''),
   };
 
@@ -360,6 +433,37 @@ class BlastGame extends FlameGame {
       _stride -= strideTiles;
       GameAudio.instance.play(dx >= dy ? Sfx.stepH : Sfx.stepV);
     }
+  }
+
+  /// Standing on the exit while enemies are left: say why it won't open,
+  /// once per visit, the way the original's door simply ignores you.
+  void _checkLockedExit() {
+    final exit = sim.exitTile;
+    final onExit =
+        exit != null &&
+        !stage.isBoss &&
+        !stage.bonus &&
+        player.alive &&
+        !sim.cleared &&
+        player.tile == exit;
+    if (!onExit) {
+      _onLockedExit = false;
+      return;
+    }
+    if (_onLockedExit || sim.allEnemiesDead) return;
+    _onLockedExit = true;
+    final left = sim.enemies.where((e) => e.alive).length;
+    GameAudio.instance.play(Sfx.uiTap);
+    messages.show(
+      GameMessage(
+        title: 'The exit is locked',
+        body: left == 1
+            ? 'Defeat the last enemy to open it.'
+            : 'Defeat the $left enemies left to open it.',
+        sprite: 'exit',
+        seconds: 2.5,
+      ),
+    );
   }
 
   /// The last enemy is down: chime once so you know to head for the exit.
@@ -386,9 +490,31 @@ class BlastGame extends FlameGame {
             when playerId == player.id:
           audio.play(Sfx.pickup);
           _buzz(HapticFeedback.selectionClick);
-          if (!_found && !stage.bonus && type != core.ItemType.exit) {
+          if (type == core.ItemType.extraLife) {
+            final gained = gainLives(1);
+            messages.show(
+              GameMessage(
+                title: '1-Up!',
+                body: gained > 0
+                    ? 'One more life. You have $lives.'
+                    : 'Already at the most lives ($maxLives).',
+                sprite: 'pu-life',
+                seconds: 2.5,
+              ),
+            );
+            _refreshHud();
+            continue;
+          }
+          if (!_found &&
+              !stage.bonus &&
+              !stage.isBoss &&
+              type != core.ItemType.exit) {
             _found = true;
-            audio.playMusic(stage.world, hurry: _hurry, found: true);
+            // Between the time alarm and the hurry loop, the hurry switch
+            // starts the found loop itself.
+            if (!_timeLowStung || _hurry) {
+              audio.playMusic(stage.world, hurry: _hurry, found: true);
+            }
           }
           final (title, body) = itemInfo(type);
           messages.show(
@@ -417,7 +543,9 @@ class BlastGame extends FlameGame {
         case core.PlayerDied():
           lives--;
           _shake = 0.3;
-          audio.play(Sfx.death);
+          audio
+            ..stopMusic()
+            ..play(Sfx.death);
           _buzz(HapticFeedback.vibrate);
           messages.show(
             GameMessage(
@@ -466,6 +594,25 @@ class BlastGame extends FlameGame {
             ..stopMusic()
             ..play(Sfx.stageClear);
           _clearBeat = clearBeatSeconds;
+          // Points pay out lives when the stage is won.
+          var earned = 0;
+          while (player.score >= _nextLifeAt) {
+            earned++;
+            _nextLifeAt += pointsPerLife;
+          }
+          livesForPoints = gainLives(earned);
+        case core.TimeUp():
+          _shake = 0.3;
+          audio.play(Sfx.timeUp);
+          _buzz(HapticFeedback.heavyImpact);
+          messages.show(
+            GameMessage(
+              title: "Time's up!",
+              body: 'Hunters are pouring in. Find the exit!',
+              sprite: 'doorWarden',
+              seconds: 4,
+            ),
+          );
         case core.StageFailed():
           break; // handled by the respawn timer
         default:
@@ -490,7 +637,10 @@ class BlastGame extends FlameGame {
   void _endIntro() {
     _introLeft = 0;
     intro.value = null;
-    GameAudio.instance.playMusic(stage.world);
+    // A skip cuts the fanfare instead of starting the loop over it.
+    GameAudio.instance
+      ..stopSfx(Sfx.stageStart)
+      ..playMusic(stage.world);
     final tip = _pendingTip;
     _pendingTip = null;
     if (tip != null) messages.show(tip);
@@ -506,12 +656,53 @@ class BlastGame extends FlameGame {
     if (paused) return;
     input.release();
     pauseEngine();
+    GameAudio.instance
+      ..play(Sfx.uiTap)
+      ..pauseMusic();
     overlays.add(Overlays.pause);
   }
 
   void resume() {
     overlays.remove(Overlays.pause);
     resumeEngine();
+    GameAudio.instance
+      ..play(Sfx.uiTap)
+      ..resumeMusic();
+  }
+
+  /// Whether the game-over card may offer a life for watching an ad: not
+  /// in the Daily Dungeon, where everyone races on the same terms, and at
+  /// most [maxAdLives] times a run.
+  bool get canContinue =>
+      daily == null && lives == 0 && adLivesUsed < maxAdLives;
+
+  /// Whether this run has used up its ad lives (the card says so).
+  bool get adLivesSpent => daily == null && adLivesUsed >= maxAdLives;
+
+  /// Back into the stage where it was lost, with one life (the ad reward).
+  void continueWithExtraLife() {
+    if (!canContinue) return;
+    adLivesUsed++;
+    lives = 1;
+    overlays.remove(Overlays.gameOver);
+    // The ad took the app to the background; make sure the board runs.
+    if (paused && !overlays.isActive(Overlays.pause)) resumeEngine();
+    sim.respawn(player);
+    sim.clearFailure();
+    _respawnTimer = 0;
+    if (_timeLowStung) _hurry = true;
+    GameAudio.instance
+      ..stopAllOneShots()
+      ..playMusic(stage.world, hurry: _hurry, found: _found);
+    messages.show(
+      GameMessage(
+        title: 'Back in!',
+        body: 'One extra life. Make it count.',
+        sprite: 'pu-life',
+        seconds: 4,
+      ),
+    );
+    _refreshHud();
   }
 
   void nextStage() {
@@ -526,6 +717,9 @@ class BlastGame extends FlameGame {
     stageIndex = 0;
     _hasPlayer = false;
     lives = startingLives;
+    _nextLifeAt = pointsPerLife;
+    livesForPoints = 0;
+    adLivesUsed = 0;
     // The daily keeps its seed: everyone races the same dungeon.
     _seed = _shakeRng.nextInt(1 << 30);
     _startStage();

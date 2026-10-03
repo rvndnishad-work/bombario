@@ -27,6 +27,9 @@ enum Sfx {
   stepV,
   stageStart,
   exitOpen,
+  timeLow,
+  timeUp,
+  tick,
 }
 
 /// Small audio facade over flame_audio. Every call is fire-and-forget safe:
@@ -65,8 +68,25 @@ class GameAudio {
     _ => 2,
   };
 
+  /// Jingles and stings that can be cut short with [stopSfx] so one never
+  /// rings over the music that follows it.
+  static const _oneShots = {
+    Sfx.stageStart,
+    Sfx.stageClear,
+    Sfx.gameOver,
+    Sfx.death,
+    Sfx.timeLow,
+    Sfx.timeUp,
+  };
+
   final Map<Sfx, AudioPool> _pools = {};
   final Map<Sfx, Future<AudioPool?>> _loading = {};
+  final Map<Sfx, StopFunction> _stops = {};
+
+  /// Bumped on every play of a one-shot; a [stopSfx] that lands while that
+  /// play is still starting records the generation so it stops on arrival.
+  final Map<Sfx, int> _gen = {};
+  final Map<Sfx, int> _cancelled = {};
   String? _currentMusic;
   bool _bgmReady = false;
 
@@ -108,10 +128,37 @@ class GameAudio {
 
   Future<void> _play(Sfx s) async {
     try {
+      final gen = _gen[s] = (_gen[s] ?? 0) + 1;
       final pool = await _pool(s);
-      await pool?.start(volume: sfxVolume.clamp(0.0, 1.0));
+      final stop = await pool?.start(volume: sfxVolume.clamp(0.0, 1.0));
+      if (stop == null || !_oneShots.contains(s)) return;
+      if (_cancelled[s] == gen) {
+        await stop();
+      } else {
+        _stops[s] = stop;
+      }
     } catch (e) {
       debugPrint('GameAudio: play $s failed: $e');
+    }
+  }
+
+  /// Cuts a playing jingle short (no-op when disabled or not playing).
+  void stopSfx(Sfx s) {
+    final stop = _stops.remove(s);
+    // Still starting: stop it the moment it does.
+    if (stop == null) _cancelled[s] = _gen[s] ?? 0;
+    if (!enabled || stop == null) return;
+    unawaited(
+      stop().catchError(
+        (Object e) => debugPrint('GameAudio: stopSfx $s failed: $e'),
+      ),
+    );
+  }
+
+  /// Cuts every jingle and sting, for leaving a game or starting a stage.
+  void stopAllOneShots() {
+    for (final s in _oneShots) {
+      stopSfx(s);
     }
   }
 
@@ -146,6 +193,25 @@ class GameAudio {
       await FlameAudio.bgm.stop();
     } catch (e) {
       debugPrint('GameAudio: stopMusic failed: $e');
+    }
+  }
+
+  /// Holds the music behind the pause menu; [resumeMusic] picks it back up.
+  Future<void> pauseMusic() async {
+    if (!enabled || _currentMusic == null) return;
+    try {
+      await FlameAudio.bgm.pause();
+    } catch (e) {
+      debugPrint('GameAudio: pauseMusic failed: $e');
+    }
+  }
+
+  Future<void> resumeMusic() async {
+    if (!enabled || _currentMusic == null) return;
+    try {
+      await FlameAudio.bgm.resume();
+    } catch (e) {
+      debugPrint('GameAudio: resumeMusic failed: $e');
     }
   }
 
