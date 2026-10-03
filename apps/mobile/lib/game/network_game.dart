@@ -104,7 +104,12 @@ class NetworkGame extends FlameGame {
 
   void _fitCamera() {
     final grid = _snapshot.grid;
-    camera.viewfinder.zoom = FollowCamera.zoomFor(size, grid.width, tileSize);
+    camera.viewfinder.zoom = FollowCamera.zoomFor(
+      size,
+      grid.width,
+      grid.height,
+      tileSize,
+    );
   }
 
   @override

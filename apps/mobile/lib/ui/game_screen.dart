@@ -150,6 +150,7 @@ class _GameScreenState extends State<GameScreen> {
                       },
                     ),
                     MessagePopups(messages: _game.messages),
+                    StageIntroCard(intro: _game.intro, onSkip: _game.skipIntro),
                   ],
                 ),
               ),

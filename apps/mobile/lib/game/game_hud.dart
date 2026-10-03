@@ -176,3 +176,11 @@ class GameMessages extends ChangeNotifier {
     notifyListeners();
   }
 }
+
+/// Text on the card shown before a stage starts.
+class StageIntro {
+  const StageIntro({required this.title, required this.subtitle});
+
+  final String title;
+  final String subtitle;
+}

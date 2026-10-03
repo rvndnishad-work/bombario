@@ -51,6 +51,27 @@ class BlastGame extends FlameGame {
   static const int startingLives = 3;
   static const double respawnDelay = 1.5;
 
+  /// The board waits behind a "Stage N" card this long before play starts,
+  /// like the original's stage screen.
+  static const double introSeconds = 2;
+
+  /// After the exit, the board holds still while the clear jingle plays
+  /// before the results card comes up.
+  static const double clearBeatSeconds = 1.6;
+
+  /// The stage card's text while it shows, else null.
+  final ValueNotifier<StageIntro?> intro = ValueNotifier(null);
+  double _introLeft = 0;
+  GameMessage? _pendingTip;
+  double _clearBeat = 0;
+
+  /// Tiles walked since the last footstep, and whether the exit has opened.
+  double _stride = 0;
+  bool _exitOpen = false;
+
+  /// One footstep per this many tiles walked.
+  static const double strideTiles = 0.5;
+
   final InputController input = InputController();
   final GameHud hud = GameHud();
   final GameMessages messages = GameMessages();
@@ -108,17 +129,21 @@ class BlastGame extends FlameGame {
       seed: seed,
       config: def.config(players: 1, coop: false),
     );
-    messages
-      ..clear()
-      ..show(
-        GameMessage(
-          title: daily != null
-              ? 'Daily Dungeon: ${def.name}'
-              : 'Stage ${def.id}: ${def.name}',
-          body: def.tip,
-          sprite: 'p1',
-        ),
-      );
+    messages.clear();
+    // The tip pops up once the stage card has gone.
+    _pendingTip = GameMessage(
+      title: daily != null
+          ? 'Daily Dungeon: ${def.name}'
+          : 'Stage ${def.id}: ${def.name}',
+      body: def.tip,
+      sprite: 'p1',
+    );
+    _introLeft = introSeconds;
+    intro.value = StageIntro(
+      title: daily != null ? 'DAILY DUNGEON' : 'STAGE ${def.id}',
+      subtitle: def.name,
+    );
+    _clearBeat = 0;
     player = sim.addPlayer(
       name: 'You',
       skin: Cosmetics.equipped(settings.skin, achievements),
@@ -130,7 +155,12 @@ class BlastGame extends FlameGame {
       if (daily != null) 'mode': 'daily',
     });
     _hurry = false;
-    GameAudio.instance.playMusic(def.world);
+    _stride = 0;
+    _exitOpen = false;
+    // The fanfare plays under the stage card; the world's music follows it.
+    GameAudio.instance
+      ..stopMusic()
+      ..play(Sfx.stageStart);
     _hasPlayer = true;
     carryOver?.call(player);
 
@@ -182,6 +212,7 @@ class BlastGame extends FlameGame {
     camera.viewfinder.zoom = FollowCamera.zoomFor(
       size,
       sim.grid.width,
+      sim.grid.height,
       tileSize,
     );
     _followPlayer(0);
@@ -214,7 +245,22 @@ class BlastGame extends FlameGame {
   @override
   void update(double dt) {
     super.update(dt);
-    if (sim.cleared) return;
+    if (sim.cleared) {
+      if (_clearBeat > 0) {
+        _clearBeat -= dt;
+        if (_clearBeat <= 0) overlays.add(Overlays.stageCleared);
+      }
+      return;
+    }
+    if (_introLeft > 0) {
+      // Bomb or Action skips the card; nothing pressed now leaks into play.
+      final pressed = input.consume();
+      _introLeft -= dt;
+      if (pressed.placeBomb || pressed.action) _introLeft = 0;
+      if (_introLeft <= 0) _endIntro();
+      _followPlayer(dt);
+      return;
+    }
 
     // Out of lives: the board freezes, but the respawn timer below still has
     // to run so the game-over menu appears.
@@ -224,7 +270,9 @@ class BlastGame extends FlameGame {
     _accumulator += math.min(dt, 0.25) * settings.soloSpeed;
     while (!outOfLives && _accumulator >= core.World.tickDt) {
       _accumulator -= core.World.tickDt;
+      final x0 = player.x, y0 = player.y;
       sim.tick({player.id: input.consume()});
+      _footsteps(x0, y0);
       if (!sim.cleared) _ticks++;
       _handleEvents();
       _announce(
@@ -271,6 +319,29 @@ class BlastGame extends FlameGame {
       _hudTimer = 0;
       _refreshHud();
     }
+  }
+
+  /// A footstep every half tile walked, pitched by axis like the original.
+  void _footsteps(double x0, double y0) {
+    if (!player.alive || sim.cleared) return;
+    final dx = (player.x - x0).abs(), dy = (player.y - y0).abs();
+    if (dx + dy < 1e-4 || dx + dy > 0.5) {
+      _stride = 0; // standing, or teleported (respawn, warp)
+      return;
+    }
+    _stride += dx + dy;
+    if (_stride >= strideTiles) {
+      _stride -= strideTiles;
+      GameAudio.instance.play(dx >= dy ? Sfx.stepH : Sfx.stepV);
+    }
+  }
+
+  /// The last enemy is down: chime once so you know to head for the exit.
+  void _checkExitOpen() {
+    if (_exitOpen || sim.cleared || stage.isBoss || stage.bonus) return;
+    if (sim.enemies.isEmpty || !sim.allEnemiesDead) return;
+    _exitOpen = true;
+    GameAudio.instance.play(Sfx.exitOpen);
   }
 
   void _buzz(Future<void> Function() f) {
@@ -320,6 +391,19 @@ class BlastGame extends FlameGame {
               seconds: 3,
             ),
           );
+        case core.EnemyDied():
+          _checkExitOpen();
+        case core.ItemBurned(releasedWave: true):
+          _shake = 0.4;
+          audio.play(Sfx.exitAngry);
+          messages.show(
+            GameMessage(
+              title: 'You bombed a power-up!',
+              body: 'It is gone, and Door Wardens poured out.',
+              sprite: 'doorWarden',
+              seconds: 4,
+            ),
+          );
         case core.ExitBombed():
           _shake = 0.4;
           audio.play(Sfx.exitAngry);
@@ -341,7 +425,7 @@ class BlastGame extends FlameGame {
           audio
             ..stopMusic()
             ..play(Sfx.stageClear);
-          overlays.add(Overlays.stageCleared);
+          _clearBeat = clearBeatSeconds;
         case core.StageFailed():
           break; // handled by the respawn timer
         default:
@@ -361,6 +445,20 @@ class BlastGame extends FlameGame {
         ),
       );
     }
+  }
+
+  void _endIntro() {
+    _introLeft = 0;
+    intro.value = null;
+    GameAudio.instance.playMusic(stage.world);
+    final tip = _pendingTip;
+    _pendingTip = null;
+    if (tip != null) messages.show(tip);
+  }
+
+  /// Skips the rest of the stage card (a tap or key press).
+  void skipIntro() {
+    if (_introLeft > 0) _endIntro();
   }
 
   /// Freezes the simulation behind the pause menu.

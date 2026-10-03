@@ -326,11 +326,20 @@ class Flame {
 
 /// A power-up lying on the floor after its brick was destroyed.
 class FloorItem {
-  FloorItem({required this.x, required this.y, required this.type});
+  FloorItem({
+    required this.x,
+    required this.y,
+    required this.type,
+    this.fromBrick = false,
+  });
 
   final int x;
   final int y;
   final ItemType type;
+
+  /// Revealed from under a brick (not dropped by a fallen player). Bombing
+  /// one of these releases a wave of enemies, as in the original.
+  final bool fromBrick;
 }
 
 /// How an enemy moves. Composed into [EnemyKind] definitions.

@@ -23,6 +23,10 @@ enum Sfx {
   uiTap,
   bossHit,
   ghost,
+  stepH,
+  stepV,
+  stageStart,
+  exitOpen,
 }
 
 /// Small audio facade over flame_audio. Every call is fire-and-forget safe:

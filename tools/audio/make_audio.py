@@ -271,6 +271,25 @@ def make_sfx():
         ph += f / SR
         ghost.append(tri(ph) * env_adsr(i, n, a=0.08, d=0.0, s=1.0, r=0.2) * 0.7)
     s["ghost"] = (ghost, 0.6)
+    # Footsteps: a short blip per half tile walked, a different pitch for
+    # left/right than for up/down (the original's trick for making movement
+    # readable by ear).
+    s["step_h"] = (sweep(0.045, 520, 360, duty=0.25, vol=0.5, curve=0.7, r=0.012), 0.35)
+    s["step_v"] = (sweep(0.045, 760, 540, duty=0.25, vol=0.5, curve=0.7, r=0.012), 0.35)
+    # Stage start: a short bright fanfare under the STAGE card (~1.8 s).
+    q = 0.1
+    lead = [(67, q), (72, q), (76, q), (79, q * 2), (76, q), (79, q * 2),
+            (81, q), (79, q), (84, q * 6)]
+    bass = [(48, q * 4), (55, q * 4), (53, q * 2), (48, q * 6)]
+    s["stage_start"] = (mix(
+        notes_seq(lead, duty=0.5, vol=0.5, gate=0.9),
+        notes_seq(bass, kind="tri", vol=0.8, gate=0.95),
+    ), 0.75)
+    # Exit open: the last enemy is down; a rising three-note chime.
+    s["exit_open"] = (mix(
+        notes_seq([(84, 0.08), (88, 0.08), (96, 0.3)], kind="tri", vol=0.9, decay=0.2),
+        notes_seq([(84, 0.08), (88, 0.08), (96, 0.3)], duty=0.125, vol=0.25, decay=0.15),
+    ), 0.7)
     for name, (samples, peak) in s.items():
         write_wav(name, samples, peak)
     return list(s)
