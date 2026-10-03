@@ -73,6 +73,7 @@ class BlastGame extends FlameGame {
   /// Tiles walked since the last footstep, and whether the exit has opened.
   double _stride = 0;
   bool _exitOpen = false;
+  bool _onLockedExit = false;
 
   /// The stage's power-up has been picked up, so the "find the exit" music
   /// plays instead of the world's.
@@ -172,6 +173,7 @@ class BlastGame extends FlameGame {
     _lastTickSecond = -1;
     _stride = 0;
     _exitOpen = false;
+    _onLockedExit = false;
     _found = false;
     // The fanfare plays under the stage card; the world's music follows it.
     GameAudio.instance
@@ -334,6 +336,7 @@ class BlastGame extends FlameGame {
 
     _shake = math.max(0, _shake - dt);
     _followPlayer(dt);
+    _checkLockedExit();
 
     messages.tick(dt);
     if (!stage.bonus) {
@@ -398,6 +401,37 @@ class BlastGame extends FlameGame {
       _stride -= strideTiles;
       GameAudio.instance.play(dx >= dy ? Sfx.stepH : Sfx.stepV);
     }
+  }
+
+  /// Standing on the exit while enemies are left: say why it won't open,
+  /// once per visit, the way the original's door simply ignores you.
+  void _checkLockedExit() {
+    final exit = sim.exitTile;
+    final onExit =
+        exit != null &&
+        !stage.isBoss &&
+        !stage.bonus &&
+        player.alive &&
+        !sim.cleared &&
+        player.tile == exit;
+    if (!onExit) {
+      _onLockedExit = false;
+      return;
+    }
+    if (_onLockedExit || sim.allEnemiesDead) return;
+    _onLockedExit = true;
+    final left = sim.enemies.where((e) => e.alive).length;
+    GameAudio.instance.play(Sfx.uiTap);
+    messages.show(
+      GameMessage(
+        title: 'The exit is locked',
+        body: left == 1
+            ? 'Defeat the last enemy to open it.'
+            : 'Defeat the $left enemies left to open it.',
+        sprite: 'exit',
+        seconds: 2.5,
+      ),
+    );
   }
 
   /// The last enemy is down: chime once so you know to head for the exit.

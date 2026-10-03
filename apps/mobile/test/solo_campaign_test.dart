@@ -1,6 +1,7 @@
 import 'package:bombario/game/blast_game.dart';
 import 'package:bombario/game/sprite_atlas.dart';
 import 'package:bombario/ui/game_screen.dart';
+import 'package:bombario_core/bombario_core.dart' as core;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -78,5 +79,29 @@ void main() {
       await tester.pump(const Duration(milliseconds: 50));
     }
     expect(game.overlays.isActive(Overlays.gameOver), isTrue);
+  });
+
+  testWidgets('standing on the exit with enemies left says it is locked', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1600, 800);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    await tester.runAsync(SpriteAtlas.load);
+    await tester.pumpWidget(const MaterialApp(home: GameScreen(seed: 3)));
+    await tester.pump(const Duration(milliseconds: 50));
+    final game =
+        (tester.state(find.byType(GameScreen)) as dynamic).game as BlastGame;
+    game.skipIntro();
+    await tester.pump(const Duration(milliseconds: 50));
+
+    final me = game.sim.players.single;
+    game.sim.floorItems.add(
+      core.FloorItem(x: me.tileX, y: me.tileY, type: core.ItemType.exit),
+    );
+    await tester.pump(const Duration(milliseconds: 50));
+    expect(find.text('The exit is locked'), findsOneWidget);
+    expect(find.textContaining('6 enemies left'), findsOneWidget);
+    expect(game.sim.cleared, isFalse);
   });
 }
