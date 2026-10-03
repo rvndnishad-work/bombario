@@ -30,6 +30,8 @@ class LocalPredictor {
     if (snap == null) return true;
     final t = snap.grid.at(x, y);
     if (t == TileType.pillar) return true;
+    if (p.ghost) return false; // ghosts float through everything else
+    if (t == TileType.pit) return true;
     if (t == TileType.brick && !p.wallPass) return true;
     if (!p.bombPass && snap.bombAt(x, y)) {
       // The server lets a player keep walking off a bomb they overlap; the
@@ -49,8 +51,23 @@ class LocalPredictor {
     _pending.add(_PendingInput(_seq, input));
     if (_pending.length > maxPending) _pending.removeAt(0);
     final b = _body;
-    if (b != null && b.alive) _movement.move(b, input.direction, World.tickDt);
+    if (b != null) _step(b, input);
     return _seq;
+  }
+
+  /// One tick of movement, mirroring [World.tick]: ghosts float, the
+  /// frozen stand still, the dead don't move.
+  void _step(Player b, PlayerInput input) {
+    if (b.ghost) {
+      _movement.move(b, input.direction, World.tickDt);
+      return;
+    }
+    if (!b.alive) return;
+    if (b.frozenFor > 0) {
+      b.frozenFor -= World.tickDt;
+      return;
+    }
+    _movement.move(b, input.direction, World.tickDt);
   }
 
   /// Reconciles with an authoritative snapshot.
@@ -63,16 +80,15 @@ class LocalPredictor {
     }
     final b = me.toPlayer();
     _pending.removeWhere((p) => p.seq <= me.ackedInput);
-    if (b.alive) {
-      for (final p in _pending) {
-        _movement.move(b, p.input.direction, World.tickDt);
-      }
+    for (final p in _pending) {
+      _step(b, p.input);
     }
     final old = _body;
     // Tiny disagreements come from tick phase differences; keep the smooth
     // local value rather than jittering by a few pixels.
     if (old != null &&
         old.alive == b.alive &&
+        old.ghost == b.ghost &&
         (old.x - b.x).abs() < 0.08 &&
         (old.y - b.y).abs() < 0.08) {
       b.setPosition(old.x, old.y);

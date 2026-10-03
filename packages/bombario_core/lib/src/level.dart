@@ -5,9 +5,12 @@ import 'grid.dart';
 
 /// Where an enemy starts.
 class EnemySpawn {
-  const EnemySpawn(this.pos, this.kind);
+  const EnemySpawn(this.pos, this.kind, {this.hp});
   final GridPos pos;
   final EnemyKind kind;
+
+  /// Overrides the kind's HP (bosses scale with the player count).
+  final int? hp;
 }
 
 /// Everything needed to start a stage.
@@ -29,8 +32,8 @@ class LevelData {
   /// Parses the ASCII format used in the design document.
   ///
   /// `#` pillar, `+` brick, `.` floor, `P` player spawn, `E` exit hidden under
-  /// a brick, `U` power-up hidden under a brick, `e` enemy spawn
-  /// (kind taken from [enemyKinds] in order, cycling).
+  /// a brick, `U` power-up hidden under a brick, `~` cracked floor, `e` enemy
+  /// spawn (kind taken from [enemyKinds] in order, cycling).
   ///
   /// [items] lists which power-ups go under the `U` tiles, in reading order
   /// (cycled if there are more `U`s than items).
@@ -62,6 +65,8 @@ class LevelData {
             grid.set(x, y, TileType.pillar);
           case '+':
             grid.set(x, y, TileType.brick);
+          case '~':
+            grid.set(x, y, TileType.cracked);
           case 'E':
             grid.set(x, y, TileType.brick);
             grid.hide(x, y, ItemType.exit);
@@ -106,6 +111,16 @@ class LevelData {
       ItemType.speedUp
     ],
     double timeLimit = 200,
+
+    /// Exact enemies to place, overriding [enemyCount] and [enemyKinds].
+    List<EnemyKind>? enemyMix,
+
+    /// Exact power-ups to hide, overriding the one-per-player rule.
+    List<ItemType>? itemList,
+
+    /// Floor tiles turned into cracked floor (World 2).
+    int crackedTiles = 0,
+    String name = '',
   }) {
     assert(width.isOdd && height.isOdd, 'classic layouts need odd sizes');
     final rng = Random(seed);
@@ -153,12 +168,17 @@ class LevelData {
       bricks.remove(exit);
     }
 
-    // One power-up per player plus one shared.
-    final itemCount = min(bricks.length, players + 1);
-    for (var i = 0; i < itemCount; i++) {
+    // One power-up per player plus one shared, unless the stage says.
+    final hiddenItems = itemList ??
+        [
+          for (var i = 0; i < players + 1; i++)
+            items[rng.nextInt(items.length)],
+        ];
+    for (final item in hiddenItems) {
+      if (bricks.isEmpty) break;
       final b = bricks[rng.nextInt(bricks.length)];
       bricks.remove(b);
-      grid.hide(b.x, b.y, items[rng.nextInt(items.length)]);
+      grid.hide(b.x, b.y, item);
     }
 
     // Enemies on floor tiles at least 4 tiles from every spawn.
@@ -166,10 +186,22 @@ class LevelData {
         .skip(brickCount)
         .where((p) => spawns.every((s) => s.manhattanTo(p) >= 4))
         .toList();
+    final mix = enemyMix ??
+        [
+          for (var i = 0; i < enemyCount; i++)
+            enemyKinds[rng.nextInt(enemyKinds.length)],
+        ];
     final enemies = <EnemySpawn>[];
-    for (var i = 0; i < enemyCount && enemyTiles.isNotEmpty; i++) {
+    for (final kind in mix) {
+      if (enemyTiles.isEmpty) break;
       final p = enemyTiles.removeAt(rng.nextInt(enemyTiles.length));
-      enemies.add(EnemySpawn(p, enemyKinds[rng.nextInt(enemyKinds.length)]));
+      enemies.add(EnemySpawn(p, kind));
+    }
+
+    // Cracked floor on open tiles away from spawns.
+    for (var i = 0; i < crackedTiles && enemyTiles.isNotEmpty; i++) {
+      final p = enemyTiles.removeAt(rng.nextInt(enemyTiles.length));
+      grid.set(p.x, p.y, TileType.cracked);
     }
 
     return LevelData(
@@ -177,7 +209,7 @@ class LevelData {
       playerSpawns: spawns,
       enemySpawns: enemies,
       timeLimit: timeLimit,
-      name: 'Random #$seed',
+      name: name.isEmpty ? 'Random #$seed' : name,
     );
   }
 }

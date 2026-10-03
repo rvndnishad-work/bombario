@@ -46,6 +46,13 @@ class GameClient {
   int? lastWinner;
   bool lastCleared = false;
 
+  /// Co-op stage being played (from `matchStart`), and the one unlocked by
+  /// clearing it (from `matchEnd`).
+  String? stageId;
+  String? stageName;
+  String? stageTip;
+  String? nextStage;
+
   final LocalPredictor predictor = LocalPredictor();
 
   bool get connected => _socket?.readyState == WebSocket.open;
@@ -126,8 +133,12 @@ class GameClient {
       case Msg.matchStart:
         myPlayerId = msg['you'] as int;
         mode = GameMode.parse(msg['mode'] as String);
+        stageId = msg['stage'] as String?;
+        stageName = msg['name'] as String?;
+        stageTip = msg['tip'] as String?;
         lastWinner = null;
         lastCleared = false;
+        nextStage = null;
         snapshot = null;
         predictor.reset();
       case Msg.snapshot:
@@ -138,6 +149,7 @@ class GameClient {
       case Msg.matchEnd:
         lastWinner = msg['winner'] as int?;
         lastCleared = msg['cleared'] == true;
+        nextStage = msg['next'] as String?;
       case Msg.error:
         lastError = msg['m'] as String?;
     }
@@ -150,6 +162,7 @@ class GameClient {
 
   void setReady(bool ready) => _send({'t': Msg.ready, 'v': ready});
   void setMode(GameMode m) => _send({'t': Msg.mode, 'v': m.name});
+  void setStage(String id) => _send({'t': Msg.stage, 'v': id});
   void start() => _send({'t': Msg.start});
 
   /// Call once per simulation tick (30 Hz) while playing. The input is

@@ -24,7 +24,9 @@ class NetworkGame extends FlameGame {
 
   final RoomSession session;
   final InputController input = InputController();
-  final ValueNotifier<bool> hasRemote = ValueNotifier(false);
+
+  /// What the Action button does for the local player right now.
+  final ValueNotifier<String?> actionLabel = ValueNotifier(null);
 
   core.WorldSnapshot? _last;
   core.WorldSnapshot? _prev;
@@ -98,7 +100,7 @@ class NetworkGame extends FlameGame {
       final me = session.myPlayerId == null
           ? null
           : snap.player(session.myPlayerId!);
-      hasRemote.value = me?.remote ?? false;
+      actionLabel.value = me?.actionLabel;
     }
 
     // Send input at the simulation rate.
@@ -145,7 +147,7 @@ class NetworkGame extends FlameGame {
               case final old?)
             () {
               final (x, y) = lerp(old.x, old.y, e.x, e.y);
-              return core.EnemyState(e.id, x, y, e.alive, e.kind);
+              return e.copyWith(x: x, y: y);
             }()
           else
             e,

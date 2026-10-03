@@ -5,6 +5,12 @@ enum TileType {
   floor,
   pillar, // indestructible
   brick, // destructible
+
+  /// Walkable, but collapses into a [pit] after two walk-overs (World 2).
+  cracked,
+
+  /// A collapsed floor: nobody walks here, but flames pass over it.
+  pit,
 }
 
 /// Integer tile coordinate.
@@ -61,6 +67,12 @@ class Grid {
   }
 
   bool isSolidForFlame(int x, int y) => at(x, y) == TileType.pillar;
+
+  /// Floor-like tiles a player can stand and place bombs on.
+  bool isWalkable(int x, int y) {
+    final t = at(x, y);
+    return t == TileType.floor || t == TileType.cracked;
+  }
 
   /// Standard NES-style pillar layout: every even row and column is a pillar,
   /// the outer ring is a wall.

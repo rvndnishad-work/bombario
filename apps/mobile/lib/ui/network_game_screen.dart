@@ -1,3 +1,6 @@
+import 'dart:async';
+
+import 'package:bombario_core/bombario_core.dart' show Campaign;
 import 'package:bombario_net/bombario_net.dart';
 import 'package:flame/game.dart';
 import 'package:flutter/material.dart';
@@ -19,10 +22,17 @@ class NetworkGameScreen extends StatefulWidget {
 class _NetworkGameScreenState extends State<NetworkGameScreen> {
   late final NetworkGame _game = NetworkGame(widget.session);
 
+  /// Shows the stage name and tip for a few seconds at the start.
+  bool _showIntro = true;
+  Timer? _introTimer;
+
   @override
   void initState() {
     super.initState();
     widget.session.addListener(_onSession);
+    _introTimer = Timer(const Duration(seconds: 4), () {
+      if (mounted) setState(() => _showIntro = false);
+    });
   }
 
   void _onSession() {
@@ -31,6 +41,7 @@ class _NetworkGameScreenState extends State<NetworkGameScreen> {
 
   @override
   void dispose() {
+    _introTimer?.cancel();
     widget.session.removeListener(_onSession);
     super.dispose();
   }
@@ -49,12 +60,46 @@ class _NetworkGameScreenState extends State<NetworkGameScreen> {
           GameWidget(
             game: _game,
             overlayBuilderMap: {
-              'controls': (context, NetworkGame game) =>
-                  ControlsOverlay(input: game.input, hasRemote: game.hasRemote),
+              'controls': (context, NetworkGame game) => ControlsOverlay(
+                input: game.input,
+                actionLabel: game.actionLabel,
+                pings: true,
+              ),
             },
             initialActiveOverlays: const ['controls'],
           ),
           _NetworkHud(session: s),
+          if (_showIntro && s.stageName != null)
+            IgnorePointer(
+              child: Align(
+                alignment: const Alignment(0, -0.45),
+                child: Card(
+                  color: Colors.black87,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 24,
+                      vertical: 14,
+                    ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          'Stage ${s.stageId}: ${s.stageName}',
+                          style: Theme.of(context).textTheme.titleLarge,
+                        ),
+                        if ((s.stageTip ?? '').isNotEmpty) ...[
+                          const SizedBox(height: 6),
+                          Text(
+                            s.stageTip!,
+                            style: const TextStyle(color: Colors.white70),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
           if (s.phase == SessionPhase.reconnecting)
             const Center(
               child: Card(
@@ -89,6 +134,13 @@ class _NetworkGameScreenState extends State<NetworkGameScreen> {
                         _title(s),
                         style: Theme.of(context).textTheme.headlineSmall,
                       ),
+                      if (_subtitle(s) case final sub?) ...[
+                        const SizedBox(height: 6),
+                        Text(
+                          sub,
+                          style: const TextStyle(color: Colors.white70),
+                        ),
+                      ],
                       const SizedBox(height: 16),
                       FilledButton(
                         onPressed: () {
@@ -105,6 +157,13 @@ class _NetworkGameScreenState extends State<NetworkGameScreen> {
         ],
       ),
     );
+  }
+
+  String? _subtitle(RoomSession s) {
+    final next = s.nextStage;
+    if (!s.lastCleared || next == null) return null;
+    final def = Campaign.byId(next);
+    return 'Next up: $next ${def?.name ?? ''}';
   }
 
   String _title(RoomSession s) {
@@ -134,6 +193,7 @@ class _NetworkHud extends StatelessWidget {
         ? null
         : snap.player(session.myPlayerId!);
     final alive = snap.players.where((p) => p.alive).length;
+    final coop = session.mode == GameMode.coop;
     return SafeArea(
       child: Align(
         alignment: Alignment.topCenter,
@@ -159,11 +219,26 @@ class _NetworkHud extends StatelessWidget {
                   Text('🔥 ${me.fireRange}'),
                   const SizedBox(width: 14),
                 ],
-                if (session.mode == GameMode.versus)
+                if (!coop)
                   Text('👥 $alive alive')
-                else
+                else ...[
                   Text('👾 ${snap.enemies.where((e) => e.alive).length}'),
-                if (me != null && !me.alive) ...[
+                  const SizedBox(width: 10),
+                  Text('❤️ ${snap.livesLeft}'),
+                  if (session.stageId != null) ...[
+                    const SizedBox(width: 10),
+                    Text(session.stageId!),
+                  ],
+                ],
+                if (me != null && me.ghost) ...[
+                  const SizedBox(width: 14),
+                  Text(
+                    snap.livesLeft > 0
+                        ? '👻 ghost: ping, haunt, wait for a revive'
+                        : '👻 ghost: no revives left',
+                    style: const TextStyle(color: Colors.purpleAccent),
+                  ),
+                ] else if (me != null && !me.alive) ...[
                   const SizedBox(width: 14),
                   const Text(
                     '💀 spectating',

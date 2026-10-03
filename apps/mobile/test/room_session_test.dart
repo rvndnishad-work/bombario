@@ -79,6 +79,39 @@ void main() {
     expect(host.mode, GameMode.versus);
   });
 
+  test('co-op: the host picks a stage and everyone sees its name', () async {
+    final host = await RoomSession.host(playerName: 'Host');
+    addTearDown(host.leave);
+    await waitFor(() => host.phase == SessionPhase.lobby, what: 'lobby');
+    final port = int.parse(host.hostAddress!.split(':').last);
+    final guest = await RoomSession.join(
+      host: '127.0.0.1',
+      port: port,
+      playerName: 'Guest',
+    );
+    addTearDown(guest.leave);
+    await waitFor(() => host.lobby.players.length == 2, what: 'joined');
+
+    host.setMode(GameMode.coop);
+    host.setStage('1-4');
+    await waitFor(() => guest.lobbyStage == '1-4', what: 'stage');
+    guest.setReady(true);
+    await waitFor(() => host.lobby.everyoneReady, what: 'ready');
+    host.start();
+    await waitFor(
+      () => guest.phase == SessionPhase.playing && guest.snapshot != null,
+      what: 'playing',
+    );
+    expect(guest.stageName, 'Kick Off');
+    expect(guest.stageTip, contains('Kick'));
+    expect(guest.snapshot!.livesLeft, 5);
+
+    // A ping reaches the other phone.
+    guest.sendInput(const PlayerInput(ping: PingKind.exitHere));
+    await waitFor(() => host.snapshot?.pings.isNotEmpty ?? false, what: 'ping');
+    expect(host.snapshot!.pings.single.kind, PingKind.exitHere);
+  });
+
   group('online', () {
     late RoomServer cloud;
     late Uri base;

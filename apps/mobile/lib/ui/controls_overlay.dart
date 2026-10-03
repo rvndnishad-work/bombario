@@ -6,18 +6,38 @@ import 'package:flutter/services.dart';
 import '../game/input_controller.dart';
 
 /// Touch controls: a floating D-pad under the left thumb, bomb and action
-/// buttons under the right thumb. Pure Flutter widgets over the game.
+/// buttons under the right thumb, and (in rooms) a quick-chat ping wheel.
+/// Pure Flutter widgets over the game.
 class ControlsOverlay extends StatefulWidget {
   const ControlsOverlay({
     super.key,
     required this.input,
-    required this.hasRemote,
+    required this.actionLabel,
+    this.pings = false,
   });
 
   final InputController input;
 
-  /// Whether the player holds Remote, which shows the detonate button.
-  final ValueListenable<bool> hasRemote;
+  /// What the Action button does right now (see
+  /// [PlayerState.actionLabel]); null dims it.
+  final ValueListenable<String?> actionLabel;
+
+  /// Shows the ping button. Pings only mean something with teammates.
+  final bool pings;
+
+  static String actionIcon(String? label) => switch (label) {
+    'detonate' => '⚡',
+    'tether' => '🔗',
+    'haunt' => '👻',
+    _ => '⚡',
+  };
+
+  static const pingLabels = {
+    PingKind.exitHere: '🚪 Exit here!',
+    PingKind.powerUp: '⭐ Power-up!',
+    PingKind.help: '🆘 Help!',
+    PingKind.run: '🏃 Run!',
+  };
 
   @override
   State<ControlsOverlay> createState() => _ControlsOverlayState();
@@ -26,6 +46,7 @@ class ControlsOverlay extends StatefulWidget {
 class _ControlsOverlayState extends State<ControlsOverlay> {
   Offset? _padOrigin;
   Direction _current = Direction.none;
+  bool _wheelOpen = false;
 
   static const double _deadZone = 12;
   static const double _padRadius = 70;
@@ -88,22 +109,49 @@ class _ControlsOverlayState extends State<ControlsOverlay> {
             ],
           ),
         ),
-        // Right side: bomb and action buttons.
+        // Right side: ping, action and bomb buttons.
         Positioned(
           right: 28,
           bottom: 28,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              ValueListenableBuilder<bool>(
-                valueListenable: widget.hasRemote,
-                builder: (context, remote, _) => AnimatedOpacity(
-                  opacity: remote ? 1 : 0.15,
+              if (widget.pings) ...[
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (_wheelOpen)
+                      for (final e in ControlsOverlay.pingLabels.entries)
+                        Padding(
+                          padding: const EdgeInsets.only(right: 6),
+                          child: ActionChip(
+                            label: Text(e.value),
+                            onPressed: () {
+                              HapticFeedback.selectionClick();
+                              input.pressPing(e.key);
+                              setState(() => _wheelOpen = false);
+                            },
+                          ),
+                        ),
+                    _RoundButton(
+                      label: '💬',
+                      size: 44,
+                      color: Colors.blueGrey,
+                      onPressed: () => setState(() => _wheelOpen = !_wheelOpen),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+              ],
+              ValueListenableBuilder<String?>(
+                valueListenable: widget.actionLabel,
+                builder: (context, label, _) => AnimatedOpacity(
+                  opacity: label != null ? 1 : 0.15,
                   duration: const Duration(milliseconds: 200),
                   child: _RoundButton(
-                    label: '⚡',
+                    label: ControlsOverlay.actionIcon(label),
                     size: 56,
-                    color: Colors.amber,
+                    color: label == 'haunt' ? Colors.deepPurple : Colors.amber,
                     onPressed: () {
                       HapticFeedback.selectionClick();
                       input.pressAction();
