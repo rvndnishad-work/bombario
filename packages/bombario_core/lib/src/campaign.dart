@@ -158,18 +158,41 @@ class StageDef {
   static int scaleBossHp(int hp, int players) =>
       (hp * (1 + 0.6 * (max(1, players) - 1))).round();
 
-  /// Builds the stage for [players] players.
-  LevelData level({required int seed, required int players}) =>
-      _build(seed, players)..addPipes(pipeCount, seed: seed ^ 0x9e37);
+  /// One stage in this many (by seed) hides a 1-Up under a brick.
+  static const int extraLifeOdds = 4;
 
-  LevelData _build(int seed, int players) {
+  /// Builds the stage for [players] players.
+  LevelData level({required int seed, required int players}) {
     final n = players.clamp(1, 4);
     final b = boss;
     if (b != null) return _bossArena(b, seed, n);
+    final built = _build(seed, n);
+    if (!bonus) _maybeHideExtraLife(built, seed);
+    return built..addPipes(pipeCount, seed: seed ^ 0x9e37);
+  }
+
+  /// Like the original's secret bonuses: on some stages one plain brick
+  /// hides a 1-Up, for whoever finds it.
+  static void _maybeHideExtraLife(LevelData level, int seed) {
+    final rng = Random(seed * 31 + 7);
+    if (rng.nextInt(extraLifeOdds) != 0) return;
+    final grid = level.grid;
+    final spots = [
+      for (var y = 0; y < grid.height; y++)
+        for (var x = 0; x < grid.width; x++)
+          if (grid.at(x, y) == TileType.brick && grid.hiddenAt(x, y) == null)
+            GridPos(x, y),
+    ];
+    if (spots.isEmpty) return;
+    final spot = spots[rng.nextInt(spots.length)];
+    grid.hide(spot.x, spot.y, ItemType.extraLife);
+  }
+
+  LevelData _build(int seed, int n) {
     final l = layout;
     if (l != null) {
       return LevelData.parse(
-        bonus ? l : _onePowerUpEach(l, n),
+        bonus ? l : _onePowerUpEach(shuffleBricks(l, seed), n),
         items: items.isEmpty ? const [ItemType.bombUp] : items,
         enemyKinds:
             layoutEnemies.isEmpty ? const [EnemyKind.puffball] : layoutEnemies,
@@ -212,6 +235,70 @@ class StageDef {
       timeLimit: timeLimit,
       name: '$id $name',
     );
+  }
+
+  /// Deals a hand-made layout's bricks out afresh, as the original does on
+  /// every start: pillars, spawns and terrain stay put, while the same
+  /// number of bricks (with the power-up and exit under some of them) and
+  /// the same enemies land on new tiles. The tiles next to each spawn stay
+  /// clear so there is always room for a first bomb, and enemies start well
+  /// away from the players.
+  static String shuffleBricks(String layout, int seed) {
+    final rows = [
+      for (final r in layout.split('\n'))
+        if (r.trimRight().isNotEmpty) r.trimRight().split(''),
+    ];
+    final spawns = <GridPos>[];
+    final hidden = <String>[];
+    var bricks = 0;
+    var foes = 0;
+    for (var y = 0; y < rows.length; y++) {
+      for (var x = 0; x < rows[y].length; x++) {
+        switch (rows[y][x]) {
+          case 'P':
+            spawns.add(GridPos(x, y));
+          case '+':
+            bricks++;
+            rows[y][x] = '.';
+          case 'U' || 'E':
+            bricks++;
+            hidden.add(rows[y][x]);
+            rows[y][x] = '.';
+          case 'e':
+            foes++;
+            rows[y][x] = '.';
+        }
+      }
+    }
+    int nearest(int x, int y) => spawns.isEmpty
+        ? 99
+        : spawns.map((s) => (s.x - x).abs() + (s.y - y).abs()).reduce(min);
+    final rng = Random(seed);
+    final open = [
+      for (var y = 0; y < rows.length; y++)
+        for (var x = 0; x < rows[y].length; x++)
+          if (rows[y][x] == '.' && nearest(x, y) > 2) GridPos(x, y),
+    ]..shuffle(rng);
+    final brickTiles = open.take(bricks).toList();
+    for (final t in brickTiles) {
+      rows[t.y][t.x] = '+';
+    }
+    brickTiles.shuffle(rng);
+    for (var i = 0; i < hidden.length && i < brickTiles.length; i++) {
+      rows[brickTiles[i].y][brickTiles[i].x] = hidden[i];
+    }
+    // Far from the players first; nearer tiles only if the maze is small.
+    final rest = open.skip(bricks);
+    final lairs = [
+      for (final t in rest)
+        if (nearest(t.x, t.y) >= 5) t,
+      for (final t in rest)
+        if (nearest(t.x, t.y) < 5) t,
+    ];
+    for (final t in lairs.take(foes)) {
+      rows[t.y][t.x] = 'e';
+    }
+    return rows.map((r) => r.join()).join('\n');
   }
 
   /// Keeps the first [players] power-up bricks (`U`) of a hand-made layout

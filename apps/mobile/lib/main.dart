@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import 'ads/rewarded_ads.dart';
 import 'audio/game_audio.dart';
 import 'game/sprite_atlas.dart';
 import 'net/analytics.dart';
@@ -44,6 +45,8 @@ Future<void> main() async {
     () => settings.update((s) => s.playerName = PlayerName.value.value),
   );
   unawaited(audio.preload().then((_) => audio.playMusic(0)));
+  // Loads the first "extra life" ad in the background.
+  unawaited(RewardedAds.instance.start());
   runApp(BombarioApp(settings: settings, achievements: achievements));
 }
 

@@ -32,6 +32,10 @@ enum ItemType {
 
   /// The next 3 bombs freeze instead of burn.
   frost,
+
+  /// One more life (solo) or one more team revive (co-op), up to
+  /// [World.maxLives]. Hidden on some stages only.
+  extraLife,
   exit, // not a power-up, but it is hidden under a brick the same way
 }
 

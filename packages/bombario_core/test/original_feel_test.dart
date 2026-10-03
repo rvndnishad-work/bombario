@@ -145,4 +145,87 @@ void main() {
     expect(p.wallPass, isFalse);
     expect(w.floorItems, isEmpty);
   });
+
+  test('each start deals stage 1-1 bricks out afresh, pillars stay put', () {
+    final stage = Campaign.byId('1-1')!;
+    LevelData at(int seed) => stage.level(seed: seed, players: 1);
+    String tiles(LevelData l, TileType t) => [
+          for (var y = 0; y < l.grid.height; y++)
+            for (var x = 0; x < l.grid.width; x++)
+              if (l.grid.at(x, y) == t) '$x,$y',
+        ].join(' ');
+    int count(LevelData l, TileType t) =>
+        tiles(l, t).split(' ').where((s) => s.isNotEmpty).length;
+    final a = at(1), b = at(2);
+    expect(tiles(a, TileType.pillar), tiles(b, TileType.pillar));
+    expect(tiles(a, TileType.brick), isNot(tiles(b, TileType.brick)));
+    expect(count(a, TileType.brick), count(b, TileType.brick));
+    // Same seed, same maze: rooms and replays stay in step.
+    expect(tiles(at(7), TileType.brick), tiles(at(7), TileType.brick));
+    for (final l in [a, b, at(3), at(4)]) {
+      final spawn = l.playerSpawns.first;
+      // The spawn corner is clear and enemies start well away.
+      for (final (dx, dy) in [(0, 0), (1, 0), (0, 1), (2, 0), (0, 2)]) {
+        expect(l.grid.at(spawn.x + dx, spawn.y + dy), isNot(TileType.brick));
+      }
+      expect(l.enemySpawns, hasLength(6));
+      for (final e in l.enemySpawns) {
+        expect((e.pos.x - spawn.x).abs() + (e.pos.y - spawn.y).abs(),
+            greaterThanOrEqualTo(5));
+      }
+      // One power-up and the exit, each under a brick.
+      final hidden = [
+        for (var y = 0; y < l.grid.height; y++)
+          for (var x = 0; x < l.grid.width; x++)
+            if (l.grid.hiddenAt(x, y) case final item?) (x, y, item),
+      ];
+      expect(hidden.map((h) => h.$3),
+          unorderedEquals([ItemType.fireUp, ItemType.exit]));
+      for (final (x, y, _) in hidden) {
+        expect(l.grid.at(x, y), TileType.brick);
+      }
+    }
+  });
+
+  test('some stages hide a 1-Up under a brick, never bonus stages', () {
+    bool hasLife(LevelData l) {
+      for (var y = 0; y < l.grid.height; y++) {
+        for (var x = 0; x < l.grid.width; x++) {
+          if (l.grid.hiddenAt(x, y) == ItemType.extraLife) {
+            expect(l.grid.at(x, y), TileType.brick);
+            return true;
+          }
+        }
+      }
+      return false;
+    }
+
+    final stage = Campaign.byId('1-2')!;
+    final found = [
+      for (var seed = 0; seed < 200; seed++)
+        hasLife(stage.level(seed: seed, players: 1)),
+    ].where((f) => f).length;
+    // About one stage in four.
+    expect(found, inInclusiveRange(30, 70));
+    final bonus = Campaign.stages.firstWhere((s) => s.bonus);
+    for (var seed = 0; seed < 40; seed++) {
+      expect(hasLife(bonus.level(seed: seed, players: 1)), isFalse);
+    }
+  });
+
+  test('a 1-Up adds a team life in co-op, up to seven', () {
+    final w = makeWorld('''
+#######
+#P....#
+#######
+''', config: const WorldConfig(ghosts: true, sharedLives: 6));
+    final p = w.addPlayer();
+    for (var i = 0; i < 3; i++) {
+      w.floorItems
+          .add(FloorItem(x: p.tileX, y: p.tileY, type: ItemType.extraLife));
+      w.tick(const {});
+    }
+    expect(w.livesLeft, World.maxLives);
+    expect(p.items, isNot(contains(ItemType.extraLife)));
+  });
 }

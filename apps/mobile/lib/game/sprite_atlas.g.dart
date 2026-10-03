@@ -222,4 +222,5 @@ const Map<String, int> spriteIndex = {
   'lanternWitch-side': 211,
   'overlordPontan-up': 212,
   'overlordPontan-side': 213,
+  'pu-life': 214,
 };

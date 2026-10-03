@@ -17,6 +17,7 @@ dependencies:
   bonsoir: ^7.1.5
   flame_audio: ^2.12.2
   shared_preferences: ^2.5.5
+  google_mobile_ads: ^9.1.0
 
 dev_dependencies:
   flutter_test:

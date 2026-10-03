@@ -2265,3 +2265,311 @@ KcCCCCCKWKWKWKcK
 ..KcCCCCCCCCcK..
 ...KKKKKKKKKK...
 ................
+
+# ------------------------------------------- power-up panels (redraw)
+# A gold bevelled tile with a bold dark glyph, the original's read: one
+# icon per power-up, drawn for bombario. Replaces the cream panels above.
+
+palette
+o #1a1410
+H #fff1a0
+3 #f2b630
+d #a86a10
+k #24160a
+w #ffffff
+r #ff5a1f
+y #ffe14a
+b #3d7bff
+p #ff4b7a
+G #3fc062
+B #1f4fbf
+c #bff0ff
+
+sprite pu
+oooooooooooooooo
+oHHHHHHHHHHHHHHo
+oH333333333333do
+oH333333333333do
+oH333333333333do
+oH333333333333do
+oH333333333333do
+oH333333333333do
+oH333333333333do
+oH333333333333do
+oH333333333333do
+oH333333333333do
+oH333333333333do
+oH333333333333do
+oddddddddddddddo
+oooooooooooooooo
+
+sprite pu-bomb
+oooooooooooooooo
+oHHHHHHHHHHHHHHo
+oH333333333r33do
+oH33333333rwr3do
+oH3333333k3r33do
+oH333333k33333do
+oH333kkkkk3333do
+oH33kkkkkkk333do
+oH3kkwwkkkkk33do
+oH3kwkkkkkkk33do
+oH3kkkkkkkkk33do
+oH3kkkkkkkkk33do
+oH33kkkkkkk333do
+oH333kkkkk3333do
+oddddddddddddddo
+oooooooooooooooo
+
+sprite pu-fire
+oooooooooooooooo
+oHHHHHHHHHHHHHHo
+oH333333k33333do
+oH33333kk33333do
+oH33333kkk3333do
+oH3333kkkk3k33do
+oH333kkkkkkk33do
+oH33kkkrkkkk33do
+oH33kkrrkkkkk3do
+oH3kkkrrrkkkk3do
+oH3kkrryrrkkk3do
+oH3kkrryyrrkk3do
+oH33kkryyrkk33do
+oH333kkkkkk333do
+oddddddddddddddo
+oooooooooooooooo
+
+sprite pu-speed
+oooooooooooooooo
+oHHHHHHHHHHHHHHo
+oH333333333333do
+oH333kkkk33333do
+oH333kwkk33333do
+oH333kkkk33333do
+oHk33kkkk33333do
+oH333kkkk33333do
+oHkk3kkkkkkk33do
+oH333kkkkkkkk3do
+oHk33kkkkkkkkkdo
+oH33kkkkkkkkkkdo
+oH333333333333do
+oH333kk333kk33do
+oddddddddddddddo
+oooooooooooooooo
+
+sprite pu-wall
+oooooooooooooooo
+oHHHHHHHHHHHHHHo
+oH333333333333do
+oHkkkkkkkkkkkkdo
+oHk33333k3333kdo
+oHkkkkkkkkkkkkdo
+oHk33k333r333kdo
+oHk33k333rr33kdo
+oHrrrrrrrrrr3kdo
+oHk33k333rr33kdo
+oHk33k333r333kdo
+oHkkkkkkkkkkkkdo
+oHk33333k3333kdo
+oHkkkkkkkkkkkkdo
+oddddddddddddddo
+oooooooooooooooo
+
+sprite pu-remote
+oooooooooooooooo
+oHHHHHHHHHHHHHHo
+oH333333333333do
+oH333kkkkkk333do
+oH33333kk33333do
+oH33333kk33333do
+oH33333kk33333do
+oH33kkkkkkkk33do
+oH33kwkkkkkk33do
+oH33kkkkkkkk33do
+oH33kkkkrrkk33do
+oH33kkkkrrkk33do
+oH33kkkkkkkk33do
+oH333333333333do
+oddddddddddddddo
+oooooooooooooooo
+
+sprite pu-bombpass
+oooooooooooooooo
+oHHHHHHHHHHHHHHo
+oH33333333r333do
+oH3333333k3333do
+oH3333kkkkk333do
+oH333kkkkkkk33do
+oH33kkkkkkkbk3do
+oHbbbbbbbbbb33do
+oHbbbbbbbbbbb3do
+oHbbbbbbbbbb33do
+oH33kkkkkkkbk3do
+oH333kkkkkkk33do
+oH3333kkkkk333do
+oH333333333333do
+oddddddddddddddo
+oooooooooooooooo
+
+sprite pu-flamepass
+oooooooooooooooo
+oHHHHHHHHHHHHHHo
+oH3kkkkkkkkkk3do
+oH3k33333333k3do
+oH3k333r3333k3do
+oH3k333rr333k3do
+oH3k33rrr333k3do
+oH3k33ryrr33k3do
+oH3k3rryyr33k3do
+oH3k3rryyrr3k3do
+oH33k3rrrr3k33do
+oH333k3333k333do
+oH3333k33k3333do
+oH33333kk33333do
+oddddddddddddddo
+oooooooooooooooo
+
+sprite pu-mystery
+oooooooooooooooo
+oHHHHHHHHHHHHHHo
+oH333333333333do
+oH333kkkkkk333do
+oH33kkk33kkk33do
+oH33kk3333kk33do
+oH33333333kk33do
+oH3333333kkk33do
+oH33333kkk3333do
+oH33333kk33333do
+oH33333kk33333do
+oH333333333333do
+oH33333kk33333do
+oH33333kk33333do
+oddddddddddddddo
+oooooooooooooooo
+
+sprite pu-kick
+oooooooooooooooo
+oHHHHHHHHHHHHHHo
+oH333333333333do
+oH333333333333do
+oH3kkk33333333do
+oH3kkk33333333do
+oH3kkk333333r3do
+oH3kkk33333k33do
+oH3kkkk33kkkk3do
+oH3kkkkk3kwkkkdo
+oHkkkkkkk3kkkkdo
+oHkkkkkkk3kkkkdo
+oH333333333kk3do
+oH333333333333do
+oddddddddddddddo
+oooooooooooooooo
+
+sprite pu-heart
+oooooooooooooooo
+oHHHHHHHHHHHHHHo
+oH333333333333do
+oH33kkk33kkk33do
+oH3kpppkkpppk3do
+oHkppwpppppppkdo
+oHkpwppppppppkdo
+oHkppppppppppkdo
+oH3kppppppppk3do
+oH33kppppppk33do
+oH333kppppk333do
+oH3333kppk3333do
+oH33333kk33333do
+oH333333333333do
+oddddddddddddddo
+oooooooooooooooo
+
+sprite pu-sonar
+oooooooooooooooo
+oHHHHHHHHHHHHHHo
+oH3333kkkk3333do
+oH33kk3333kk33do
+oH3k33kkkk33k3do
+oH3k3k3333k3k3do
+oHk3k33kk33k3kdo
+oHk3k3kbbk3k3kdo
+oHk3k3kbbk3k3kdo
+oHk3k33kk33k3kdo
+oH3k3k3333k3k3do
+oH3k33kkkk33k3do
+oH33kk3333kk33do
+oH3333kkkk3333do
+oddddddddddddddo
+oooooooooooooooo
+
+sprite pu-teamboost
+oooooooooooooooo
+oHHHHHHHHHHHHHHo
+oH333333333333do
+oH3333kkkk3333do
+oH3333kGGk3333do
+oH3333kGGk3333do
+oHkkkkkGGkkkkkdo
+oHkGGGGGGGGGGkdo
+oHkGGGGGGGGGGkdo
+oHkkkkkGGkkkkkdo
+oH3333kGGk3333do
+oH3333kGGk3333do
+oH3333kkkk3333do
+oH333333333333do
+oddddddddddddddo
+oooooooooooooooo
+
+sprite pu-tether
+oooooooooooooooo
+oHHHHHHHHHHHHHHo
+oH3kkkkk333333do
+oHkkkkkkk33333do
+oHkk333kk33333do
+oHkk333kk33333do
+oHkk333kk33333do
+oHkkkkkkkkkkk3do
+oH3kkkkkkkkkkkdo
+oH33333kk333kkdo
+oH33333kk333kkdo
+oH33333kk333kkdo
+oH33333kkkkkkkdo
+oH333333kkkkk3do
+oddddddddddddddo
+oooooooooooooooo
+
+sprite pu-frost
+oooooooooooooooo
+oHHHHHHHHHHHHHHo
+oH33333BB33333do
+oH33B33BB33B33do
+oH333B3BB3B333do
+oH3333BBBB3333do
+oH33333BB33333do
+oHBBBBBccBBBBBdo
+oHBBBBBccBBBBBdo
+oH33333BB33333do
+oH3333BBBB3333do
+oH333B3BB3B333do
+oH33B33BB33B33do
+oH33333BB33333do
+oddddddddddddddo
+oooooooooooooooo
+
+
+sprite pu-life
+oooooooooooooooo
+oHHHHHHHHHHHHHHo
+oH333333333333do
+oH333333333333do
+oH333333333333do
+oH3GGGGGGGGGG3do
+oHGkGGkGkGkkGGdo
+oHkkGGkGkGkGkGdo
+oHGkGGkGkGkkGGdo
+oHGkGGkGkGkGGGdo
+oHkkkGkkkGkGGGdo
+oH3GGGGGGGGGG3do
+oH333333333333do
+oH333333333333do
+oddddddddddddddo
+oooooooooooooooo
