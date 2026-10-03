@@ -22,7 +22,10 @@ curl -fsSL https://raw.githubusercontent.com/rvndnishad-work/bombario/main/deplo
 ```
 
 It installs Docker, adds swap for the build, clones the repo to
-`/opt/bombario` and starts everything. Without `DOMAIN=...` the address is
+`/opt/bombario` and starts everything. If another Caddy container already
+serves ports 80/443 on the droplet, it runs only the game server, joins that
+Caddy's network and appends one site block to its Caddyfile (backed up,
+validated, then reloaded); other sites are untouched. Without `DOMAIN=...` the address is
 `https://<ip-with-dashes>.sslip.io`. Run the same command again to update.
 Logs: `cd /opt/bombario/deploy/droplet && docker compose logs -f`.
 

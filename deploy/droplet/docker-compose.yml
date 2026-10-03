@@ -1,8 +1,13 @@
-# The room server behind Caddy, which gets a free HTTPS certificate on its
-# own. Phones refuse plain http, so the app needs the HTTPS address.
-# setup.sh writes DOMAIN into .env next to this file.
+# The room server, and Caddy in front of it for HTTPS (phones refuse plain
+# http). setup.sh writes .env next to this file and picks one of two modes:
+# - standalone: this Caddy owns ports 80/443 (COMPOSE_PROFILES=caddy);
+# - shared: a Caddy already running on the droplet proxies to us instead
+#   (docker-compose.shared.yml joins its network).
+name: bombario
+
 services:
   server:
+    container_name: bombario-server
     build:
       context: ../..
       dockerfile: apps/server/Dockerfile
@@ -16,6 +21,7 @@ services:
       - "8080"
 
   caddy:
+    profiles: [caddy]
     image: caddy:2
     restart: unless-stopped
     depends_on:
@@ -24,7 +30,7 @@ services:
       - "80:80"
       - "443:443"
     environment:
-      DOMAIN: ${DOMAIN:?set DOMAIN in .env}
+      DOMAIN: ${DOMAIN:-localhost}
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy_data:/data
