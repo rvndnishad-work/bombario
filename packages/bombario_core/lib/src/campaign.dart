@@ -99,6 +99,40 @@ class StageDef {
   int get number => int.tryParse(id.split('-').last) ?? 0;
   bool get isBoss => boss != null;
 
+  /// 1 to 50 across the campaign; 0 outside it (the Daily Dungeon).
+  int get campaignNumber =>
+      theme != null || number == 0 ? 0 : (world - 1) * 10 + number;
+
+  /// Every fifth stage gets an extra, rotating treasure, mini-boss,
+  /// challenge: 5 treasure, 10 mini-boss, 15 challenge, 20 treasure ...
+  StageExtra? get extra {
+    final n = campaignNumber;
+    if (n == 0 || n % 5 != 0) return null;
+    return StageExtra.values[(n ~/ 5 - 1) % StageExtra.values.length];
+  }
+
+  /// The mini-boss for each world: a regular enemy, bigger and tougher.
+  static EnemyKind miniBossKind(int world) => switch (world) {
+        1 => EnemyKind.grinface,
+        2 => EnemyKind.tigerclaw,
+        3 => EnemyKind.bombGoblin,
+        4 => EnemyKind.mirrorKnight,
+        _ => EnemyKind.phaseWraith,
+      };
+
+  /// One line describing [extra] for the stage card and the admin viewer.
+  String get extraTip => switch (extra) {
+        StageExtra.treasure =>
+          'Treasure! Bomb the chest three times for a rare power-up.',
+        StageExtra.miniBoss =>
+          'Mini-boss! A giant ${miniBossKind(world).name} drops a rare '
+              'power-up.',
+        StageExtra.challenge =>
+          'Challenge: clear it without getting hit for 5000 points and a '
+              'life.',
+        null => '',
+      };
+
   static int scaleCount(int twoPlayerCount, int players) => max(
         1,
         (twoPlayerCount * (players <= 1 ? 0.75 : 1 + 0.25 * (players - 2)))
@@ -249,6 +283,9 @@ class StageDef {
         windInterval: wind,
         cannonInterval: cannons,
         keepItemsOnDeath: !coop,
+        extra: extra,
+        miniBossKind: miniBossKind(world),
+        miniBossHp: scaleBossHp(2 + world, players),
       );
 }
 

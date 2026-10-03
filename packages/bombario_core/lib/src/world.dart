@@ -10,6 +10,29 @@ import 'level.dart';
 import 'movement.dart';
 
 /// Rules that differ between modes and stages.
+/// What the every-fifth campaign stages (5, 10 ... 50) add, in rotation.
+enum StageExtra {
+  /// A locked chest: three bomb hits open it for points and a rare power-up.
+  treasure,
+
+  /// A tougher, bigger enemy that drops a rare power-up.
+  miniBoss,
+
+  /// Clear the stage without anyone getting hit for points and a life.
+  challenge,
+}
+
+/// The chest on a [StageExtra.treasure] stage. Solid until opened.
+class Treasure {
+  Treasure(this.x, this.y);
+
+  static const int maxHp = 3;
+
+  final int x;
+  final int y;
+  int hp = maxHp;
+}
+
 class WorldConfig {
   const WorldConfig({
     this.exitHoldSeconds = 0,
@@ -34,6 +57,9 @@ class WorldConfig {
     this.windInterval = 0,
     this.cannonInterval = 0,
     this.keepItemsOnDeath = false,
+    this.extra,
+    this.miniBossKind = EnemyKind.grinface,
+    this.miniBossHp = 4,
   });
 
   /// Solo: step on the exit and you're done.
@@ -102,6 +128,13 @@ class WorldConfig {
   /// power-ups drop for teammates.
   final bool keepItemsOnDeath;
 
+  /// The every-fifth stage's extra, or null.
+  final StageExtra? extra;
+
+  /// Who the [StageExtra.miniBoss] is, and its HP.
+  final EnemyKind miniBossKind;
+  final int miniBossHp;
+
   WorldConfig copyWith({
     int? sharedLives,
     bool? friendlyFire,
@@ -129,6 +162,10 @@ class WorldConfig {
         darkness: darkness,
         windInterval: windInterval,
         cannonInterval: cannonInterval,
+        keepItemsOnDeath: keepItemsOnDeath,
+        extra: extra,
+        miniBossKind: miniBossKind,
+        miniBossHp: miniBossHp,
       );
 }
 
@@ -191,6 +228,68 @@ class World {
     for (final spawn in level.enemySpawns) {
       spawnEnemy(spawn.pos, spawn.kind, hp: spawn.hp);
     }
+    switch (config.extra) {
+      case StageExtra.treasure:
+        final t = _quietFloorTile();
+        if (t != null) treasure = Treasure(t.x, t.y);
+      case StageExtra.miniBoss:
+        final t = _quietFloorTile();
+        if (t != null) {
+          miniBossId =
+              spawnEnemy(t, config.miniBossKind, hp: config.miniBossHp).id;
+        }
+      case StageExtra.challenge || null:
+        break;
+    }
+  }
+
+  /// Points for opening the chest, beating the mini-boss, and finishing the
+  /// challenge.
+  static const int treasurePoints = 3000;
+  static const int miniBossPoints = 2000;
+  static const int challengePoints = 5000;
+
+  /// What the chest and the mini-boss can drop.
+  static const rareItems = [
+    ItemType.wallPass,
+    ItemType.remote,
+    ItemType.bombPass,
+    ItemType.flamePass,
+    ItemType.kick,
+    ItemType.heart,
+  ];
+
+  /// The closed chest on a treasure stage, null once opened.
+  Treasure? treasure;
+
+  /// The mini-boss's enemy id, 0 when there is none.
+  int miniBossId = 0;
+
+  /// On a challenge stage: someone got hit, so no reward.
+  bool challengeFailed = false;
+
+  /// A plain floor tile well away from the player spawns and enemies.
+  GridPos? _quietFloorTile() {
+    final spawns = level.playerSpawns;
+    for (final minDistance in const [6, 4, 2]) {
+      final candidates = [
+        for (final p in grid.positions)
+          if (grid.atPos(p) == TileType.floor &&
+              grid.featureAt(p.x, p.y) == TileFeature.none &&
+              spawns.every((s) => s.manhattanTo(p) >= minDistance) &&
+              enemies.every((e) => e.tile != p))
+            p,
+      ];
+      if (candidates.isNotEmpty) {
+        return candidates[_rng.nextInt(candidates.length)];
+      }
+    }
+    return null;
+  }
+
+  bool chestAt(int x, int y) {
+    final t = treasure;
+    return t != null && t.x == x && t.y == y;
   }
 
   // Tuning from the design doc.
@@ -461,6 +560,7 @@ class World {
       timeLeft = max(0, timeLeft - dt);
       if (timeLeft <= 0 && !cleared) {
         cleared = true;
+        _finishChallenge();
         events.add(const StageCleared());
       }
       return;
@@ -504,6 +604,7 @@ class World {
     final t = grid.at(x, y);
     if (t == TileType.pillar) return true;
     if (p.ghost) return false; // ghosts float through everything else
+    if (chestAt(x, y)) return true;
     if (t == TileType.pit) return true;
     if (t == TileType.brick && !p.wallPass) return true;
     if (!p.bombPass) {
@@ -763,7 +864,7 @@ class World {
   /// Can a sliding bomb move onto this tile?
   bool _bombCanEnter(int x, int y) {
     if (!grid.isWalkable(x, y)) return false;
-    if (bombAt(x, y) != null) return false;
+    if (bombAt(x, y) != null || chestAt(x, y)) return false;
     for (final e in enemies) {
       if (e.alive && e.solid && e.tile == GridPos(x, y)) return false;
     }
@@ -847,6 +948,10 @@ class World {
         if (tile == TileType.brick) {
           // Frost freezes; it doesn't break bricks.
           if (!frost) _destroyBrick(x, y, bomb.ownerId);
+          break;
+        }
+        if (chestAt(x, y)) {
+          if (!frost) _hitTreasure(bomb.ownerId);
           break;
         }
         final other = bombAt(x, y);
@@ -1063,6 +1168,7 @@ class World {
   /// A hit that a Heart can absorb.
   void _hurtPlayer(Player p, int killerId) {
     if (p.godMode) return;
+    _failChallenge();
     if (p.hearts > 0) {
       p.hearts--;
       p.invincibleFor = 1.5;
@@ -1074,6 +1180,7 @@ class World {
 
   void _killPlayer(Player p, int killerId) {
     if (p.godMode) return;
+    _failChallenge();
     p.alive = false;
     p.frozenFor = 0;
     if (config.keepItemsOnDeath) {
@@ -1089,6 +1196,36 @@ class World {
       p.hauntUsed = false;
       events.add(BecameGhost(p.id));
     }
+  }
+
+  void _failChallenge() {
+    if (config.extra != StageExtra.challenge || challengeFailed || cleared) {
+      return;
+    }
+    challengeFailed = true;
+    events.add(const ChallengeFailed());
+  }
+
+  /// Called as the stage clears: a clean challenge pays out.
+  void _finishChallenge() {
+    if (config.extra != StageExtra.challenge || challengeFailed) return;
+    for (final p in alivePlayers) {
+      p.score += challengePoints;
+    }
+    if (config.sharedLives > 0) livesLeft++;
+    events.add(const ChallengeComplete());
+  }
+
+  void _hitTreasure(int ownerId) {
+    final t = treasure!;
+    t.hp--;
+    events.add(TreasureHit(t.x, t.y, t.hp));
+    if (t.hp > 0) return;
+    treasure = null;
+    playerById(ownerId)?.score += treasurePoints;
+    final item = rareItems[_rng.nextInt(rareItems.length)];
+    floorItems.add(FloorItem(x: t.x, y: t.y, type: item));
+    events.add(TreasureOpened(t.x, t.y, item));
   }
 
   /// Drops lost power-ups on free tiles near [at] for teammates (§3.4).
@@ -1137,6 +1274,15 @@ class World {
       killer.score += multiKillPoints(e.kind.points, nth);
     }
     events.add(EnemyDied(e, killerId));
+    if (e.id == miniBossId) {
+      killer?.score += miniBossPoints;
+      final item = rareItems[_rng.nextInt(rareItems.length)];
+      final at = e.tile;
+      if (grid.isWalkable(at.x, at.y)) {
+        floorItems.add(FloorItem(x: at.x, y: at.y, type: item));
+      }
+      events.add(MiniBossDefeated(at.x, at.y, item));
+    }
     if (e.linkedPlayer != 0) {
       final cursed = playerById(e.linkedPlayer);
       if (cursed != null && cursed.cursed) {
@@ -1168,7 +1314,7 @@ class World {
     final t = grid.at(x, y);
     if (t == TileType.pillar || t == TileType.pit) return false;
     if (t == TileType.brick && !e.kind.wallPass) return false;
-    if (bombAt(x, y) != null) return false;
+    if (bombAt(x, y) != null || chestAt(x, y)) return false;
     return true;
   }
 
@@ -2434,6 +2580,7 @@ class World {
     for (final p in alivePlayers) {
       p.score += timeLeft.floor() * 10;
     }
+    _finishChallenge();
     events.add(const StageCleared());
   }
 
@@ -2462,6 +2609,7 @@ class World {
       for (final p in alive) {
         p.score += timeLeft.floor() * 10;
       }
+      _finishChallenge();
       events.add(const StageCleared());
     }
   }

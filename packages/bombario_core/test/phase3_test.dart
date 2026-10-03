@@ -416,7 +416,7 @@ void main() {
       final p = w.addPlayer()
         ..remote = true
         ..invincibleFor = 999;
-      final king = w.enemies.single;
+      final king = w.enemies.firstWhere((e) => e.kind.boss);
       expect(king.kind, EnemyKind.kingPuffball);
       expect(king.hp, 8);
       for (var i = 0; i < 300; i++) {
@@ -470,7 +470,9 @@ void main() {
       final w = World(stage.level(seed: 1, players: 1),
           seed: 1, config: stage.config(players: 1));
       w.addPlayer();
-      w.enemies.single.alive = false;
+      for (final e in w.enemies) {
+        e.alive = false; // the boss and the mini-boss
+      }
       final events = run(w, 0.1);
       expect(events.whereType<StageCleared>(), hasLength(1));
     });

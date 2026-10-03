@@ -219,6 +219,7 @@ class WorldRenderer extends PositionComponent {
     _drawSonar(canvas, sim);
     if (revealHidden()) _drawHidden(canvas, sim);
     _drawItems(canvas, sim);
+    _drawChest(canvas, sim);
     _drawHazards(canvas, sim);
     _drawTombstones(canvas, sim);
     _drawBombs(canvas, sim);
@@ -470,6 +471,66 @@ class WorldRenderer extends PositionComponent {
     }
   }
 
+  /// An ordinary enemy with more HP than its kind: the stage's mini-boss.
+  static bool isMiniBoss(core.EnemyState e) {
+    final kind = e.kindData;
+    return kind != null && !kind.boss && e.maxHp > kind.hp;
+  }
+
+  /// The treasure chest: a banded box that cracks with each hit.
+  void _drawChest(Canvas canvas, core.WorldSnapshot sim) {
+    final chest = sim.chest;
+    if (chest == null) return;
+    final (x, y, hp) = chest;
+    final r = _tileRect(x, y, tileSize * 0.1);
+    final glow = 0.25 + 0.15 * math.sin(_time * 4);
+    canvas.drawRect(
+      r.inflate(tileSize * 0.06),
+      Paint()
+        ..color = const Color(0xFFFFD23F).withValues(alpha: glow)
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 5),
+    );
+    final outline = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = tileSize * 0.06
+      ..color = const Color(0xFF0D1120);
+    canvas.drawRect(r, Paint()..color = const Color(0xFF8A4B22));
+    final lid = Rect.fromLTWH(r.left, r.top, r.width, r.height * 0.4);
+    canvas.drawRect(lid, Paint()..color = const Color(0xFFB45A2C));
+    final band = Paint()..color = const Color(0xFFFFD23F);
+    canvas.drawRect(
+      Rect.fromLTWH(
+        r.left,
+        lid.bottom - tileSize * 0.04,
+        r.width,
+        tileSize * 0.08,
+      ),
+      band,
+    );
+    canvas.drawRect(
+      Rect.fromCenter(
+        center: Offset(r.center.dx, lid.bottom + tileSize * 0.05),
+        width: tileSize * 0.16,
+        height: tileSize * 0.2,
+      ),
+      band,
+    );
+    canvas.drawRect(r, outline);
+    // Cracks for each hit taken.
+    final crack = Paint()
+      ..color = const Color(0xFF0D1120)
+      ..strokeWidth = tileSize * 0.04;
+    final hits = core.Treasure.maxHp - hp;
+    for (var i = 0; i < hits; i++) {
+      final cx = r.left + r.width * (0.25 + 0.25 * i);
+      canvas.drawLine(
+        Offset(cx, r.top + r.height * 0.45),
+        Offset(cx + tileSize * 0.08, r.bottom - tileSize * 0.04),
+        crack,
+      );
+    }
+  }
+
   void _drawTombstones(Canvas canvas, core.WorldSnapshot sim) {
     for (final p in sim.players) {
       final t = p.tombstone;
@@ -575,8 +636,20 @@ class WorldRenderer extends PositionComponent {
         );
         continue;
       }
-      final bodySize = (kind?.size ?? 0.4) * tileSize * 2.5;
+      // A mini-boss is a regular enemy with extra HP: drawn half again as
+      // big, on a gold halo, with an HP bar.
+      final elite = isMiniBoss(e);
+      final bodySize = (kind?.size ?? 0.4) * tileSize * 2.5 * (elite ? 1.5 : 1);
       var centre = _centre(e.x, e.y);
+      if (elite) {
+        canvas.drawCircle(
+          centre,
+          bodySize * (0.55 + 0.05 * math.sin(_time * 5)),
+          Paint()
+            ..color = const Color(0xFFFFD23F).withValues(alpha: 0.35)
+            ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4),
+        );
+      }
 
       if (e.state == core.EnemyStateKind.underground ||
           (kind?.style == core.MoveStyle.burrow &&
@@ -655,7 +728,7 @@ class WorldRenderer extends PositionComponent {
       }
       if (e.slowed) canvas.drawCircle(centre, bodySize * 0.55, _slowRing);
 
-      if (kind?.boss ?? false) {
+      if ((kind?.boss ?? false) || elite) {
         final bar = Rect.fromLTWH(
           centre.dx - bodySize / 2,
           body.top - 9,

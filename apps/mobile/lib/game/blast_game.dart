@@ -149,7 +149,7 @@ class BlastGame extends FlameGame {
       title: daily != null
           ? 'Daily Dungeon: ${def.name}'
           : 'Stage ${def.id}: ${def.name}',
-      body: def.tip,
+      body: [def.tip, def.extraTip].where((t) => t.isNotEmpty).join('\n\n'),
       sprite: 'p1',
     );
     _introLeft = introSeconds;
@@ -476,6 +476,42 @@ class BlastGame extends FlameGame {
               title: 'The exit is angry!',
               body: 'Door Wardens are pouring out. Run!',
               sprite: 'doorWarden',
+              seconds: 4,
+            ),
+          );
+        case core.TreasureHit(:final hp) when hp > 0:
+          _shake = 0.15;
+          audio.play(Sfx.bossHit);
+        case core.TreasureOpened(:final item) ||
+            core.MiniBossDefeated(:final item):
+          final chest = event is core.TreasureOpened;
+          audio.play(Sfx.exitOpen);
+          messages.show(
+            GameMessage(
+              title: chest ? 'Treasure!' : 'Mini-boss down!',
+              body:
+                  '+${chest ? core.World.treasurePoints : core.World.miniBossPoints}'
+                  ' points. It dropped a ${itemInfo(item).$1}.',
+              sprite: WorldRenderer.itemSprite(item),
+              seconds: 3,
+            ),
+          );
+        case core.ChallengeFailed():
+          messages.show(
+            GameMessage(
+              title: 'Challenge failed',
+              body: 'You got hit. Clear the stage anyway!',
+              sprite: 'tomb',
+              seconds: 3,
+            ),
+          );
+        case core.ChallengeComplete():
+          lives++;
+          messages.show(
+            GameMessage(
+              title: 'Challenge complete!',
+              body: '+${core.World.challengePoints} points and an extra life.',
+              sprite: 'p1',
               seconds: 4,
             ),
           );

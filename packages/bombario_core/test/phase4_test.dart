@@ -507,7 +507,7 @@ void main() {
     test('Lantern Witch blinks away and summons Shades', () {
       final w = boss('4-10');
       w.addPlayer().invincibleFor = 999;
-      final witch = w.enemies.single;
+      final witch = w.enemies.firstWhere((e) => e.kind.boss);
       expect(roundTrip(w).darkness, 4);
       final events = run(w, 10);
       expect(events.whereType<EnemyTeleported>(), isNotEmpty);
@@ -524,7 +524,7 @@ void main() {
       final b = w.addPlayer()
         ..invincibleFor = 999
         ..remote = true;
-      final witch = w.enemies.single;
+      final witch = w.enemies.firstWhere((e) => e.kind.boss);
       witch.hp = witch.maxHp ~/ 2;
       PlayerCursed? curse;
       for (var i = 0; i < 30 * 40 && curse == null; i++) {

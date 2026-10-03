@@ -33,6 +33,7 @@ class WorldSnapshot {
     this.ventTimeLeft = 0,
     this.darkness = 0,
     this.regrowing = const [],
+    this.chest,
   });
 
   final int tick;
@@ -73,6 +74,9 @@ class WorldSnapshot {
   /// Possessed bricks waiting to grow back: x, y and seconds left.
   final List<HazardState> regrowing;
 
+  /// The closed treasure chest on a treasure stage: x, y and hits left.
+  final (int, int, int)? chest;
+
   bool get over => cleared || failed || winnerId != null;
 
   WorldSnapshot copyWith({
@@ -102,6 +106,7 @@ class WorldSnapshot {
         ventTimeLeft: ventTimeLeft,
         darkness: darkness,
         regrowing: regrowing,
+        chest: chest,
       );
 
   bool bombAt(int x, int y) => bombs.any((b) => b.x == x && b.y == y);
@@ -167,6 +172,10 @@ class WorldSnapshot {
           for (final r in w.regrowing.entries)
             HazardState(r.key.x, r.key.y, r.value),
         ],
+        chest: switch (w.treasure) {
+          final t? => (t.x, t.y, t.hp),
+          null => null,
+        },
       );
 
   Map<String, dynamic> toJson() => {
@@ -219,6 +228,7 @@ class WorldSnapshot {
           'rg': [
             for (final r in regrowing) [r.x, r.y, r.warn],
           ],
+        if (chest case (final x, final y, final hp)) 'chest': [x, y, hp],
       };
 
   static WorldSnapshot fromJson(Map<String, dynamic> j) => WorldSnapshot(
@@ -295,6 +305,10 @@ class WorldSnapshot {
           for (final r in (j['rg'] as List?) ?? const [])
             HazardState(r[0] as int, r[1] as int, (r[2] as num).toDouble()),
         ],
+        chest: switch (j['chest']) {
+          [final int x, final int y, final int hp] => (x, y, hp),
+          _ => null,
+        },
       );
 
   // Grid as one character per tile. Hidden items stay secret: the server

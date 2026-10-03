@@ -113,6 +113,13 @@ class _AdminScreenState extends State<AdminScreen> {
   }
 }
 
+/// What an every-fifth stage's extra is called.
+String extraName(core.StageExtra extra) => switch (extra) {
+  core.StageExtra.treasure => 'Treasure',
+  core.StageExtra.miniBoss => 'Mini-boss',
+  core.StageExtra.challenge => 'Challenge',
+};
+
 class _StageRow extends StatelessWidget {
   const _StageRow({
     required this.info,
@@ -152,7 +159,8 @@ class _StageRow extends StatelessWidget {
                   ),
                   Text(
                     '${info.width} x ${info.height}'
-                    '${info.kind == 'Stage' ? '' : '  ${info.kind.toUpperCase()}'}',
+                    '${info.kind == 'Stage' ? '' : '  ${info.kind.toUpperCase()}'}'
+                    '${info.extra == null ? '' : ' + ${extraName(info.extra!).toUpperCase()}'}',
                     style: Px.label(10, color: Px.muted, bold: false),
                   ),
                 ],
@@ -209,6 +217,14 @@ class _StageDetail extends StatelessWidget {
           '${info.milestone ? '. Every-5th stage.' : ''}',
           style: Px.label(12, color: Px.muted, bold: false),
         ),
+        if (info.extra case final extra?) ...[
+          const SizedBox(height: 6),
+          Text(
+            key: const Key('admin-extra'),
+            'EXTRA: ${extraName(extra).toUpperCase()}. ${info.def.extraTip}',
+            style: Px.label(12, color: Px.fuse, bold: false),
+          ),
+        ],
         const SizedBox(height: 12),
         AspectRatio(
           aspectRatio: info.width / info.height,
@@ -339,6 +355,24 @@ class _MapPainter extends CustomPainter {
     for (final e in info.level.enemySpawns) {
       paint.color = Px.danger;
       canvas.drawCircle(cell(e.pos.x, e.pos.y).center, t * 0.3, paint);
+    }
+    if (info.miniBoss case final boss?) {
+      final c = cell(boss.tileX, boss.tileY).center;
+      canvas.drawCircle(c, t * 0.6, Paint()..color = Px.fuse);
+      canvas.drawCircle(c, t * 0.4, Paint()..color = Px.danger);
+    }
+    if (info.chest case final chest?) {
+      canvas.drawRect(
+        cell(chest.x, chest.y, t * 0.1),
+        Paint()..color = const Color(0xFF8A4B22),
+      );
+      canvas.drawRect(
+        cell(chest.x, chest.y, t * 0.1),
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = max(1.5, t * 0.12)
+          ..color = Px.fuse,
+      );
     }
     final atlas = SpriteAtlas.instance;
     for (final (pos, item) in info.hidden) {

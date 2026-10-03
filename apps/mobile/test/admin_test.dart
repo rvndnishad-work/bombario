@@ -59,6 +59,9 @@ void main() {
     await tester.tap(find.byKey(const Key('admin-stage-10')));
     await tester.pump();
     expect(find.textContaining('Stage 10 (1-10)'), findsOneWidget);
+    expect(find.textContaining('EXTRA: MINI-BOSS'), findsOneWidget);
+    expect(StageInfo.of(9, seed: 3).miniBoss, isNotNull);
+    expect(StageInfo.of(4, seed: 3).chest, isNotNull);
 
     await tester.tap(find.byKey(const Key('admin-stage-15')));
     await tester.pump();
