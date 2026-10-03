@@ -21,6 +21,21 @@ play and client-side prediction, so the rules only ever exist once.
 
 ## Status
 
+Phase 3 (co-op campaign v1):
+- [x] Worlds 1 and 2: 20 stages from the design doc's stage table, including a bonus stage and a boss in each world
+- [x] Hand-made 1-1 "First Spark" from the design doc; the other stages are generated from per-stage enemy mixes, items, brick density and timers
+- [x] New enemies: Pebble (patrol), Hopper (telegraphed jump), Barrelhop, Grinface, Splitter and Splitlings, Shellback (front armour), Wisp
+- [x] Bosses: King Puffball (bounces, splits at half HP) and Rockjaw Worm (burrows, rumbles, surfaces); boss HP scales +60% per extra player
+- [x] Co-op ghosts: the fallen float through walls, ping and haunt; teammates revive them by standing on the tombstone for 2 s, paid from a shared lives pool (3 + 1 per player)
+- [x] Lose the newest half of your power-ups on death; they scatter for teammates
+- [x] New power-ups: Kick, Heart, Sonar Ping, Team Boost, Tether, Frost Bomb; one active item at a time
+- [x] Quick-chat pings (Exit here, Power-up, Help, Run)
+- [x] World 2 hazards: cracked floor that collapses, telegraphed falling rocks; tutorial stages stun instead of kill on friendly fire
+- [x] Host picks the co-op stage in the lobby, and a cleared stage moves the room to the next one
+- [x] Solo now plays the same campaign
+- [ ] Glove/throw (World 2 in the design doc) is deferred; Kick covers bomb movement for now
+- [ ] Deep-link invites and Firebase guest sign-in (left over from Phase 2; need a Firebase project)
+
 Phase 2 (online rooms):
 - [x] `RoomHub`: many rooms per server, each with a 6-character code (no O/0/I/1); empty rooms expire after 10 minutes
 - [x] HTTP API: `POST /rooms` creates a room, `GET /rooms/<code>` looks one up, `GET /health`; WebSocket at `/rooms/<code>`

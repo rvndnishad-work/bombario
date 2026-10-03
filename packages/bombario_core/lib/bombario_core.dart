@@ -5,6 +5,7 @@
 /// and inside the client for solo play and client-side prediction.
 library;
 
+export 'src/campaign.dart';
 export 'src/direction.dart';
 export 'src/entities.dart';
 export 'src/events.dart';

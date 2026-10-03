@@ -139,15 +139,27 @@ void main() {
     await b.close();
   });
 
-  test('a co-op match has enemies and a bigger maze', () async {
+  test('a co-op match plays the stage the host picked', () async {
     final a = await connect(server, 'Solo');
+    final b = await connect(server, 'Friend');
     a.setMode(GameMode.coop);
-    await waitFor(() => a.lobby.mode == GameMode.coop);
+    a.setStage('1-3');
+    await waitFor(
+        () => b.lobby.mode == GameMode.coop && b.lobby.stage == '1-3');
+    expect(b.lobby.stageDef.name, 'Drip Drop');
+    b.setStage('2-10'); // not the host: ignored
+    await Future<void>.delayed(const Duration(milliseconds: 50));
+    expect(a.lobby.stage, '1-3');
     a.start();
-    await waitFor(() => a.snapshot != null);
-    expect(a.snapshot!.enemies, isNotEmpty);
-    expect(a.snapshot!.grid.width, 31);
+    await waitFor(() => b.snapshot != null && b.stageName != null);
+    expect(b.stageId, '1-3');
+    expect(b.stageName, 'Drip Drop');
+    expect(b.stageTip, isNotEmpty);
+    expect(b.snapshot!.enemies, hasLength(7)); // 5 Puffballs + 2 Blue Drops
+    expect(b.snapshot!.grid.width, 31);
+    expect(b.snapshot!.livesLeft, 5); // 3 + one per player
     await a.close();
+    await b.close();
   });
 
   test('room rejects a fifth player', () async {
@@ -224,6 +236,29 @@ void main() {
     final first = c.takeInput();
     expect(first.placeBomb, isTrue);
     expect(c.lastInputSeq, 4);
+  });
+
+  test('clearing a co-op stage advances the room to the next one', () {
+    final room = Room(seed: 4)
+      ..mode = GameMode.coop
+      ..stageId = '1-10';
+    room.startMatch();
+    expect(room.world!.enemies.single.kind, EnemyKind.kingPuffball);
+    room.world!.enemies.single.alive = false;
+    room.tick();
+    expect(room.state, RoomState.lobby);
+    expect(room.stageId, '2-1');
+    room.close();
+  });
+
+  test('pings survive the trip over the wire', () {
+    final json = inputToJson(
+        const PlayerInput(direction: Direction.up, ping: PingKind.help),
+        seq: 3);
+    final back = inputFromJson(json);
+    expect(back.ping, PingKind.help);
+    expect(back.direction, Direction.up);
+    expect(inputFromJson(inputToJson(const PlayerInput())).ping, PingKind.none);
   });
 
   test('room ticks deterministically without sockets', () {

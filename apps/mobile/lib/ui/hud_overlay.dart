@@ -42,7 +42,7 @@ class HudOverlay extends StatelessWidget {
                       '$minutes:$seconds',
                       color: h.timeLeft <= 30 ? Colors.redAccent : null,
                     ),
-                    _Stat('STAGE', '${h.stage}'),
+                    _Stat('STAGE', h.stage),
                     _Stat('💣', '${h.bombs}'),
                     _Stat('🔥', '${h.fire}'),
                     _Stat('👾', '${h.enemiesLeft}'),

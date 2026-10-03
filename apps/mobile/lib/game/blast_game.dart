@@ -24,15 +24,14 @@ class HudState extends ChangeNotifier {
   int timeLeft = 0;
   int bombs = 1;
   int fire = 1;
-  int stage = 1;
-  bool remote = false;
+  String stage = '1-1';
   int enemiesLeft = 0;
 
   void updateFrom(
     core.World world,
     core.Player player, {
     required int lives,
-    required int stage,
+    required String stage,
   }) {
     this.lives = lives;
     this.stage = stage;
@@ -40,13 +39,13 @@ class HudState extends ChangeNotifier {
     timeLeft = world.timeLeft.ceil();
     bombs = player.maxBombs;
     fire = player.fireRange;
-    remote = player.remote;
     enemiesLeft = world.enemies.where((e) => e.alive).length;
     notifyListeners();
   }
 }
 
-/// Solo prototype: one player, generated stages, three lives.
+/// Solo campaign: the co-op stages played alone (§4.3 "Solo Campaign"),
+/// three lives, power-ups carried between stages.
 ///
 /// The simulation lives entirely in `bombario_core`; this class only steps it at
 /// a fixed 30 Hz, feeds it input, moves the camera and reacts to events.
@@ -59,11 +58,21 @@ class BlastGame extends FlameGame {
 
   final InputController input = InputController();
   final HudState hud = HudState();
-  final ValueNotifier<bool> hasRemote = ValueNotifier(false);
+
+  /// What the Action button does right now.
+  final ValueNotifier<String?> actionLabel = ValueNotifier(null);
+
+  /// The stage's name and tip, shown briefly when it starts.
+  final ValueNotifier<String?> banner = ValueNotifier(null);
 
   int _seed;
-  int stage = 1;
+
+  /// Index into [core.Campaign.stages].
+  int stageIndex = 0;
   int lives = startingLives;
+
+  core.StageDef get stage => core.Campaign.stages[stageIndex];
+  bool get isLastStage => stageIndex == core.Campaign.stages.length - 1;
 
   late core.World sim;
   late core.Player player;
@@ -88,33 +97,18 @@ class BlastGame extends FlameGame {
   }
 
   void _startStage() {
-    // Difficulty ramps with the stage number: more enemies, smarter kinds,
-    // denser bricks. Mirrors the World 1 table in the design doc.
-    final kinds = <core.EnemyKind>[
-      core.EnemyKind.puffball,
-      if (stage >= 3) core.EnemyKind.blueDrop,
-      if (stage >= 6) core.EnemyKind.slimeSage,
-    ];
-    final level = core.LevelData.generate(
-      seed: _seed + stage,
-      players: 1,
-      enemyCount: 4 + stage,
-      brickDensity: math.min(0.65, 0.35 + stage * 0.03),
-      enemyKinds: kinds,
-      items: const [
-        core.ItemType.bombUp,
-        core.ItemType.fireUp,
-        core.ItemType.speedUp,
-        core.ItemType.remote,
-        core.ItemType.wallPass,
-        core.ItemType.bombPass,
-        core.ItemType.flamePass,
-        core.ItemType.mystery,
-      ],
-      timeLimit: 200,
-    );
+    final def = stage;
+    final seed = _seed + stageIndex;
+    final level = def.level(seed: seed, players: 1);
     final carryOver = _hasPlayer ? _playerStats() : null;
-    sim = core.World(level, seed: _seed + stage, config: core.WorldConfig.solo);
+    sim = core.World(
+      level,
+      seed: seed,
+      config: def.config(players: 1, coop: false),
+    );
+    banner.value = def.tip.isEmpty
+        ? 'Stage ${def.id}: ${def.name}'
+        : 'Stage ${def.id}: ${def.name}\n${def.tip}';
     player = sim.addPlayer(name: 'You');
     _hasPlayer = true;
     carryOver?.call(player);
@@ -132,18 +126,19 @@ class BlastGame extends FlameGame {
     _fitCamera();
     _accumulator = 0;
     _respawnTimer = 0;
-    hud.updateFrom(sim, player, lives: lives, stage: stage);
+    hud.updateFrom(sim, player, lives: lives, stage: stage.id);
   }
 
-  /// Stat power-ups carry over between stages, as in the original.
+  /// Power-ups carry over between stages, as in the original.
   void Function(core.Player) _playerStats() {
-    final bombs = player.maxBombs,
-        fire = player.fireRange,
-        speed = player.speed;
+    final items = [...player.items];
+    final active = player.active;
+    final hearts = player.hearts;
     return (core.Player np) {
-      np.maxBombs = bombs;
-      np.fireRange = fire;
-      np.speed = speed;
+      np.items.addAll(items);
+      np.recomputeStats();
+      np.active = active;
+      np.hearts = hearts;
     };
   }
 
@@ -212,8 +207,9 @@ class BlastGame extends FlameGame {
     _hudTimer += dt;
     if (_hudTimer >= 0.1) {
       _hudTimer = 0;
-      hud.updateFrom(sim, player, lives: lives, stage: stage);
-      hasRemote.value = player.remote;
+      hud.updateFrom(sim, player, lives: lives, stage: stage.id);
+      actionLabel.value = core.PlayerState.of(player).actionLabel;
+      if (sim.elapsed > 4) banner.value = null;
     }
   }
 
@@ -237,13 +233,15 @@ class BlastGame extends FlameGame {
 
   void nextStage() {
     overlays.remove(Overlays.stageCleared);
-    stage++;
+    // After the last stage, loop back to the start with everything kept.
+    stageIndex = isLastStage ? 0 : stageIndex + 1;
     _startStage();
   }
 
   void restart() {
     overlays.remove(Overlays.gameOver);
-    stage = 1;
+    stageIndex = 0;
+    _hasPlayer = false;
     lives = startingLives;
     _seed = _shakeRng.nextInt(1 << 30);
     _startStage();

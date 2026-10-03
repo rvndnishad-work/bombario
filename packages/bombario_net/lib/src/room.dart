@@ -48,7 +48,7 @@ class RoomClient {
     _inputs.add((s, input));
     while (_inputs.length > maxQueuedInputs) {
       final (_, dropped) = _inputs.removeFirst();
-      // A dropped step may carry a bomb press; never lose that.
+      // A dropped step may carry a bomb press or ping; never lose that.
       final (nextSeq, next) = _inputs.removeFirst();
       _inputs.addFirst((
         nextSeq,
@@ -56,6 +56,7 @@ class RoomClient {
           direction: next.direction,
           placeBomb: next.placeBomb || dropped.placeBomb,
           action: next.action || dropped.action,
+          ping: next.ping != PingKind.none ? next.ping : dropped.ping,
         ),
       ));
     }
@@ -115,6 +116,9 @@ class Room {
   final Map<RoomClient, Timer> _resumeTimers = {};
 
   GameMode mode = GameMode.versus;
+
+  /// Co-op campaign stage. Advances by itself when a stage is cleared.
+  String stageId = Campaign.first.id;
   RoomState state = RoomState.lobby;
   World? world;
   Timer? _ticker;
@@ -197,7 +201,7 @@ class Room {
       _broadcastLobby();
       final w = world;
       if (state == RoomState.playing && w != null && c.playerId != null) {
-        c.send({'t': Msg.matchStart, 'mode': mode.name, 'you': c.playerId});
+        c.send(_matchStartMsg(c));
         _sendSnapshot(w);
         // Back from the dead-zone: a moment of protection while they catch up.
         w.playerById(c.playerId!)?.invincibleFor = 2;
@@ -244,6 +248,12 @@ class Room {
       case Msg.mode:
         if (!client.isHost || state != RoomState.lobby) return;
         mode = GameMode.parse(msg['v'] as String? ?? '');
+        _broadcastLobby();
+      case Msg.stage:
+        if (!client.isHost || state != RoomState.lobby) return;
+        final id = msg['v'] as String? ?? '';
+        if (Campaign.byId(id) == null) return;
+        stageId = id;
         _broadcastLobby();
       case Msg.start:
         if (!client.isHost || state != RoomState.lobby) return;
@@ -306,6 +316,7 @@ class Room {
     final msg = {
       't': Msg.lobby,
       'mode': mode.name,
+      'stage': stageId,
       'players': [for (final c in clients) c.lobbyRow.toJson()],
     };
     for (final c in clients) {
@@ -318,6 +329,8 @@ class Room {
   void startMatch() {
     final seed = _rng.nextInt(1 << 30);
     final LevelData level;
+    var config = mode.config;
+    final stage = Campaign.byId(stageId) ?? Campaign.first;
     if (mode == GameMode.versus) {
       // Single-screen arena, no enemies, plenty of items under the bricks.
       level = LevelData.generate(
@@ -336,18 +349,10 @@ class Room {
         timeLimit: 120,
       );
     } else {
-      level = LevelData.generate(
-        seed: seed,
-        width: clients.length <= 2 ? 31 : 41,
-        height: clients.length <= 2 ? 13 : 17,
-        players: clients.length,
-        enemyCount: 6 + 2 * clients.length,
-        brickDensity: 0.45,
-        enemyKinds: const [EnemyKind.puffball, EnemyKind.blueDrop],
-        timeLimit: 240,
-      );
+      level = stage.level(seed: seed, players: clients.length);
+      config = stage.config(players: clients.length);
     }
-    final w = World(level, seed: seed, config: mode.config);
+    final w = World(level, seed: seed, config: config);
     for (final c in clients) {
       c.playerId = w.addPlayer(name: c.name).id;
       c.resetInputs();
@@ -356,13 +361,27 @@ class Room {
     state = RoomState.playing;
     _tick = 0;
     for (final c in clients) {
-      c.send({'t': Msg.matchStart, 'mode': mode.name, 'you': c.playerId});
+      c.send(_matchStartMsg(c));
     }
     _sendSnapshot(w);
     _ticker = Timer.periodic(
       Duration(microseconds: (World.tickDt * 1e6).round()),
       (_) => tick(),
     );
+  }
+
+  Map<String, dynamic> _matchStartMsg(RoomClient c) {
+    final stage = Campaign.byId(stageId) ?? Campaign.first;
+    return {
+      't': Msg.matchStart,
+      'mode': mode.name,
+      'you': c.playerId,
+      if (mode == GameMode.coop) ...{
+        'stage': stage.id,
+        'name': stage.name,
+        'tip': stage.tip,
+      },
+    };
   }
 
   /// One simulation step. Public so tests can drive the room without a timer.
@@ -377,11 +396,20 @@ class Room {
     _tick++;
     if (_tick % snapshotEvery == 0 || w.over) _sendSnapshot(w);
     if (w.over) {
+      final played = stageId;
+      if (mode == GameMode.coop && w.cleared) {
+        stageId = Campaign.next(stageId)?.id ?? stageId;
+      }
       for (final c in clients) {
         c.send({
           't': Msg.matchEnd,
           if (w.winnerId != null) 'winner': w.winnerId,
           'cleared': w.cleared,
+          if (mode == GameMode.coop) ...{
+            'stage': played,
+            if (w.cleared && Campaign.next(played) != null)
+              'next': Campaign.next(played)!.id,
+          },
         });
       }
       _stopMatch();

@@ -10,6 +10,7 @@ abstract final class Msg {
   static const join = 'join'; // {name, token?: resume a dropped seat}
   static const ready = 'ready'; // {v: bool}
   static const mode = 'mode'; // {v: 'versus' | 'coop'}  (host only)
+  static const stage = 'stage'; // {v: '1-4'}  co-op stage (host only)
   static const start = 'start'; // (host only)
   static const input =
       'input'; // {s: seq, d: Direction index, b: bomb, a: action}
@@ -17,10 +18,12 @@ abstract final class Msg {
 
   // Server to client.
   static const welcome = 'welcome'; // {id, code, host, token, resumed?}
-  static const lobby = 'lobby'; // {mode, players: [{id, name, ready, host}]}
-  static const matchStart = 'matchStart'; // {mode, you: world player id}
+  static const lobby =
+      'lobby'; // {mode, stage, players: [{id, name, ready, host, on}]}
+  static const matchStart =
+      'matchStart'; // {mode, you: world player id, stage?, name?, tip?}
   static const snapshot = 'snap'; // WorldSnapshot.toJson() fields
-  static const matchEnd = 'matchEnd'; // {winner?, cleared}
+  static const matchEnd = 'matchEnd'; // {winner?, cleared, stage?, next?}
   static const error = 'error'; // {m}
 }
 
@@ -56,12 +59,15 @@ Map<String, dynamic> inputToJson(PlayerInput input, {int seq = 0}) => {
       'd': input.direction.index,
       'b': input.placeBomb,
       'a': input.action,
+      if (input.ping != PingKind.none) 'g': input.ping.index,
     };
 
 PlayerInput inputFromJson(Map<String, dynamic> j) => PlayerInput(
       direction: Direction.values[(j['d'] as int?)?.clamp(0, 4) ?? 0],
       placeBomb: j['b'] == true,
       action: j['a'] == true,
+      ping: PingKind
+          .values[(j['g'] as int?)?.clamp(0, PingKind.values.length - 1) ?? 0],
     );
 
 /// One row of the lobby list as clients see it.
@@ -100,16 +106,26 @@ class LobbyPlayer {
 }
 
 class LobbyState {
-  const LobbyState({this.mode = GameMode.versus, this.players = const []});
+  const LobbyState({
+    this.mode = GameMode.versus,
+    this.players = const [],
+    this.stage = '1-1',
+  });
 
   final GameMode mode;
   final List<LobbyPlayer> players;
+
+  /// Co-op campaign stage the host picked, e.g. `1-4`.
+  final String stage;
+
+  StageDef get stageDef => Campaign.byId(stage) ?? Campaign.first;
 
   bool get everyoneReady =>
       players.isNotEmpty && players.every((p) => p.ready || p.isHost);
 
   static LobbyState fromJson(Map<String, dynamic> j) => LobbyState(
         mode: GameMode.parse(j['mode'] as String),
+        stage: j['stage'] as String? ?? '1-1',
         players: [
           for (final p in j['players'] as List)
             LobbyPlayer.fromJson(p as Map<String, dynamic>),

@@ -62,6 +62,14 @@ class RoomSession extends ChangeNotifier {
   int? get lastWinner => _client.lastWinner;
   bool get lastCleared => _client.lastCleared;
 
+  /// Co-op campaign: the stage picked in the lobby, and while playing the
+  /// stage's name and tip; after a clear, the stage that comes next.
+  String get lobbyStage => _client.lobby.stage;
+  String? get stageId => _client.stageId;
+  String? get stageName => _client.stageName;
+  String? get stageTip => _client.stageTip;
+  String? get nextStage => _client.nextStage;
+
   /// The local player as predicted on this device: it moves the moment the
   /// stick moves, then reconciles with the server.
   PlayerState? get me => _client.me;
@@ -203,6 +211,7 @@ class RoomSession extends ChangeNotifier {
 
   void setReady(bool ready) => _client.setReady(ready);
   void setMode(GameMode m) => _client.setMode(m);
+  void setStage(String id) => _client.setStage(id);
   void start() => _client.start();
   void sendInput(PlayerInput input) => _client.sendInput(input);
 

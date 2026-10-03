@@ -1,3 +1,4 @@
+import 'package:bombario_core/bombario_core.dart' show Campaign;
 import 'package:bombario_net/bombario_net.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -195,10 +196,39 @@ class _LobbyScreenState extends State<LobbyScreen> {
                                 : null,
                           ),
                           const SizedBox(height: 8),
+                          if (s.mode == GameMode.coop) ...[
+                            if (s.isHost)
+                              DropdownButton<String>(
+                                key: const Key('stage-picker'),
+                                isExpanded: true,
+                                value: s.lobbyStage,
+                                items: [
+                                  for (final st in Campaign.stages)
+                                    DropdownMenuItem(
+                                      value: st.id,
+                                      child: Text('${st.id}  ${st.name}'),
+                                    ),
+                                ],
+                                onChanged: (v) {
+                                  if (v != null) s.setStage(v);
+                                },
+                              )
+                            else
+                              Text(
+                                'Stage ${s.lobbyStage}  '
+                                '${Campaign.byId(s.lobbyStage)?.name ?? ''}',
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            const SizedBox(height: 4),
+                          ],
                           Text(
                             s.mode == GameMode.versus
                                 ? 'Last one standing wins. 2 to 4 players.'
-                                : 'Clear the enemies, then gather at the exit.',
+                                : 'Clear the enemies, then gather at the exit. '
+                                      'Fallen players become ghosts until a '
+                                      'teammate revives them.',
                             style: const TextStyle(
                               color: Colors.white54,
                               fontSize: 12,

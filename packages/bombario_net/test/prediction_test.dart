@@ -65,6 +65,30 @@ void main() {
     expect(p.body!.y, world.playerById(me)!.y);
   });
 
+  test('a ghost floats through bricks in prediction too', () {
+    world.grid.set(1, 2, TileType.brick);
+    final p = world.playerById(me)!
+      ..alive = false
+      ..ghost = true;
+    final pred = LocalPredictor();
+    pred.onSnapshot(snap(0), me);
+    for (var i = 0; i < 15; i++) {
+      pred.apply(const PlayerInput(direction: Direction.down));
+    }
+    expect(pred.body!.y, greaterThan(p.y + 1));
+  });
+
+  test('a frozen player does not move', () {
+    world.playerById(me)!.frozenFor = 1;
+    final pred = LocalPredictor();
+    pred.onSnapshot(snap(0), me);
+    final y = pred.body!.y;
+    for (var i = 0; i < 10; i++) {
+      pred.apply(const PlayerInput(direction: Direction.down));
+    }
+    expect(pred.body!.y, y);
+  });
+
   test('reset forgets everything', () {
     final p = LocalPredictor();
     p.onSnapshot(snap(0), me);
