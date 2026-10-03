@@ -25,22 +25,22 @@ class _GameScreenState extends State<GameScreen> {
         overlayBuilderMap: {
           Overlays.hud: (context, BlastGame game) => HudOverlay(game: game),
           Overlays.controls: (context, BlastGame game) =>
-              ControlsOverlay(game: game),
+              ControlsOverlay(input: game.input, hasRemote: game.hasRemote),
           Overlays.stageCleared: (context, BlastGame game) => _EndCard(
-                title: 'Stage ${game.stage} cleared!',
-                subtitle: 'Score ${game.player.score}',
-                buttonLabel: 'Next stage',
-                onPressed: game.nextStage,
-              ),
+            title: 'Stage ${game.stage} cleared!',
+            subtitle: 'Score ${game.player.score}',
+            buttonLabel: 'Next stage',
+            onPressed: game.nextStage,
+          ),
           Overlays.gameOver: (context, BlastGame game) => _EndCard(
-                title: 'Game over',
-                subtitle:
-                    'Reached stage ${game.stage} with ${game.player.score} points',
-                buttonLabel: 'Try again',
-                onPressed: game.restart,
-                secondaryLabel: 'Home',
-                onSecondary: () => Navigator.of(context).pop(),
-              ),
+            title: 'Game over',
+            subtitle:
+                'Reached stage ${game.stage} with ${game.player.score} points',
+            buttonLabel: 'Try again',
+            onPressed: game.restart,
+            secondaryLabel: 'Home',
+            onSecondary: () => Navigator.of(context).pop(),
+          ),
         },
       ),
     );
@@ -83,7 +83,9 @@ class _EndCard extends StatelessWidget {
                 children: [
                   if (secondaryLabel != null) ...[
                     OutlinedButton(
-                        onPressed: onSecondary, child: Text(secondaryLabel!)),
+                      onPressed: onSecondary,
+                      child: Text(secondaryLabel!),
+                    ),
                     const SizedBox(width: 12),
                   ],
                   FilledButton(onPressed: onPressed, child: Text(buttonLabel)),

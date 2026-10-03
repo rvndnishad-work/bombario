@@ -72,3 +72,9 @@ class StageCleared extends GameEvent {
 class StageFailed extends GameEvent {
   const StageFailed();
 }
+
+/// Versus round over. [winnerId] is -1 for a draw.
+class MatchEnded extends GameEvent {
+  const MatchEnded(this.winnerId);
+  final int winnerId;
+}
