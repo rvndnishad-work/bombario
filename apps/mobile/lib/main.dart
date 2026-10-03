@@ -1,6 +1,9 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import 'audio/game_audio.dart';
 import 'game/sprite_atlas.dart';
 import 'progress/achievements.dart';
 import 'settings/settings.dart';
@@ -20,6 +23,12 @@ Future<void> main() async {
     Achievements.load(),
     SpriteAtlas.load(),
   ).wait;
+  final audio = GameAudio.instance;
+  void applyVolumes() =>
+      audio.setVolumes(music: settings.musicVolume, sfx: settings.sfxVolume);
+  applyVolumes();
+  settings.addListener(applyVolumes);
+  unawaited(audio.preload().then((_) => audio.playMusic(0)));
   runApp(BombarioApp(settings: settings, achievements: achievements));
 }
 

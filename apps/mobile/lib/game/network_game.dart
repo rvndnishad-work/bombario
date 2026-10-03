@@ -1,13 +1,14 @@
 import 'dart:math' as math;
-import 'dart:ui' show Color;
 
 import 'package:bombario_core/bombario_core.dart' as core;
 import 'package:bombario_net/bombario_net.dart' show GameMode;
 import 'package:flame/components.dart';
 import 'package:flame/game.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 
 import '../net/room_session.dart';
+import '../audio/game_audio.dart';
 import '../progress/achievements.dart';
 import '../settings/settings.dart';
 import 'game_hud.dart';
@@ -123,7 +124,10 @@ class NetworkGame extends FlameGame {
       _lastAt = _clock;
       if (_last == null || snap.grid.width != _last!.grid.width) _fitCamera();
       // Any new flame tile means something exploded: shake a little.
-      if (snap.flames.length > _seenFlames) _shake = 0.15;
+      if (snap.flames.length > _seenFlames && settings.shake > 0) {
+        _shake = 0.15;
+      }
+      _sounds(_last, snap);
       _seenFlames = snap.flames.length;
       _last = snap;
       final me = session.myPlayerId == null
@@ -147,7 +151,10 @@ class NetworkGame extends FlameGame {
     while (_accumulator >= core.World.tickDt) {
       _accumulator -= core.World.tickDt;
       final sent = input.consume();
-      if (sent.placeBomb) achievements.recordRoomBomb();
+      if (sent.placeBomb) {
+        achievements.recordRoomBomb();
+        _myBombAt = _clock;
+      }
       session.sendInput(sent);
     }
 
@@ -225,6 +232,45 @@ class NetworkGame extends FlameGame {
   }
 
   core.PlayerState? _meBefore;
+  double _myBombAt = -1;
+  bool _hurry = false;
+  bool _musicStarted = false;
+
+  /// Room play only sees snapshots, so sounds come from what changed.
+  void _sounds(core.WorldSnapshot? before, core.WorldSnapshot now) {
+    final audio = GameAudio.instance;
+    final world = int.tryParse((session.stageId ?? '1').split('-').first) ?? 1;
+    if (!_musicStarted) {
+      _musicStarted = true;
+      audio.playMusic(world);
+    }
+    if (!_hurry && now.timeLeft <= 30 && now.timeLeft > 0) {
+      _hurry = true;
+      audio.playMusic(world, hurry: true);
+    }
+    if (before == null) return;
+    if (now.bombs.length > before.bombs.length) {
+      // Ours if we pressed Bomb just before this snapshot.
+      audio.play(_clock - _myBombAt < 0.4 ? Sfx.bombPlace : Sfx.bombPlaceOther);
+    }
+    if (now.flames.length > before.flames.length) audio.play(Sfx.explode);
+    if (now.pings.length > before.pings.length) audio.play(Sfx.ping);
+    final id = session.myPlayerId;
+    final was = id == null ? null : before.player(id);
+    final me = id == null ? null : now.player(id);
+    if (was != null && me != null) {
+      if (!was.ghost && me.ghost) audio.play(Sfx.ghost);
+      if (was.alive && !me.alive && !me.ghost) audio.play(Sfx.death);
+      if (was.ghost && me.alive) audio.play(Sfx.revive);
+      if (me.alive &&
+          (me.maxBombs > was.maxBombs ||
+              me.fireRange > was.fireRange ||
+              me.speed > was.speed)) {
+        audio.play(Sfx.pickup);
+        if (settings.haptics) HapticFeedback.selectionClick();
+      }
+    }
+  }
 
   void _unlocked(List<AchievementDef> unlocked) {
     for (final a in unlocked) {
@@ -241,6 +287,13 @@ class NetworkGame extends FlameGame {
 
   /// Called once when the match ends.
   void recordResult() {
+    GameAudio.instance
+      ..stopMusic()
+      ..play(
+        session.lastCleared || session.lastWinner == session.myPlayerId
+            ? Sfx.stageClear
+            : Sfx.gameOver,
+      );
     final stage = session.stageId;
     if (session.lastCleared && stage != null) {
       _unlocked(achievements.recordStageCleared(stage));

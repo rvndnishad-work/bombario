@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 
 import '../game/network_game.dart';
 import '../net/room_session.dart';
+import '../audio/game_audio.dart';
 import '../progress/achievements.dart';
 import '../settings/settings.dart';
 import 'controls_overlay.dart';
@@ -48,6 +49,7 @@ class _NetworkGameScreenState extends State<NetworkGameScreen> {
 
   @override
   void dispose() {
+    GameAudio.instance.playMusic(0);
     widget.session.removeListener(_onSession);
     super.dispose();
   }

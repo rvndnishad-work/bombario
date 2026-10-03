@@ -1,11 +1,12 @@
 import 'dart:math' as math;
-import 'dart:ui' show Color;
 
 import 'package:bombario_core/bombario_core.dart' as core;
 import 'package:flame/components.dart';
 import 'package:flame/game.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 
+import '../audio/game_audio.dart';
 import '../progress/achievements.dart';
 import '../settings/settings.dart';
 import 'game_hud.dart';
@@ -65,6 +66,7 @@ class BlastGame extends FlameGame {
   double _respawnTimer = 0;
   double _hudTimer = 0;
   double _shake = 0;
+  bool _hurry = false;
   final math.Random _shakeRng = math.Random();
 
   @override
@@ -99,6 +101,8 @@ class BlastGame extends FlameGame {
       );
     player = sim.addPlayer(name: 'You');
     achievements.startStage();
+    _hurry = false;
+    GameAudio.instance.playMusic(def.world);
     _hasPlayer = true;
     carryOver?.call(player);
 
@@ -206,7 +210,10 @@ class BlastGame extends FlameGame {
         if (lives > 0) {
           sim.respawn(player);
           sim.clearFailure();
-        } else {
+        } else if (!overlays.isActive(Overlays.gameOver)) {
+          GameAudio.instance
+            ..stopMusic()
+            ..play(Sfx.gameOver);
           overlays.add(Overlays.gameOver);
         }
       }
@@ -216,6 +223,10 @@ class BlastGame extends FlameGame {
     _followPlayer();
 
     messages.tick(dt);
+    if (!_hurry && sim.timeLeft <= 30 && sim.timeLeft > 0) {
+      _hurry = true;
+      GameAudio.instance.playMusic(stage.world, hurry: true);
+    }
     _hudTimer += dt;
     if (_hudTimer >= 0.1) {
       _hudTimer = 0;
@@ -223,14 +234,41 @@ class BlastGame extends FlameGame {
     }
   }
 
+  void _buzz(Future<void> Function() f) {
+    if (settings.haptics) f();
+  }
+
   void _handleEvents() {
+    final audio = GameAudio.instance;
     for (final event in sim.events) {
       switch (event) {
-        case core.BombExploded():
+        case core.BombPlaced(:final bomb):
+          audio.play(
+            bomb.ownerId == player.id ? Sfx.bombPlace : Sfx.bombPlaceOther,
+          );
+        case core.ItemPicked(:final playerId) when playerId == player.id:
+          audio.play(Sfx.pickup);
+          _buzz(HapticFeedback.selectionClick);
+        case core.BombKicked():
+          audio.play(Sfx.kick);
+        case core.EnemyFrozen() || core.PlayerFrozen():
+          audio.play(Sfx.freeze);
+        case core.BossDamaged():
+          audio.play(Sfx.bossHit);
+        default:
+          break;
+      }
+      switch (event) {
+        case core.BombExploded(:final x, :final y):
           _shake = 0.15;
+          final near = (player.x - x).abs() + (player.y - y).abs() < 6;
+          audio.play(near ? Sfx.explode : Sfx.explodeFar);
+          if (near) _buzz(HapticFeedback.heavyImpact);
         case core.PlayerDied():
           lives--;
           _shake = 0.3;
+          audio.play(Sfx.death);
+          _buzz(HapticFeedback.vibrate);
           messages.show(
             GameMessage(
               title: lives > 0 ? 'Ouch!' : 'Out of lives',
@@ -245,6 +283,7 @@ class BlastGame extends FlameGame {
           );
         case core.ExitBombed():
           _shake = 0.4;
+          audio.play(Sfx.exitAngry);
           messages.show(
             GameMessage(
               title: 'The exit is angry!',
@@ -254,6 +293,9 @@ class BlastGame extends FlameGame {
             ),
           );
         case core.StageCleared():
+          audio
+            ..stopMusic()
+            ..play(Sfx.stageClear);
           overlays.add(Overlays.stageCleared);
         case core.StageFailed():
           break; // handled by the respawn timer

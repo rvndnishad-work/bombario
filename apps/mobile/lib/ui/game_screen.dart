@@ -3,6 +3,7 @@ import 'package:flame/game.dart';
 import 'package:flutter/material.dart';
 
 import '../game/blast_game.dart';
+import '../audio/game_audio.dart';
 import '../progress/achievements.dart';
 import '../settings/settings.dart';
 import 'controls_overlay.dart';
@@ -28,6 +29,12 @@ class _GameScreenState extends State<GameScreen> {
 
   @visibleForTesting
   BlastGame get game => _game;
+
+  @override
+  void dispose() {
+    GameAudio.instance.playMusic(0);
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
