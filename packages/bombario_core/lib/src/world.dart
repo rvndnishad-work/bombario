@@ -530,8 +530,16 @@ class World {
         _tickPipe(p, dt);
         continue;
       }
-      p.onPipe = grid.featureAt(p.tileX, p.tileY) == TileFeature.pipe;
-      if (input.action && p.frozenFor <= 0 && _enterPipe(p)) continue;
+      final pipe = _pipeInFront(p);
+      p.onPipe = pipe != null;
+      if (pipe != null &&
+          p.frozenFor <= 0 &&
+          (input.action ||
+              input.direction ==
+                  grid.featureAt(pipe.x, pipe.y).pipeMouth.opposite) &&
+          _enterPipe(p, pipe)) {
+        continue;
+      }
       if (p.frozenFor > 0) {
         p.frozenFor = max(0, p.frozenFor - dt);
         p.moveDir = Direction.none;
@@ -616,7 +624,7 @@ class World {
     final t = grid.at(x, y);
     if (t == TileType.pillar) return true;
     if (p.ghost) return false; // ghosts float through everything else
-    if (chestAt(x, y)) return true;
+    if (chestAt(x, y) || grid.isPipe(x, y)) return true;
     if (t == TileType.pit) return true;
     if (t == TileType.brick && !p.wallPass) return true;
     if (!p.bombPass) {
@@ -690,46 +698,82 @@ class World {
     events.add(GatesOpened(plate.x, plate.y));
   }
 
-  /// Action on a warp pipe: sink in, heading for a random other pipe that
-  /// is clear. False when there is nowhere to go.
-  bool _enterPipe(Player p) {
-    if (!p.onPipe) return false;
-    final from = p.tile;
+  /// The pipe whose mouth [p] stands at, lined up enough to walk in.
+  GridPos? _pipeInFront(Player p) {
+    final pipe = grid.pipeOpeningOnto(p.tile);
+    if (pipe == null) return null;
+    final mouth = grid.featureAt(pipe.x, pipe.y).pipeMouth;
+    // Off-centre across the mouth means you'd brush past it, not go in.
+    final across = mouth.dx != 0 ? p.y - p.tileY - 0.5 : p.x - p.tileX - 0.5;
+    return across.abs() <= 0.3 ? pipe : null;
+  }
+
+  /// Walking into a pipe's mouth (or Action at it): slide in, heading for a
+  /// random other pipe whose mouth is clear. False when there is nowhere
+  /// to go.
+  bool _enterPipe(Player p, GridPos from) {
     final exits = [
       for (final t in grid.pipes)
-        if (t != from &&
-            bombAt(t.x, t.y) == null &&
-            !enemies.any((e) => e.alive && e.tile == t))
-          t,
+        if (t != from && _pipeExitClear(grid.pipeFront(t))) t,
     ];
     if (exits.isEmpty) return false;
     final to = exits[_rng.nextInt(exits.length)];
     p
       ..pipeFor = pipeTotal
+      ..pipeFrom = from
       ..pipeTo = to
+      ..pipeStartX = p.x
+      ..pipeStartY = p.y
       ..moveDir = Direction.none
       ..momentum = Direction.none
+      ..facing = grid.featureAt(from.x, from.y).pipeMouth.opposite
       ..onPipe = false;
-    // Line up with the pipe so the sink looks right.
-    p.setPosition(from.x + 0.5, from.y + 0.5);
     events.add(PipeEntered(p.id, from.x, from.y, to.x, to.y));
     return true;
   }
 
+  bool _pipeExitClear(GridPos front) =>
+      grid.isWalkable(front.x, front.y) &&
+      bombAt(front.x, front.y) == null &&
+      !enemies.any((e) => e.alive && e.tile == front);
+
+  /// Slides the player into the pipe they entered, then (after the unseen
+  /// trip) out of the exit pipe's mouth onto the tile in front of it.
   void _tickPipe(Player p, double dt) {
-    final before = p.pipeFor;
+    final before = pipeTotal - p.pipeFor;
     p.pipeFor = max(0, p.pipeFor - dt);
-    // Halfway through the unseen travel, move to the exit pipe.
-    const swap = pipeRise + pipeTravel / 2;
-    final to = p.pipeTo;
-    if (before > swap && p.pipeFor <= swap && to != null) {
-      p.setPosition(to.x + 0.5, to.y + 0.5);
-      p.lastTile = to;
-      events.add(PipeExited(p.id, to.x, to.y));
+    final t = pipeTotal - p.pipeFor;
+    final from = p.pipeFrom, to = p.pipeTo;
+    // A predicting client doesn't know the pipes; it just waits.
+    if (from == null || to == null) return;
+    void lerp(GridPos a, GridPos b, double k) => p.setPosition(
+          a.x + 0.5 + (b.x - a.x) * k,
+          a.y + 0.5 + (b.y - a.y) * k,
+        );
+    const riseAt = pipeSink + pipeTravel;
+    if (t < pipeSink) {
+      // From where you stood at the mouth, into the pipe.
+      final k = t / pipeSink;
+      p.setPosition(
+        p.pipeStartX + (from.x + 0.5 - p.pipeStartX) * k,
+        p.pipeStartY + (from.y + 0.5 - p.pipeStartY) * k,
+      );
+    } else if (t < riseAt) {
+      lerp(to, to, 0); // unseen, waiting inside the exit pipe
+    } else {
+      if (before < riseAt) {
+        p.facing = grid.featureAt(to.x, to.y).pipeMouth;
+        events.add(PipeExited(p.id, to.x, to.y));
+      }
+      lerp(to, grid.pipeFront(to), min(1, (t - riseAt) / pipeRise));
     }
     if (p.pipeFor == 0) {
-      p.pipeTo = null;
-      p.onPipe = true;
+      final out = grid.pipeFront(to);
+      p
+        ..pipeFrom = null
+        ..pipeTo = null
+        ..lastTile = out
+        ..onPipe = false;
     }
   }
 
@@ -919,7 +963,9 @@ class World {
   /// Can a sliding bomb move onto this tile?
   bool _bombCanEnter(int x, int y) {
     if (!grid.isWalkable(x, y)) return false;
-    if (bombAt(x, y) != null || chestAt(x, y)) return false;
+    if (bombAt(x, y) != null || chestAt(x, y) || grid.isPipe(x, y)) {
+      return false;
+    }
     for (final e in enemies) {
       if (e.alive && e.solid && e.tile == GridPos(x, y)) return false;
     }
@@ -999,7 +1045,7 @@ class World {
         final x = bomb.x + dir.dx * r;
         final y = bomb.y + dir.dy * r;
         final tile = grid.at(x, y);
-        if (tile == TileType.pillar) break;
+        if (tile == TileType.pillar || grid.isPipe(x, y)) break;
         if (tile == TileType.brick) {
           // Frost freezes; it doesn't break bricks.
           if (!frost) _destroyBrick(x, y, bomb.ownerId);
@@ -1369,7 +1415,9 @@ class World {
     final t = grid.at(x, y);
     if (t == TileType.pillar || t == TileType.pit) return false;
     if (t == TileType.brick && !e.kind.wallPass) return false;
-    if (bombAt(x, y) != null || chestAt(x, y)) return false;
+    if (bombAt(x, y) != null || chestAt(x, y) || grid.isPipe(x, y)) {
+      return false;
+    }
     return true;
   }
 

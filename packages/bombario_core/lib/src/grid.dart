@@ -49,9 +49,32 @@ enum TileFeature {
   /// Players keep sliding on ice until they hit something (World 5).
   ice,
 
-  /// Warp pipe: press Action on it to sink in and pop out of another pipe,
-  /// picked at random (after Mario's warp pipes).
-  pipe;
+  /// Warp pipes (after Mario's), named for the way the mouth faces. A pipe
+  /// juts out of the wall behind it and is solid; walk into its mouth to
+  /// go in, and you slide out of another pipe's mouth, picked at random.
+  pipeUp,
+  pipeDown,
+  pipeLeft,
+  pipeRight;
+
+  bool get isPipe => pipeMouth != Direction.none;
+
+  /// The way a pipe's mouth faces, and the way you walk out of it.
+  Direction get pipeMouth => switch (this) {
+        pipeUp => Direction.up,
+        pipeDown => Direction.down,
+        pipeLeft => Direction.left,
+        pipeRight => Direction.right,
+        _ => Direction.none,
+      };
+
+  static TileFeature pipeFacing(Direction mouth) => switch (mouth) {
+        Direction.up => pipeUp,
+        Direction.down => pipeDown,
+        Direction.left => pipeLeft,
+        Direction.right => pipeRight,
+        Direction.none => none,
+      };
 
   /// The way a conveyor runs, [Direction.none] for anything else.
   Direction get conveyor => switch (this) {
@@ -122,8 +145,26 @@ class Grid {
   /// Warp pipes in reading order.
   List<GridPos> get pipes => [
         for (final p in positions)
-          if (featureAt(p.x, p.y) == TileFeature.pipe) p,
+          if (featureAt(p.x, p.y).isPipe) p,
       ];
+
+  bool isPipe(int x, int y) => featureAt(x, y).isPipe;
+
+  /// The tile in front of the pipe at [pipe]'s mouth: where you stand to go
+  /// in and where you come out.
+  GridPos pipeFront(GridPos pipe) {
+    final d = featureAt(pipe.x, pipe.y).pipeMouth;
+    return pipe.step(d.dx, d.dy);
+  }
+
+  /// The pipe whose mouth opens onto [front], or null.
+  GridPos? pipeOpeningOnto(GridPos front) {
+    for (final d in Direction.cardinal) {
+      final n = front.step(d.dx, d.dy);
+      if (featureAt(n.x, n.y).pipeMouth == d.opposite) return n;
+    }
+    return null;
+  }
 
   /// The partner of the warp door at [at], or null.
   GridPos? warpPartner(GridPos at) {

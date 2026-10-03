@@ -131,10 +131,11 @@ void main() {
         );
         final p = w.addPlayer();
         w.treasure?.hp = 2;
-        // A player half sunk into the first pipe.
+        // A player half way into the first pipe.
         final pipes = w.grid.pipes;
         if (pipes.isNotEmpty) {
-          p.setPosition(pipes.first.x + 0.5, pipes.first.y + 0.5);
+          final front = w.grid.pipeFront(pipes.first);
+          p.setPosition(front.x + 0.5, front.y + 0.5);
           w.enemies.clear();
           w.tick(const {});
           w.tick({p.id: const PlayerInput(action: true)});

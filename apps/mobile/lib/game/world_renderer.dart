@@ -91,7 +91,10 @@ class WorldRenderer extends PositionComponent {
     core.TileFeature.warp => 'warp',
     core.TileFeature.ice => 'ice',
     // Pipes are drawn by hand; see _drawPipe.
-    core.TileFeature.pipe => null,
+    core.TileFeature.pipeUp ||
+    core.TileFeature.pipeDown ||
+    core.TileFeature.pipeLeft ||
+    core.TileFeature.pipeRight => null,
     // Gates and possessed bricks change the tile itself; see _drawTiles.
     core.TileFeature.gate || core.TileFeature.possessed => null,
     core.TileFeature.none => null,
@@ -270,7 +273,7 @@ class WorldRenderer extends PositionComponent {
               ? 'vent-warn'
               : featureSprite(feature);
           if (name != null) atlas.draw(canvas, name, r);
-          if (feature == core.TileFeature.pipe) _drawPipe(canvas, r);
+          if (feature.isPipe) _drawPipe(canvas, r, feature.pipeMouth);
         }
       }
     }
@@ -297,8 +300,19 @@ class WorldRenderer extends PositionComponent {
 
   /// A warp pipe standing on its tile: a wide lip on a narrower body, both
   /// shaded like a shiny round tube, with the dark mouth on top.
-  void _drawPipe(Canvas canvas, Rect r) {
+  void _drawPipe(Canvas canvas, Rect r, core.Direction facing) {
     final t = tileSize;
+    // Drawn upright (mouth up, base on the wall below), then turned so the
+    // base sits on its wall and the mouth faces into the map.
+    canvas.save();
+    canvas.translate(r.center.dx, r.center.dy);
+    canvas.rotate(switch (facing) {
+      core.Direction.right => math.pi / 2,
+      core.Direction.down => math.pi,
+      core.Direction.left => -math.pi / 2,
+      _ => 0,
+    });
+    canvas.translate(-r.center.dx, -r.center.dy);
     final outline = Paint()
       ..style = PaintingStyle.stroke
       ..strokeWidth = t * 0.045
@@ -344,6 +358,7 @@ class WorldRenderer extends PositionComponent {
       Paint()..color = const Color(0xFF0B3D14),
     );
     canvas.drawOval(mouth, Paint()..color = const Color(0xFF041208));
+    canvas.restore();
   }
 
   /// The pipe's wide top band.
@@ -364,27 +379,53 @@ class WorldRenderer extends PositionComponent {
     );
   }
 
-  /// 0 to 1: how far up onto a pipe a player at (x, y) has stepped; 1 at
-  /// the pipe's centre, 0 at its edge or off it.
-  double _pipeLift(core.WorldSnapshot sim, double x, double y) {
-    final tx = x.floor(), ty = y.floor();
-    if (sim.grid.featureAt(tx, ty) != core.TileFeature.pipe) return 0;
-    final d = math.max((x - tx - 0.5).abs(), (y - ty - 0.5).abs());
-    return (1 - d / 0.5).clamp(0.0, 1.0);
+  /// The part of the board a player sliding through the pipe at [pipe]
+  /// shows in: everything outside the pipe past the middle of its mouth.
+  Rect pipeWindow(core.WorldSnapshot sim, core.GridPos pipe) {
+    final r = _tileRect(pipe.x, pipe.y);
+    final t = tileSize;
+    final far = t * 4;
+    final edge = t * 0.24;
+    return switch (sim.grid.featureAt(pipe.x, pipe.y).pipeMouth) {
+      core.Direction.up => Rect.fromLTRB(
+        r.left - far,
+        r.top - far,
+        r.right + far,
+        r.top + edge,
+      ),
+      core.Direction.down => Rect.fromLTRB(
+        r.left - far,
+        r.bottom - edge,
+        r.right + far,
+        r.bottom + far,
+      ),
+      core.Direction.left => Rect.fromLTRB(
+        r.left - far,
+        r.top - far,
+        r.left + edge,
+        r.bottom + far,
+      ),
+      _ => Rect.fromLTRB(
+        r.right - edge,
+        r.top - far,
+        r.right + far,
+        r.bottom + far,
+      ),
+    };
   }
 
-  /// How deep a player is in a pipe, 0 (out) to 1 (gone), from the trip's
-  /// progress: sink, travel unseen, rise.
-  static double pipeDepth(double progress) {
-    if (progress <= 0) return 0;
+  /// The pipe a player in the middle of a trip is sliding through, or
+  /// null while they travel unseen between pipes.
+  static core.GridPos? pipeOf(core.WorldSnapshot sim, core.PlayerState p) {
     const total = core.World.pipeTotal;
-    final t = progress * total;
-    if (t < core.World.pipeSink) return t / core.World.pipeSink;
-    if (t < core.World.pipeSink + core.World.pipeTravel) return 1;
-    return (1 -
-            (t - core.World.pipeSink - core.World.pipeTravel) /
-                core.World.pipeRise)
-        .clamp(0.0, 1.0);
+    final t = p.pipe * total;
+    if (t >= core.World.pipeSink &&
+        t < core.World.pipeSink + core.World.pipeTravel) {
+      return null;
+    }
+    final tile = core.GridPos(p.x.floor(), p.y.floor());
+    if (sim.grid.isPipe(tile.x, tile.y)) return tile;
+    return sim.grid.pipeOpeningOnto(tile);
   }
 
   void _drawRegrowing(Canvas canvas, core.WorldSnapshot sim) {
@@ -896,17 +937,12 @@ class WorldRenderer extends PositionComponent {
         continue;
       }
 
-      final depth = pipeDepth(p.pipe);
-      if (depth >= 1) continue; // travelling through the pipe
-      // On a pipe you stand on its mouth, like Mario: the body lifts as
-      // you step up onto it.
-      final onPipe = _pipeLift(sim, p.x, p.y);
-      final pipeTile = _tileRect(p.x.floor(), p.y.floor());
-      final standY =
-          pipeMouth(pipeTile).center.dy - (centre.dy + tileSize * 0.34);
-      centre += Offset(0, standY * (depth > 0 ? 1 : onPipe));
+      // Mid pipe trip: drawn only where it pokes out of the mouth, and not
+      // at all while travelling between pipes.
+      final pipe = p.pipe > 0 ? pipeOf(sim, p) : null;
+      if (p.pipe > 0 && pipe == null) continue;
       final blink = p.invincible && (_time * 12).floor().isEven;
-      final pose = p.frozen || depth > 0 ? (moving: false, step: 0) : _pose(p);
+      final pose = p.frozen ? (moving: false, step: 0) : _pose(p);
       // The body lifts a pixel on each stride, so the walk has a bounce.
       final lift = pose.step.isOdd ? tileSize / 16 : 0.0;
       final body = _square(
@@ -922,19 +958,7 @@ class WorldRenderer extends PositionComponent {
       };
       final paint = blink ? SpriteAtlas.faded(0.35) : null;
       canvas.save();
-      if (depth > 0) {
-        // Sinking into (or rising out of) a pipe: slide down past the
-        // mouth's front edge.
-        canvas.clipRect(
-          Rect.fromLTRB(
-            pipeTile.left - tileSize,
-            pipeTile.top - tileSize * 3,
-            pipeTile.right + tileSize,
-            pipeMouth(pipeTile).center.dy,
-          ),
-        );
-        canvas.translate(0, depth * tileSize * 0.95);
-      }
+      if (pipe != null) canvas.clipRect(pipeWindow(sim, pipe));
       if (facing == core.Direction.left) {
         canvas.translate(body.center.dx, body.center.dy);
         canvas.scale(-1, 1);
@@ -950,7 +974,7 @@ class WorldRenderer extends PositionComponent {
       final hat = Cosmetics.spriteFor(p.skin);
       if (hat != null) atlas.draw(canvas, hat, body, paint: paint);
       canvas.restore();
-      if (depth > 0) continue;
+      if (pipe != null) continue;
       if (p.frozen) canvas.drawRect(body.deflate(2), _iceOverlay);
       if (p.cursedFor > 0) {
         // Reversed controls: an orb circles the cursed player's head.

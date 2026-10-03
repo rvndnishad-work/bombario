@@ -125,10 +125,13 @@ class Player extends Entity {
   /// player can't act or be hurt meanwhile.
   double pipeFor = 0;
 
-  /// Where the current pipe trip comes out.
+  /// The pipe the current trip went into, and the one it comes out of.
+  GridPos? pipeFrom;
   GridPos? pipeTo;
+  double pipeStartX = 0;
+  double pipeStartY = 0;
 
-  /// Standing on a warp pipe, so Action enters it.
+  /// Standing at a warp pipe's mouth, so walking in (or Action) enters it.
   bool onPipe = false;
 
   bool get inPipe => pipeFor > 0;
