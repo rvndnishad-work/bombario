@@ -425,6 +425,8 @@ class BlastGame extends FlameGame {
           );
         case core.BombKicked():
           audio.play(Sfx.kick);
+        case core.PipeEntered() || core.PipeExited():
+          audio.play(Sfx.pipe);
         case core.EnemyFrozen() || core.PlayerFrozen():
           audio.play(Sfx.freeze);
         case core.BossDamaged():

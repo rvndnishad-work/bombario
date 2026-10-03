@@ -121,6 +121,18 @@ class Player extends Entity {
 
   bool get invincible => invincibleFor > 0;
 
+  /// Seconds left of a trip through a warp pipe (sink, travel, rise); the
+  /// player can't act or be hurt meanwhile.
+  double pipeFor = 0;
+
+  /// Where the current pipe trip comes out.
+  GridPos? pipeTo;
+
+  /// Standing on a warp pipe, so Action enters it.
+  bool onPipe = false;
+
+  bool get inPipe => pipeFor > 0;
+
   /// Admin cheat: nothing can kill or hurt this player.
   bool godMode = false;
 

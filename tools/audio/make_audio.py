@@ -290,6 +290,10 @@ def make_sfx():
         notes_seq([(84, 0.08), (88, 0.08), (96, 0.3)], kind="tri", vol=0.9, decay=0.2),
         notes_seq([(84, 0.08), (88, 0.08), (96, 0.3)], duty=0.125, vol=0.25, decay=0.15),
     ), 0.7)
+    # Pipe: three quick falling blips, like sliding down a warp pipe.
+    blip = sweep(0.07, 700, 180, duty=0.5, vol=0.8, curve=1.5)
+    gap = [0.0] * int(SR * 0.03)
+    s["pipe"] = (blip + gap + blip + gap + blip, 0.6)
     for name, (samples, peak) in s.items():
         write_wav(name, samples, peak)
     return list(s)

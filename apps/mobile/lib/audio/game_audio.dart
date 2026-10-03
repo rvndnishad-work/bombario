@@ -27,6 +27,7 @@ enum Sfx {
   stepV,
   stageStart,
   exitOpen,
+  pipe,
 }
 
 /// Small audio facade over flame_audio. Every call is fire-and-forget safe:

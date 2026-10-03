@@ -47,7 +47,11 @@ enum TileFeature {
   warp,
 
   /// Players keep sliding on ice until they hit something (World 5).
-  ice;
+  ice,
+
+  /// Warp pipe: press Action on it to sink in and pop out of another pipe,
+  /// picked at random (after Mario's warp pipes).
+  pipe;
 
   /// The way a conveyor runs, [Direction.none] for anything else.
   Direction get conveyor => switch (this) {
@@ -113,6 +117,12 @@ class Grid {
   List<GridPos> get warps => [
         for (final p in positions)
           if (featureAt(p.x, p.y) == TileFeature.warp) p,
+      ];
+
+  /// Warp pipes in reading order.
+  List<GridPos> get pipes => [
+        for (final p in positions)
+          if (featureAt(p.x, p.y) == TileFeature.pipe) p,
       ];
 
   /// The partner of the warp door at [at], or null.

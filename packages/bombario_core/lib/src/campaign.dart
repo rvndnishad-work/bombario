@@ -37,6 +37,7 @@ class StageDef {
     this.cannons = 0,
     this.big = false,
     this.theme,
+    this.pipes,
   });
 
   /// "world-stage", e.g. `1-4`.
@@ -88,6 +89,9 @@ class StageDef {
   /// Seconds between cannon shots, 0 for none.
   final double cannons;
 
+  /// Warp pipes on the stage; null picks by world (see [pipeCount]).
+  final int? pipes;
+
   /// Always the large 41 × 17 field, whatever the team size.
   final bool big;
 
@@ -109,6 +113,18 @@ class StageDef {
     final n = campaignNumber;
     if (n == 0 || n % 5 != 0) return null;
     return StageExtra.values[(n ~/ 5 - 1) % StageExtra.values.length];
+  }
+
+  /// Warp pipes: none on the first two stages, bonus and boss stages; then
+  /// two in World 1, three in World 2 and four from World 3 on.
+  int get pipeCount {
+    if (pipes case final n?) return n;
+    if (isBoss || bonus || campaignNumber < 3) return 0;
+    return switch (world) {
+      1 => 2,
+      2 => 3,
+      _ => 4,
+    };
   }
 
   /// The mini-boss for each world: a regular enemy, bigger and tougher.
@@ -143,7 +159,10 @@ class StageDef {
       (hp * (1 + 0.6 * (max(1, players) - 1))).round();
 
   /// Builds the stage for [players] players.
-  LevelData level({required int seed, required int players}) {
+  LevelData level({required int seed, required int players}) =>
+      _build(seed, players)..addPipes(pipeCount, seed: seed ^ 0x9e37);
+
+  LevelData _build(int seed, int players) {
     final n = players.clamp(1, 4);
     final b = boss;
     if (b != null) return _bossArena(b, seed, n);

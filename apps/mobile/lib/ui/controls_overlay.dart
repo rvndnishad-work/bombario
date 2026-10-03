@@ -47,6 +47,7 @@ class ControlsOverlay extends StatefulWidget {
     'detonate' => 'Detonate',
     'tether' => 'Tether',
     'haunt' => 'Haunt',
+    'pipe' => 'Pipe',
     _ => 'Action',
   };
 
@@ -227,15 +228,22 @@ class _ControlsOverlayState extends State<ControlsOverlay> {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    SpriteIcon(
-                      label == 'haunt'
-                          ? 'spirit'
-                          : label == 'tether'
-                          ? 'icon-tether'
-                          : 'remote',
-                      size: 24 * s,
-                      opacity: 0.9 * o,
-                    ),
+                    if (label == 'pipe')
+                      Icon(
+                        Icons.south,
+                        size: 24 * s,
+                        color: Px.paper.withValues(alpha: 0.9 * o),
+                      )
+                    else
+                      SpriteIcon(
+                        label == 'haunt'
+                            ? 'spirit'
+                            : label == 'tether'
+                            ? 'icon-tether'
+                            : 'remote',
+                        size: 24 * s,
+                        opacity: 0.9 * o,
+                      ),
                     Text(
                       ControlsOverlay.actionText(label).toUpperCase(),
                       style: Px.label(

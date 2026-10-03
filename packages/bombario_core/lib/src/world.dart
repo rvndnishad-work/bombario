@@ -310,6 +310,12 @@ class World {
   static const double regrowSeconds = 20;
   static const double windCalm = 2;
   static const double warpCooldown = 1;
+
+  /// A pipe trip: sink in, travel unseen, rise out (seconds).
+  static const double pipeSink = 0.45;
+  static const double pipeTravel = 0.3;
+  static const double pipeRise = 0.45;
+  static const double pipeTotal = pipeSink + pipeTravel + pipeRise;
   static const double curseSeconds = 10;
   static const double herdRange = 3;
   static const double herdBoost = 1.3;
@@ -520,6 +526,12 @@ class World {
         continue;
       }
       if (!p.alive) continue;
+      if (p.inPipe) {
+        _tickPipe(p, dt);
+        continue;
+      }
+      p.onPipe = grid.featureAt(p.tileX, p.tileY) == TileFeature.pipe;
+      if (input.action && p.frozenFor <= 0 && _enterPipe(p)) continue;
       if (p.frozenFor > 0) {
         p.frozenFor = max(0, p.frozenFor - dt);
         p.moveDir = Direction.none;
@@ -676,6 +688,49 @@ class World {
       }
     }
     events.add(GatesOpened(plate.x, plate.y));
+  }
+
+  /// Action on a warp pipe: sink in, heading for a random other pipe that
+  /// is clear. False when there is nowhere to go.
+  bool _enterPipe(Player p) {
+    if (!p.onPipe) return false;
+    final from = p.tile;
+    final exits = [
+      for (final t in grid.pipes)
+        if (t != from &&
+            bombAt(t.x, t.y) == null &&
+            !enemies.any((e) => e.alive && e.tile == t))
+          t,
+    ];
+    if (exits.isEmpty) return false;
+    final to = exits[_rng.nextInt(exits.length)];
+    p
+      ..pipeFor = pipeTotal
+      ..pipeTo = to
+      ..moveDir = Direction.none
+      ..momentum = Direction.none
+      ..onPipe = false;
+    // Line up with the pipe so the sink looks right.
+    p.setPosition(from.x + 0.5, from.y + 0.5);
+    events.add(PipeEntered(p.id, from.x, from.y, to.x, to.y));
+    return true;
+  }
+
+  void _tickPipe(Player p, double dt) {
+    final before = p.pipeFor;
+    p.pipeFor = max(0, p.pipeFor - dt);
+    // Halfway through the unseen travel, move to the exit pipe.
+    const swap = pipeRise + pipeTravel / 2;
+    final to = p.pipeTo;
+    if (before > swap && p.pipeFor <= swap && to != null) {
+      p.setPosition(to.x + 0.5, to.y + 0.5);
+      p.lastTile = to;
+      events.add(PipeExited(p.id, to.x, to.y));
+    }
+    if (p.pipeFor == 0) {
+      p.pipeTo = null;
+      p.onPipe = true;
+    }
   }
 
   /// Warp doors carry a player to the partner door.
@@ -1167,7 +1222,7 @@ class World {
 
   /// A hit that a Heart can absorb.
   void _hurtPlayer(Player p, int killerId) {
-    if (p.godMode) return;
+    if (p.godMode || p.inPipe) return;
     _failChallenge();
     if (p.hearts > 0) {
       p.hearts--;
@@ -1179,7 +1234,7 @@ class World {
   }
 
   void _killPlayer(Player p, int killerId) {
-    if (p.godMode) return;
+    if (p.godMode || p.inPipe) return;
     _failChallenge();
     p.alive = false;
     p.frozenFor = 0;

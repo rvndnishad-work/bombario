@@ -90,6 +90,8 @@ class WorldRenderer extends PositionComponent {
     core.TileFeature.plate => 'plate',
     core.TileFeature.warp => 'warp',
     core.TileFeature.ice => 'ice',
+    // Pipes are drawn by hand; see _drawPipe.
+    core.TileFeature.pipe => null,
     // Gates and possessed bricks change the tile itself; see _drawTiles.
     core.TileFeature.gate || core.TileFeature.possessed => null,
     core.TileFeature.none => null,
@@ -268,9 +270,67 @@ class WorldRenderer extends PositionComponent {
               ? 'vent-warn'
               : featureSprite(feature);
           if (name != null) atlas.draw(canvas, name, r);
+          if (feature == core.TileFeature.pipe) _drawPipe(canvas, r);
         }
       }
     }
+  }
+
+  static const _pipeGreen = Color(0xFF2FA84F);
+  static const _pipeDark = Color(0xFF1B6B32);
+  static const _pipeLight = Color(0xFF8CE07A);
+
+  /// A warp pipe seen from above at a slight angle: a thick green lip
+  /// around a dark mouth, with a highlight stripe, after Mario's pipes.
+  void _drawPipe(Canvas canvas, Rect r) {
+    final ink = Paint()..color = const Color(0xFF0D1120);
+    final lip = r.deflate(tileSize * 0.04);
+    canvas.drawRect(lip, ink);
+    canvas.drawRect(lip.deflate(tileSize * 0.04), Paint()..color = _pipeGreen);
+    // Shade on the right, shine on the left, like a round pipe.
+    final inner = lip.deflate(tileSize * 0.04);
+    canvas.drawRect(
+      Rect.fromLTWH(
+        inner.right - inner.width * 0.22,
+        inner.top,
+        inner.width * 0.22,
+        inner.height,
+      ),
+      Paint()..color = _pipeDark,
+    );
+    canvas.drawRect(
+      Rect.fromLTWH(
+        inner.left + inner.width * 0.12,
+        inner.top,
+        inner.width * 0.1,
+        inner.height,
+      ),
+      Paint()..color = _pipeLight,
+    );
+    final mouth = pipeMouth(r);
+    canvas.drawOval(mouth.inflate(tileSize * 0.03), ink);
+    canvas.drawOval(mouth, Paint()..color = const Color(0xFF071A0E));
+  }
+
+  /// The dark opening of a pipe drawn in [r].
+  Rect pipeMouth(Rect r) => Rect.fromCenter(
+    center: r.center - Offset(0, tileSize * 0.04),
+    width: r.width * 0.62,
+    height: r.height * 0.5,
+  );
+
+  /// How deep a player is in a pipe, 0 (out) to 1 (gone), from the trip's
+  /// progress: sink, travel unseen, rise.
+  static double pipeDepth(double progress) {
+    if (progress <= 0) return 0;
+    const total = core.World.pipeTotal;
+    final t = progress * total;
+    if (t < core.World.pipeSink) return t / core.World.pipeSink;
+    if (t < core.World.pipeSink + core.World.pipeTravel) return 1;
+    return (1 -
+            (t - core.World.pipeSink - core.World.pipeTravel) /
+                core.World.pipeRise)
+        .clamp(0.0, 1.0);
   }
 
   void _drawRegrowing(Canvas canvas, core.WorldSnapshot sim) {
@@ -782,8 +842,10 @@ class WorldRenderer extends PositionComponent {
         continue;
       }
 
+      final depth = pipeDepth(p.pipe);
+      if (depth >= 1) continue; // travelling through the pipe
       final blink = p.invincible && (_time * 12).floor().isEven;
-      final pose = p.frozen ? (moving: false, step: 0) : _pose(p);
+      final pose = p.frozen || depth > 0 ? (moving: false, step: 0) : _pose(p);
       // The body lifts a pixel on each stride, so the walk has a bounce.
       final lift = pose.step.isOdd ? tileSize / 16 : 0.0;
       final body = _square(
@@ -799,6 +861,20 @@ class WorldRenderer extends PositionComponent {
       };
       final paint = blink ? SpriteAtlas.faded(0.35) : null;
       canvas.save();
+      if (depth > 0) {
+        // Sinking into (or rising out of) a pipe: slide down past the
+        // mouth's front edge.
+        final tile = _tileRect(p.x.floor(), p.y.floor());
+        canvas.clipRect(
+          Rect.fromLTRB(
+            tile.left - tileSize,
+            tile.top - tileSize * 2,
+            tile.right + tileSize,
+            pipeMouth(tile).bottom,
+          ),
+        );
+        canvas.translate(0, depth * tileSize * 0.85);
+      }
       if (facing == core.Direction.left) {
         canvas.translate(body.center.dx, body.center.dy);
         canvas.scale(-1, 1);
@@ -814,6 +890,7 @@ class WorldRenderer extends PositionComponent {
       final hat = Cosmetics.spriteFor(p.skin);
       if (hat != null) atlas.draw(canvas, hat, body, paint: paint);
       canvas.restore();
+      if (depth > 0) continue;
       if (p.frozen) canvas.drawRect(body.deflate(2), _iceOverlay);
       if (p.cursedFor > 0) {
         // Reversed controls: an orb circles the cursed player's head.

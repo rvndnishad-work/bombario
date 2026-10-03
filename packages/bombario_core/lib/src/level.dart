@@ -39,6 +39,46 @@ class LevelData {
     return null;
   }
 
+  /// Puts up to [count] warp pipes near the map's edges, one per side in the
+  /// order left, right, top, bottom, so a trip crosses the map. Pipes go on
+  /// open floor (or a brick with nothing under it, cleared) away from the
+  /// spawns, enemies and terrain.
+  void addPipes(int count, {required int seed}) {
+    if (count <= 0) return;
+    final rng = Random(seed);
+    final w = grid.width, h = grid.height;
+    final enemyTiles = {for (final e in enemySpawns) e.pos};
+    bool fits(GridPos p) {
+      final t = grid.atPos(p);
+      final open = t == TileType.floor ||
+          (t == TileType.brick && grid.hiddenAt(p.x, p.y) == null);
+      return open &&
+          grid.featureAt(p.x, p.y) == TileFeature.none &&
+          !enemyTiles.contains(p) &&
+          playerSpawns.every((s) => s.manhattanTo(p) >= 4);
+    }
+
+    final sides = [
+      [for (var y = 2; y < h - 2; y++) GridPos(1, y)], // left
+      [for (var y = 2; y < h - 2; y++) GridPos(w - 2, y)], // right
+      [for (var x = 2; x < w - 2; x++) GridPos(x, 1)], // top
+      [for (var x = 2; x < w - 2; x++) GridPos(x, h - 2)], // bottom
+    ];
+    for (final side in sides.take(count)) {
+      final spots = side.where(fits).toList();
+      if (spots.isEmpty) continue;
+      // Prefer the middle of the side, like a pipe on a level's far wall.
+      spots.sort(
+          (a, b) => _midDistance(a, w, h).compareTo(_midDistance(b, w, h)));
+      final p = spots[rng.nextInt(min(3, spots.length))];
+      grid.set(p.x, p.y, TileType.floor);
+      grid.setFeature(p.x, p.y, TileFeature.pipe);
+    }
+  }
+
+  static int _midDistance(GridPos p, int w, int h) =>
+      (p.x - w ~/ 2).abs() + (p.y - h ~/ 2).abs();
+
   /// §8.4 step 6: every spawn can reach the exit once bricks are gone.
   /// Pits block; closed gates count as open only if a pressure plate is
   /// reachable without them. Stages without an exit are trivially solvable.

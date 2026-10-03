@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'direction.dart';
 import 'entities.dart';
 import 'grid.dart';
@@ -394,10 +396,18 @@ class PlayerState {
     this.cursedFor = 0,
     this.momentum = Direction.none,
     this.skin = Player.defaultSkin,
+    this.pipe = 0,
+    this.onPipe = false,
   });
 
   final int id;
   final String name;
+
+  /// How far through a pipe trip, 0 to 1, or 0 when not in one.
+  final double pipe;
+
+  /// Standing on a warp pipe: Action enters it.
+  final bool onPipe;
 
   /// Cosmetic look, `classic` unless the player picked another.
   final String skin;
@@ -441,7 +451,8 @@ class PlayerState {
   /// What the Action button does right now, or null when it does nothing.
   String? get actionLabel {
     if (ghost) return hauntUsed ? null : 'haunt';
-    if (!alive) return null;
+    if (!alive || pipe > 0) return null;
+    if (onPipe) return 'pipe';
     return switch (active) {
       ActiveItem.remote => 'detonate',
       ActiveItem.tether => 'tether',
@@ -477,6 +488,8 @@ class PlayerState {
         cursedFor: p.cursedFor,
         momentum: p.momentum,
         skin: p.skin,
+        pipe: p.inPipe ? max(0.001, 1 - p.pipeFor / World.pipeTotal) : 0,
+        onPipe: p.onPipe,
       );
 
   PlayerState copyWith({double? x, double? y, Direction? facing}) =>
@@ -508,6 +521,8 @@ class PlayerState {
         cursedFor: cursedFor,
         momentum: momentum,
         skin: skin,
+        pipe: pipe,
+        onPipe: onPipe,
       );
 
   /// A mutable [Player] body with this state, for client-side prediction.
@@ -520,7 +535,9 @@ class PlayerState {
     ..ghost = ghost
     ..frozenFor = frozenFor
     ..cursedFor = cursedFor
-    ..momentum = momentum;
+    ..momentum = momentum
+    ..pipeFor = pipe > 0 ? (1 - pipe) * World.pipeTotal : 0
+    ..onPipe = onPipe;
 
   Map<String, dynamic> toJson() => {
         'id': id,
@@ -550,6 +567,8 @@ class PlayerState {
         if (cursedFor > 0) 'cu': cursedFor,
         if (momentum != Direction.none) 'mo': momentum.index,
         if (skin != Player.defaultSkin) 'sk': skin,
+        if (pipe > 0) 'pi': pipe,
+        if (onPipe) 'op': true,
       };
 
   static PlayerState fromJson(Map<String, dynamic> j) {
@@ -582,6 +601,8 @@ class PlayerState {
       cursedFor: (j['cu'] as num?)?.toDouble() ?? 0,
       momentum: Direction.values[j['mo'] as int? ?? 0],
       skin: j['sk'] as String? ?? Player.defaultSkin,
+      pipe: (j['pi'] as num?)?.toDouble() ?? 0,
+      onPipe: j['op'] as bool? ?? false,
     );
   }
 }

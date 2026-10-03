@@ -213,7 +213,8 @@ class _StageDetail extends StatelessWidget {
         Text(
           key: const Key('admin-detail-size'),
           '${info.kind}. Map ${info.width} x ${info.height} tiles, '
-          '${info.bricks} bricks, ${info.def.timeLimit.round()} s'
+          '${info.bricks} bricks, ${info.level.grid.pipes.length} pipes, '
+          '${info.def.timeLimit.round()} s'
           '${info.milestone ? '. Every-5th stage.' : ''}',
           style: Px.label(12, color: Px.muted, bold: false),
         ),
@@ -347,6 +348,13 @@ class _MapPainter extends CustomPainter {
         };
         canvas.drawRect(cell(x, y), paint);
       }
+    }
+    for (final p in grid.pipes) {
+      canvas.drawRect(cell(p.x, p.y, t * 0.04), Paint()..color = Px.ok);
+      canvas.drawOval(
+        cell(p.x, p.y, t * 0.28),
+        Paint()..color = const Color(0xFF071A0E),
+      );
     }
     for (final s in info.level.playerSpawns) {
       paint.color = const Color(0xFF3D7BFF);

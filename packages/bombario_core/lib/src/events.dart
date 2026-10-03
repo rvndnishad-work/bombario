@@ -99,6 +99,24 @@ class ChallengeComplete extends GameEvent {
   const ChallengeComplete();
 }
 
+/// A player sank into the pipe at (x, y), heading for (toX, toY).
+class PipeEntered extends GameEvent {
+  const PipeEntered(this.playerId, this.x, this.y, this.toX, this.toY);
+  final int playerId;
+  final int x;
+  final int y;
+  final int toX;
+  final int toY;
+}
+
+/// A player is rising out of the pipe at (x, y).
+class PipeExited extends GameEvent {
+  const PipeExited(this.playerId, this.x, this.y);
+  final int playerId;
+  final int x;
+  final int y;
+}
+
 class TimeUp extends GameEvent {
   const TimeUp();
 }
