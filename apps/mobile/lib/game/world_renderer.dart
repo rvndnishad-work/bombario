@@ -905,18 +905,12 @@ class WorldRenderer extends PositionComponent {
     }
   }
 
-  /// The layers a dying player pops with: the front-facing body and the
-  /// hat, in the slot's colour.
-  ({List<String> sprites, Color tint}) _popSprites(
-    int slot,
-    core.PlayerState p,
-  ) {
+  /// The layers a dying player is drawn with: the front-facing body in the
+  /// slot's colour, then the hat.
+  List<String> _popSprites(int slot, core.PlayerState p) {
     final look = (slot % playerColors.length) + 1;
     final hat = Cosmetics.spriteFor(p.skin);
-    return (
-      sprites: ['p$look', if (hat != null) hat],
-      tint: playerColors[slot % playerColors.length],
-    );
+    return ['p$look', if (hat != null) hat];
   }
 
   void _drawPlayers(Canvas canvas, core.WorldSnapshot sim) {

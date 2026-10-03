@@ -2573,3 +2573,341 @@ oH333333333333do
 oH333333333333do
 oddddddddddddddo
 oooooooooooooooo
+
+
+# ---------------------------------------------------------------------------
+# Death animations, after the frame-by-frame deaths of the 8-bit original
+# (drawn here from scratch: the original sheets were only a reference).
+# The bomber: X-eyed shock with hands thrown up, a squash into a puddle,
+# then a ring that breaks into specks, hands and boots left at the corners.
+# Enemies: one X-shaped template that puffs up, shrinks and flies apart,
+# recoloured to each enemy's most common body colour.
+# ---------------------------------------------------------------------------
+palette
+K #1e2230
+x #07090f
+W #ffffff
+P #f58ccb
+j #ffe9d6
+l #3d7bff
+e #8ab4ff
+d #2452c4
+c #f58ccb
+s #b0507f
+w #ffd0ea
+
+sprite p1-die-1
+.......KK.......
+......KPPK......
+.....KKKKKK.....
+.KK.KllllllK.KK.
+KWWKleelllllKWWK
+KWWKllllllllKWWK
+.KKllKKKKKKllKK.
+..KlxjxjjxjxlK..
+..KljxjjjjxjlK..
+..KlxjxjjxjxlK..
+...KlKKKKKKlK...
+...KKWWWWWWKK...
+....KllllllK....
+...KKWWWWWWKK...
+..KddK....KddK..
+..KKKK....KKKK..
+
+sprite p1-die-2
+................
+.......KK.......
+......KPPK......
+.....KKKKKK.....
+....KllllllK....
+...KleelllllK...
+..KllKKKKKKllK..
+..KlxjxjjxjxlK..
+..KljxjjjjxjlK..
+.KKlxjxjjxjxlKK.
+KWWKlKKKKKKlKWWK
+KWlWKWlWWlWKWlWK
+KlWllWlWWlWllWlK
+KWlWlWllllWlWlWK
+.KKWlWlWWlWlWKK.
+..KKKKKKKKKKKK..
+
+sprite p1-die-3
+................
+................
+................
+................
+.WW....KK....WW.
+.WW...KPPK...WW.
+.....KKKKKK.....
+...KKKllllKKK...
+..KlWKxjjxKWlK..
+.KlWlKjxxjKlWlK.
+KlWlKKxjjxKKlWlK
+KWl..KKKKKK..lWK
+KlW..........WlK
+.KlWl......lWlK.
+.WWKlWlWWlWlKWW.
+.WW.KKKKKKKK.WW.
+
+sprite p1-die-4
+................
+................
+.WW..........WW.
+.WW..eWllWe..WW.
+....lWl..lWl....
+...eW......We...
+..lW........Wl..
+..Wl........lW..
+..lW........Wl..
+..We........eW..
+...lW......Wl...
+....lWe..eWl....
+.....eWllWe.....
+.WW..........WW.
+.WW..........WW.
+................
+
+sprite p1-die-5
+................
+.W............W.
+WW............WW
+......e..W......
+....W......e....
+................
+..e..........W..
+................
+.W............e.
+................
+..W..........e..
+................
+....e......W....
+WW....W..e....WW
+.W............W.
+................
+
+sprite p1-die-6
+................
+................
+W..............W
+................
+................
+................
+................
+................
+................
+................
+................
+................
+................
+................
+W..............W
+................
+
+recolor p2-die-1 = p1-die-1 #3d7bff:#ff4b4b #8ab4ff:#ff9a9a #2452c4:#b52a2a
+recolor p2-die-2 = p1-die-2 #3d7bff:#ff4b4b #8ab4ff:#ff9a9a #2452c4:#b52a2a
+recolor p2-die-3 = p1-die-3 #3d7bff:#ff4b4b #8ab4ff:#ff9a9a #2452c4:#b52a2a
+recolor p2-die-4 = p1-die-4 #3d7bff:#ff4b4b #8ab4ff:#ff9a9a #2452c4:#b52a2a
+recolor p2-die-5 = p1-die-5 #3d7bff:#ff4b4b #8ab4ff:#ff9a9a #2452c4:#b52a2a
+recolor p2-die-6 = p1-die-6 #3d7bff:#ff4b4b #8ab4ff:#ff9a9a #2452c4:#b52a2a
+recolor p3-die-1 = p1-die-1 #3d7bff:#3fc062 #8ab4ff:#9ee8ad #2452c4:#258a43
+recolor p3-die-2 = p1-die-2 #3d7bff:#3fc062 #8ab4ff:#9ee8ad #2452c4:#258a43
+recolor p3-die-3 = p1-die-3 #3d7bff:#3fc062 #8ab4ff:#9ee8ad #2452c4:#258a43
+recolor p3-die-4 = p1-die-4 #3d7bff:#3fc062 #8ab4ff:#9ee8ad #2452c4:#258a43
+recolor p3-die-5 = p1-die-5 #3d7bff:#3fc062 #8ab4ff:#9ee8ad #2452c4:#258a43
+recolor p3-die-6 = p1-die-6 #3d7bff:#3fc062 #8ab4ff:#9ee8ad #2452c4:#258a43
+recolor p4-die-1 = p1-die-1 #3d7bff:#ffc23d #8ab4ff:#ffe08a #2452c4:#c98f1c
+recolor p4-die-2 = p1-die-2 #3d7bff:#ffc23d #8ab4ff:#ffe08a #2452c4:#c98f1c
+recolor p4-die-3 = p1-die-3 #3d7bff:#ffc23d #8ab4ff:#ffe08a #2452c4:#c98f1c
+recolor p4-die-4 = p1-die-4 #3d7bff:#ffc23d #8ab4ff:#ffe08a #2452c4:#c98f1c
+recolor p4-die-5 = p1-die-5 #3d7bff:#ffc23d #8ab4ff:#ffe08a #2452c4:#c98f1c
+recolor p4-die-6 = p1-die-6 #3d7bff:#ffc23d #8ab4ff:#ffe08a #2452c4:#c98f1c
+
+sprite edie-1
+................
+..KK........KK..
+.KccK......KccK.
+.KcwcKKKKKKcwcK.
+..KcWWWccWWWcK..
+..KcWxWccWxWcK..
+..KcWxWccWxWcK..
+...KcccccccccK..
+...KccKKKKccK...
+...KcKccccKcK...
+..KcccccccccsK..
+.KccsK....KcssK.
+.KcsK......KssK.
+..KK........KK..
+................
+................
+
+sprite edie-2
+................
+................
+................
+...KK......KK...
+...KcK....KcK...
+....KcKKKKcK....
+....KWWccWWK....
+....KxWccWxK....
+....KcKKKKcK....
+...KcsK..KscK...
+...KsK....KsK...
+....K......K....
+................
+................
+................
+................
+
+sprite edie-3
+................
+................
+..Kc........cK..
+..cW........Wc..
+................
+.....W....W.....
+......c..c......
+................
+................
+......s..s......
+.....s....s.....
+................
+..cs........sc..
+..s..........s..
+................
+................
+
+sprite edie-4
+c..............c
+.W............W.
+................
+................
+................
+................
+................
+................
+................
+................
+................
+................
+................
+................
+.s............s.
+s..............s
+
+recolor puff-die-1 = edie-1 #f58ccb:#f58ccb #b0507f:#8e547e #ffd0ea:#facbe8
+recolor drop-die-1 = edie-1 #f58ccb:#4b7bff #b0507f:#304b9b #ffd0ea:#aec4ff
+recolor barrelhop-die-1 = edie-1 #f58ccb:#8a5a2c #b0507f:#533927 #ffd0ea:#cab5a0
+recolor grinface-die-1 = edie-1 #f58ccb:#ffd23f #b0507f:#937b31 #ffd0ea:#ffeba9
+recolor slimeSage-die-1 = edie-1 #f58ccb:#7ad63f #b0507f:#4a7d31 #ffd0ea:#c3eda9
+recolor wisp-die-1 = edie-1 #f58ccb:#dff0ff #b0507f:#828b9b #ffd0ea:#f1f8ff
+recolor hunterCoin-die-1 = edie-1 #f58ccb:#e04040 #b0507f:#822a32 #ffd0ea:#f1a9a9
+recolor doorWarden-die-1 = edie-1 #f58ccb:#5e35b1 #b0507f:#3b2470 #ffd0ea:#b7a4dc
+recolor pebble-die-1 = edie-1 #f58ccb:#8a7a6a #b0507f:#534a49 #ffd0ea:#cac3bc
+recolor hopper-die-1 = edie-1 #f58ccb:#7ad63f #b0507f:#4a7d31 #ffd0ea:#c3eda9
+recolor splitter-die-1 = edie-1 #f58ccb:#9b59d0 #b0507f:#5c3881 #ffd0ea:#d2b4ea
+recolor splitling-die-1 = edie-1 #f58ccb:#9b59d0 #b0507f:#5c3881 #ffd0ea:#d2b4ea
+recolor shellback-die-1 = edie-1 #f58ccb:#7ad63f #b0507f:#4a7d31 #ffd0ea:#c3eda9
+recolor kingPuffball-die-1 = edie-1 #f58ccb:#f58ccb #b0507f:#8e547e #ffd0ea:#facbe8
+recolor rockjaw-die-1 = edie-1 #f58ccb:#8a7a6a #b0507f:#534a49 #ffd0ea:#cac3bc
+recolor goblin-die-1 = edie-1 #f58ccb:#9ad648 #b0507f:#5c7d36 #ffd0ea:#d2edad
+recolor tigerclaw-die-1 = edie-1 #f58ccb:#ff7a1a #b0507f:#934a1d #ffd0ea:#ffc398
+recolor mimic-die-1 = edie-1 #f58ccb:#8a5a2c #b0507f:#533927 #ffd0ea:#cab5a0
+recolor kickerCrab-die-1 = edie-1 #f58ccb:#e04040 #b0507f:#822a32 #ffd0ea:#f1a9a9
+recolor shade-die-1 = edie-1 #f58ccb:#5a4a8a #b0507f:#39305a #ffd0ea:#b5aeca
+recolor moleNest-die-1 = edie-1 #f58ccb:#8a7a6a #b0507f:#534a49 #ffd0ea:#cac3bc
+recolor mirrorKnight-die-1 = edie-1 #f58ccb:#9aa3b8 #b0507f:#5c6174 #ffd0ea:#d2d6df
+recolor fuseEater-die-1 = edie-1 #f58ccb:#7ad63f #b0507f:#4a7d31 #ffd0ea:#c3eda9
+recolor phaseWraith-die-1 = edie-1 #f58ccb:#9db9ff #b0507f:#5e6d9b #ffd0ea:#d3e0ff
+recolor herder-die-1 = edie-1 #f58ccb:#8a7a6a #b0507f:#534a49 #ffd0ea:#cac3bc
+recolor curseOrb-die-1 = edie-1 #f58ccb:#5a4a8a #b0507f:#39305a #ffd0ea:#b5aeca
+recolor bombOTron-die-1 = edie-1 #f58ccb:#6f7890 #b0507f:#44495e #ffd0ea:#bec2cd
+recolor lanternWitch-die-1 = edie-1 #f58ccb:#5a3a7a #b0507f:#392752 #ffd0ea:#b5a6c3
+recolor overlordPontan-die-1 = edie-1 #f58ccb:#e04040 #b0507f:#822a32 #ffd0ea:#f1a9a9
+recolor puff-die-2 = edie-2 #f58ccb:#f58ccb #b0507f:#8e547e #ffd0ea:#facbe8
+recolor drop-die-2 = edie-2 #f58ccb:#4b7bff #b0507f:#304b9b #ffd0ea:#aec4ff
+recolor barrelhop-die-2 = edie-2 #f58ccb:#8a5a2c #b0507f:#533927 #ffd0ea:#cab5a0
+recolor grinface-die-2 = edie-2 #f58ccb:#ffd23f #b0507f:#937b31 #ffd0ea:#ffeba9
+recolor slimeSage-die-2 = edie-2 #f58ccb:#7ad63f #b0507f:#4a7d31 #ffd0ea:#c3eda9
+recolor wisp-die-2 = edie-2 #f58ccb:#dff0ff #b0507f:#828b9b #ffd0ea:#f1f8ff
+recolor hunterCoin-die-2 = edie-2 #f58ccb:#e04040 #b0507f:#822a32 #ffd0ea:#f1a9a9
+recolor doorWarden-die-2 = edie-2 #f58ccb:#5e35b1 #b0507f:#3b2470 #ffd0ea:#b7a4dc
+recolor pebble-die-2 = edie-2 #f58ccb:#8a7a6a #b0507f:#534a49 #ffd0ea:#cac3bc
+recolor hopper-die-2 = edie-2 #f58ccb:#7ad63f #b0507f:#4a7d31 #ffd0ea:#c3eda9
+recolor splitter-die-2 = edie-2 #f58ccb:#9b59d0 #b0507f:#5c3881 #ffd0ea:#d2b4ea
+recolor splitling-die-2 = edie-2 #f58ccb:#9b59d0 #b0507f:#5c3881 #ffd0ea:#d2b4ea
+recolor shellback-die-2 = edie-2 #f58ccb:#7ad63f #b0507f:#4a7d31 #ffd0ea:#c3eda9
+recolor kingPuffball-die-2 = edie-2 #f58ccb:#f58ccb #b0507f:#8e547e #ffd0ea:#facbe8
+recolor rockjaw-die-2 = edie-2 #f58ccb:#8a7a6a #b0507f:#534a49 #ffd0ea:#cac3bc
+recolor goblin-die-2 = edie-2 #f58ccb:#9ad648 #b0507f:#5c7d36 #ffd0ea:#d2edad
+recolor tigerclaw-die-2 = edie-2 #f58ccb:#ff7a1a #b0507f:#934a1d #ffd0ea:#ffc398
+recolor mimic-die-2 = edie-2 #f58ccb:#8a5a2c #b0507f:#533927 #ffd0ea:#cab5a0
+recolor kickerCrab-die-2 = edie-2 #f58ccb:#e04040 #b0507f:#822a32 #ffd0ea:#f1a9a9
+recolor shade-die-2 = edie-2 #f58ccb:#5a4a8a #b0507f:#39305a #ffd0ea:#b5aeca
+recolor moleNest-die-2 = edie-2 #f58ccb:#8a7a6a #b0507f:#534a49 #ffd0ea:#cac3bc
+recolor mirrorKnight-die-2 = edie-2 #f58ccb:#9aa3b8 #b0507f:#5c6174 #ffd0ea:#d2d6df
+recolor fuseEater-die-2 = edie-2 #f58ccb:#7ad63f #b0507f:#4a7d31 #ffd0ea:#c3eda9
+recolor phaseWraith-die-2 = edie-2 #f58ccb:#9db9ff #b0507f:#5e6d9b #ffd0ea:#d3e0ff
+recolor herder-die-2 = edie-2 #f58ccb:#8a7a6a #b0507f:#534a49 #ffd0ea:#cac3bc
+recolor curseOrb-die-2 = edie-2 #f58ccb:#5a4a8a #b0507f:#39305a #ffd0ea:#b5aeca
+recolor bombOTron-die-2 = edie-2 #f58ccb:#6f7890 #b0507f:#44495e #ffd0ea:#bec2cd
+recolor lanternWitch-die-2 = edie-2 #f58ccb:#5a3a7a #b0507f:#392752 #ffd0ea:#b5a6c3
+recolor overlordPontan-die-2 = edie-2 #f58ccb:#e04040 #b0507f:#822a32 #ffd0ea:#f1a9a9
+recolor puff-die-3 = edie-3 #f58ccb:#f58ccb #b0507f:#8e547e #ffd0ea:#facbe8
+recolor drop-die-3 = edie-3 #f58ccb:#4b7bff #b0507f:#304b9b #ffd0ea:#aec4ff
+recolor barrelhop-die-3 = edie-3 #f58ccb:#8a5a2c #b0507f:#533927 #ffd0ea:#cab5a0
+recolor grinface-die-3 = edie-3 #f58ccb:#ffd23f #b0507f:#937b31 #ffd0ea:#ffeba9
+recolor slimeSage-die-3 = edie-3 #f58ccb:#7ad63f #b0507f:#4a7d31 #ffd0ea:#c3eda9
+recolor wisp-die-3 = edie-3 #f58ccb:#dff0ff #b0507f:#828b9b #ffd0ea:#f1f8ff
+recolor hunterCoin-die-3 = edie-3 #f58ccb:#e04040 #b0507f:#822a32 #ffd0ea:#f1a9a9
+recolor doorWarden-die-3 = edie-3 #f58ccb:#5e35b1 #b0507f:#3b2470 #ffd0ea:#b7a4dc
+recolor pebble-die-3 = edie-3 #f58ccb:#8a7a6a #b0507f:#534a49 #ffd0ea:#cac3bc
+recolor hopper-die-3 = edie-3 #f58ccb:#7ad63f #b0507f:#4a7d31 #ffd0ea:#c3eda9
+recolor splitter-die-3 = edie-3 #f58ccb:#9b59d0 #b0507f:#5c3881 #ffd0ea:#d2b4ea
+recolor splitling-die-3 = edie-3 #f58ccb:#9b59d0 #b0507f:#5c3881 #ffd0ea:#d2b4ea
+recolor shellback-die-3 = edie-3 #f58ccb:#7ad63f #b0507f:#4a7d31 #ffd0ea:#c3eda9
+recolor kingPuffball-die-3 = edie-3 #f58ccb:#f58ccb #b0507f:#8e547e #ffd0ea:#facbe8
+recolor rockjaw-die-3 = edie-3 #f58ccb:#8a7a6a #b0507f:#534a49 #ffd0ea:#cac3bc
+recolor goblin-die-3 = edie-3 #f58ccb:#9ad648 #b0507f:#5c7d36 #ffd0ea:#d2edad
+recolor tigerclaw-die-3 = edie-3 #f58ccb:#ff7a1a #b0507f:#934a1d #ffd0ea:#ffc398
+recolor mimic-die-3 = edie-3 #f58ccb:#8a5a2c #b0507f:#533927 #ffd0ea:#cab5a0
+recolor kickerCrab-die-3 = edie-3 #f58ccb:#e04040 #b0507f:#822a32 #ffd0ea:#f1a9a9
+recolor shade-die-3 = edie-3 #f58ccb:#5a4a8a #b0507f:#39305a #ffd0ea:#b5aeca
+recolor moleNest-die-3 = edie-3 #f58ccb:#8a7a6a #b0507f:#534a49 #ffd0ea:#cac3bc
+recolor mirrorKnight-die-3 = edie-3 #f58ccb:#9aa3b8 #b0507f:#5c6174 #ffd0ea:#d2d6df
+recolor fuseEater-die-3 = edie-3 #f58ccb:#7ad63f #b0507f:#4a7d31 #ffd0ea:#c3eda9
+recolor phaseWraith-die-3 = edie-3 #f58ccb:#9db9ff #b0507f:#5e6d9b #ffd0ea:#d3e0ff
+recolor herder-die-3 = edie-3 #f58ccb:#8a7a6a #b0507f:#534a49 #ffd0ea:#cac3bc
+recolor curseOrb-die-3 = edie-3 #f58ccb:#5a4a8a #b0507f:#39305a #ffd0ea:#b5aeca
+recolor bombOTron-die-3 = edie-3 #f58ccb:#6f7890 #b0507f:#44495e #ffd0ea:#bec2cd
+recolor lanternWitch-die-3 = edie-3 #f58ccb:#5a3a7a #b0507f:#392752 #ffd0ea:#b5a6c3
+recolor overlordPontan-die-3 = edie-3 #f58ccb:#e04040 #b0507f:#822a32 #ffd0ea:#f1a9a9
+recolor puff-die-4 = edie-4 #f58ccb:#f58ccb #b0507f:#8e547e #ffd0ea:#facbe8
+recolor drop-die-4 = edie-4 #f58ccb:#4b7bff #b0507f:#304b9b #ffd0ea:#aec4ff
+recolor barrelhop-die-4 = edie-4 #f58ccb:#8a5a2c #b0507f:#533927 #ffd0ea:#cab5a0
+recolor grinface-die-4 = edie-4 #f58ccb:#ffd23f #b0507f:#937b31 #ffd0ea:#ffeba9
+recolor slimeSage-die-4 = edie-4 #f58ccb:#7ad63f #b0507f:#4a7d31 #ffd0ea:#c3eda9
+recolor wisp-die-4 = edie-4 #f58ccb:#dff0ff #b0507f:#828b9b #ffd0ea:#f1f8ff
+recolor hunterCoin-die-4 = edie-4 #f58ccb:#e04040 #b0507f:#822a32 #ffd0ea:#f1a9a9
+recolor doorWarden-die-4 = edie-4 #f58ccb:#5e35b1 #b0507f:#3b2470 #ffd0ea:#b7a4dc
+recolor pebble-die-4 = edie-4 #f58ccb:#8a7a6a #b0507f:#534a49 #ffd0ea:#cac3bc
+recolor hopper-die-4 = edie-4 #f58ccb:#7ad63f #b0507f:#4a7d31 #ffd0ea:#c3eda9
+recolor splitter-die-4 = edie-4 #f58ccb:#9b59d0 #b0507f:#5c3881 #ffd0ea:#d2b4ea
+recolor splitling-die-4 = edie-4 #f58ccb:#9b59d0 #b0507f:#5c3881 #ffd0ea:#d2b4ea
+recolor shellback-die-4 = edie-4 #f58ccb:#7ad63f #b0507f:#4a7d31 #ffd0ea:#c3eda9
+recolor kingPuffball-die-4 = edie-4 #f58ccb:#f58ccb #b0507f:#8e547e #ffd0ea:#facbe8
+recolor rockjaw-die-4 = edie-4 #f58ccb:#8a7a6a #b0507f:#534a49 #ffd0ea:#cac3bc
+recolor goblin-die-4 = edie-4 #f58ccb:#9ad648 #b0507f:#5c7d36 #ffd0ea:#d2edad
+recolor tigerclaw-die-4 = edie-4 #f58ccb:#ff7a1a #b0507f:#934a1d #ffd0ea:#ffc398
+recolor mimic-die-4 = edie-4 #f58ccb:#8a5a2c #b0507f:#533927 #ffd0ea:#cab5a0
+recolor kickerCrab-die-4 = edie-4 #f58ccb:#e04040 #b0507f:#822a32 #ffd0ea:#f1a9a9
+recolor shade-die-4 = edie-4 #f58ccb:#5a4a8a #b0507f:#39305a #ffd0ea:#b5aeca
+recolor moleNest-die-4 = edie-4 #f58ccb:#8a7a6a #b0507f:#534a49 #ffd0ea:#cac3bc
+recolor mirrorKnight-die-4 = edie-4 #f58ccb:#9aa3b8 #b0507f:#5c6174 #ffd0ea:#d2d6df
+recolor fuseEater-die-4 = edie-4 #f58ccb:#7ad63f #b0507f:#4a7d31 #ffd0ea:#c3eda9
+recolor phaseWraith-die-4 = edie-4 #f58ccb:#9db9ff #b0507f:#5e6d9b #ffd0ea:#d3e0ff
+recolor herder-die-4 = edie-4 #f58ccb:#8a7a6a #b0507f:#534a49 #ffd0ea:#cac3bc
+recolor curseOrb-die-4 = edie-4 #f58ccb:#5a4a8a #b0507f:#39305a #ffd0ea:#b5aeca
+recolor bombOTron-die-4 = edie-4 #f58ccb:#6f7890 #b0507f:#44495e #ffd0ea:#bec2cd
+recolor lanternWitch-die-4 = edie-4 #f58ccb:#5a3a7a #b0507f:#392752 #ffd0ea:#b5a6c3
+recolor overlordPontan-die-4 = edie-4 #f58ccb:#e04040 #b0507f:#822a32 #ffd0ea:#f1a9a9
