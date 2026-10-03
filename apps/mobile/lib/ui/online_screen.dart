@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../net/analytics.dart';
 import '../net/online.dart';
 import '../net/room_session.dart';
 import 'lobby_screen.dart';
@@ -59,6 +60,19 @@ class _OnlineScreenState extends State<OnlineScreen> {
     ),
   );
 
+  /// Quick match (§7): the server picks or makes a room of [mode] and
+  /// fills empty seats with bots after 20 seconds.
+  void _quick(String mode) => _go(() async {
+    final server = _serverUri;
+    final code = await OnlineServer.quickMatch(server, mode);
+    Analytics.instance.log('quick_match', {'mode': mode});
+    return RoomSession.joinOnline(
+      server: server,
+      code: code,
+      playerName: PlayerName.current,
+    );
+  });
+
   void _join() {
     final code = OnlineServer.normalizeCode(_code.text);
     if (code.length != 6) {
@@ -90,6 +104,30 @@ class _OnlineScreenState extends State<OnlineScreen> {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
+                  const Text('Quick match: play with anyone, bots fill in'),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: FilledButton.icon(
+                          key: const Key('quick-coop'),
+                          icon: const Icon(Icons.groups),
+                          label: const Text('Co-op'),
+                          onPressed: _busy ? null : () => _quick('coop'),
+                        ),
+                      ),
+                      const SizedBox(width: 24),
+                      Expanded(
+                        child: FilledButton.icon(
+                          key: const Key('quick-versus'),
+                          icon: const Icon(Icons.sports_mma),
+                          label: const Text('Versus'),
+                          onPressed: _busy ? null : () => _quick('versus'),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const Divider(height: 40),
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
