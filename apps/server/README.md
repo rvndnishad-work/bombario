@@ -11,6 +11,23 @@ docker build -f apps/server/Dockerfile -t bombario-server .   # from the repo ro
 docker run -p 8080:8080 -e DATA_DIR=/data -v bombario:/data bombario-server
 ```
 
+## Deploying to Fly.io
+
+`fly.toml` at the repo root deploys this server as the Fly app
+`bombario-server` in Mumbai (`bom`), with a 1 GB volume at `/data` for
+leaderboards and analytics. The app's default server address is
+`https://bombario-server.fly.dev`; change both if the app name differs.
+
+```sh
+fly launch --no-deploy --copy-config   # first time only, from the repo root
+fly scale count 1                      # rooms live in memory: one machine
+fly deploy
+curl https://bombario-server.fly.dev/health
+```
+
+Keep it at one machine. A second machine would not know the first one's
+room codes, so players would land on "no room with code".
+
 ## Environment
 
 | Variable | Default | Meaning |
@@ -19,7 +36,7 @@ docker run -p 8080:8080 -e DATA_DIR=/data -v bombario:/data bombario-server
 | `MAX_PLAYERS` | 4 | Seats per room |
 | `ROOM_TTL_MINUTES` | 10 | How long an empty room keeps its code |
 | `QUICK_START_SECONDS` | 20 | Quick-match wait after the first player joins |
-| `BOT_SKINS` | `classic` | Comma-separated skins bots pick from (the app validates) |
+| `BOT_SKINS` | every app hat | Comma-separated skins bots pick from (the app validates) |
 | `DATA_DIR` | unset | Where leaderboards and events are saved. Unset: leaderboards in memory, last 1000 events in memory |
 
 ## HTTP API
