@@ -310,7 +310,7 @@ class _ControlsOverlayState extends State<ControlsOverlay> {
   void _releasePad() {
     _padPointer = null;
     setState(() => _current = Direction.none);
-    widget.input.release();
+    widget.input.lift();
   }
 }
 

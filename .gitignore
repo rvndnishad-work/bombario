@@ -19,3 +19,6 @@ apps/mobile/android/local.properties
 # Claude Code worktrees
 .claude/worktrees/
 deploy/droplet/.env
+
+# Python tools
+__pycache__/

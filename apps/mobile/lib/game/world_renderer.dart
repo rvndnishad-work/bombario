@@ -203,7 +203,12 @@ class WorldRenderer extends PositionComponent {
   @override
   void render(Canvas canvas) {
     final sim = snapshot();
-    effects.observe(sim, _time, (e) => enemySprites[e.kind]);
+    effects.observe(
+      sim,
+      _time,
+      (e) => enemySprites[e.kind],
+      playerSprites: _popSprites,
+    );
     _drawTiles(canvas, sim);
     _drawRegrowing(canvas, sim);
     _drawSonar(canvas, sim);
@@ -216,6 +221,7 @@ class WorldRenderer extends PositionComponent {
     _drawEnemies(canvas, sim);
     effects.drawEnemies(canvas, atlas, tileSize, _time);
     _drawPlayers(canvas, sim);
+    effects.drawPlayers(canvas, atlas, tileSize, _time);
     _drawFallingRocks(canvas, sim);
     _drawWind(canvas, sim);
     _drawDarkness(canvas, sim);
@@ -467,13 +473,33 @@ class WorldRenderer extends PositionComponent {
     }
   }
 
+  /// When each burning tile was first seen, for the pulse.
+  final Map<(int, int), double> _flameBorn = {};
+
+  /// How fat the flame is at [age]: the original's four frames swell from
+  /// thin to full over the first third of the burn and thin out again over
+  /// the last, with a flicker in between.
+  static double flameWidth(double age) {
+    const life = core.Flame.duration;
+    final t = (age / life).clamp(0.0, 1.0);
+    final swell = t < 0.3
+        ? 0.45 + 0.55 * (t / 0.3)
+        : t > 0.7
+        ? 0.45 + 0.55 * ((1 - t) / 0.3)
+        : 1.0;
+    return swell * (1 - 0.06 * ((age * 24).floor().isOdd ? 1 : 0));
+  }
+
   void _drawFlames(Canvas canvas, core.WorldSnapshot sim) {
     // The snapshot carries flame tiles, not blasts, so each tile's shape
     // comes from its neighbours: a crossing is a centre, a straight run is
     // an arm, and a tile with one neighbour is an end cap pointing away.
     final lit = {for (final f in sim.flames) (f.x, f.y)};
+    _flameBorn.removeWhere((k, _) => !lit.contains(k));
     final outline = highContrast();
     for (final f in sim.flames) {
+      final born = _flameBorn.putIfAbsent((f.x, f.y), () => _time);
+      final width = flameWidth(_time - born);
       final l = lit.contains((f.x - 1, f.y));
       final r = lit.contains((f.x + 1, f.y));
       final u = lit.contains((f.x, f.y - 1));
@@ -488,7 +514,18 @@ class WorldRenderer extends PositionComponent {
       } else {
         shape = u && d ? 'fv' : (u ? 'fd' : 'fu');
       }
-      atlas.draw(canvas, f.frost ? '$shape-frost' : shape, _tileRect(f.x, f.y));
+      // Arms fatten and thin across their width only, so the cross stays
+      // joined up; the centre breathes in both directions.
+      final tile = _tileRect(f.x, f.y);
+      canvas.save();
+      canvas.translate(tile.center.dx, tile.center.dy);
+      canvas.scale(
+        shape == 'fc' || vertical ? width : 1,
+        shape == 'fc' || horizontal ? width : 1,
+      );
+      canvas.translate(-tile.center.dx, -tile.center.dy);
+      atlas.draw(canvas, f.frost ? '$shape-frost' : shape, tile);
+      canvas.restore();
       if (outline) canvas.drawRect(_tileRect(f.x, f.y, 1), _flameOutline);
     }
   }
@@ -605,6 +642,20 @@ class WorldRenderer extends PositionComponent {
         );
       }
     }
+  }
+
+  /// The layers a dying player pops with: the front-facing body and the
+  /// hat, in the slot's colour.
+  ({List<String> sprites, Color tint}) _popSprites(
+    int slot,
+    core.PlayerState p,
+  ) {
+    final look = (slot % playerColors.length) + 1;
+    final hat = Cosmetics.spriteFor(p.skin);
+    return (
+      sprites: ['p$look', if (hat != null) hat],
+      tint: playerColors[slot % playerColors.length],
+    );
   }
 
   void _drawPlayers(Canvas canvas, core.WorldSnapshot sim) {

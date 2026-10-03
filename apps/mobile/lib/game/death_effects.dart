@@ -7,8 +7,10 @@ import 'package:flutter/painting.dart' show TextPainter, TextSpan, TextStyle;
 import 'sprite_atlas.dart';
 
 /// Short-lived animations the rules don't track: bricks bursting into
-/// chunks, and enemies doing the classic Bomberman death (a shocked white
-/// flash, then shrinking away in sparkles while their points float up).
+/// chunks, enemies doing the classic Bomberman death (a shocked white
+/// flash, then shrinking away in sparkles while their points float up), and
+/// players popping the way the original's bomber does (a shocked shiver,
+/// then a spin that deflates into a puff of their colour).
 ///
 /// Effects are spotted by comparing consecutive snapshots, so they work the
 /// same in solo play and in rooms, where the server's events never reach
@@ -19,25 +21,36 @@ class DeathEffects {
   static const double enemyTime = 1.0;
   static const double pointsTime = 1.4;
 
+  /// The original's death takes about a second, and a respawn comes later
+  /// than that, so the pop finishes before the player is back.
+  static const double playerTime = 1.0;
+
   /// More bricks than this vanishing at once is a new maze, not a blast.
   static const int maxBurstsPerFrame = 24;
 
   final List<_BrickBurst> _bricks = [];
   final List<_EnemyDeath> _enemies = [];
+  final List<_PlayerDeath> _players = [];
 
   List<core.TileType>? _tiles;
   int _width = 0;
   Map<int, core.EnemyState> _alive = {};
+  Map<int, core.PlayerState> _standing = {};
 
   int get activeBricks => _bricks.length;
   int get activeEnemies => _enemies.length;
+  int get activePlayers => _players.length;
 
-  /// Looks for bricks that broke and enemies that died since the last call.
+  /// Looks for bricks that broke and enemies and players that died since
+  /// the last call. [playerSprites] gives the layers (body, then hat) to
+  /// pop for the player in a slot; without it players vanish as before.
   void observe(
     core.WorldSnapshot sim,
     double now,
-    String? Function(core.EnemyState) spriteFor,
-  ) {
+    String? Function(core.EnemyState) spriteFor, {
+    ({List<String> sprites, Color tint}) Function(int slot, core.PlayerState)?
+    playerSprites,
+  }) {
     final grid = sim.grid;
     final tiles = [
       for (var y = 0; y < grid.height; y++)
@@ -91,8 +104,33 @@ class DeathEffects {
     }
     _alive = alive;
 
+    final standing = {
+      for (final p in sim.players)
+        if (p.alive) p.id: p,
+    };
+    if (playerSprites != null && !newMaze) {
+      for (var slot = 0; slot < sim.players.length; slot++) {
+        final p = sim.players[slot];
+        final was = _standing[p.id];
+        if (was == null || p.alive) continue;
+        final look = playerSprites(slot, was);
+        _players.add(
+          _PlayerDeath(
+            x: was.x,
+            y: was.y,
+            sprites: look.sprites,
+            tint: look.tint,
+            flip: was.facing == core.Direction.left,
+            born: now,
+          ),
+        );
+      }
+    }
+    _standing = standing;
+
     _bricks.removeWhere((b) => now - b.born > brickTime);
     _enemies.removeWhere((e) => now - e.born > pointsTime);
+    _players.removeWhere((p) => now - p.born > playerTime);
   }
 
   /// Brick chunks fly out over the flames.
@@ -209,8 +247,67 @@ class DeathEffects {
     }
   }
 
-  void _sparkles(Canvas canvas, Offset centre, double side, double k) {
-    final paint = Paint()..color = Color.fromRGBO(255, 230, 120, 1 - k);
+  /// Players shiver in shock, then spin and deflate into a puff of their
+  /// colour: the original's six-frame pop, built from the standing sprite.
+  void drawPlayers(
+    Canvas canvas,
+    SpriteAtlas atlas,
+    double tileSize,
+    double now,
+  ) {
+    for (final p in _players) {
+      final t = ((now - p.born) / playerTime).clamp(0.0, 1.0);
+      final centre = Offset(p.x * tileSize, p.y * tileSize - tileSize * 0.08);
+      var scale = 1.0;
+      var wobble = 0.0;
+      Paint? paint;
+      if (t < 0.3) {
+        // Shocked: a white blink and a shiver, feet planted.
+        if (((now - p.born) * 16).floor().isEven) paint = _white;
+        wobble = math.sin((now - p.born) * 50) * 0.12;
+      } else {
+        // Deflating: a spin while the body shrinks away in a puff.
+        final k = (t - 0.3) / 0.7;
+        scale = 1 - k * k;
+        paint = SpriteAtlas.faded(1 - k * 0.5);
+        _sparkles(canvas, centre, tileSize, k, color: p.tint);
+        _puff(canvas, centre, tileSize, k, p.tint);
+      }
+      if (scale <= 0.02) continue;
+      canvas.save();
+      canvas.translate(centre.dx, centre.dy);
+      canvas.rotate(wobble + (t < 0.3 ? 0 : (t - 0.3) / 0.7 * math.pi * 2));
+      canvas.scale(p.flip ? -scale : scale, scale);
+      final dst = Rect.fromCenter(
+        center: Offset.zero,
+        width: tileSize,
+        height: tileSize,
+      );
+      for (final sprite in p.sprites) {
+        atlas.draw(canvas, sprite, dst, paint: paint);
+      }
+      canvas.restore();
+    }
+  }
+
+  /// A ring of the player's colour that swells and fades: the puff left
+  /// where the bomber was.
+  void _puff(Canvas canvas, Offset centre, double side, double k, Color tint) {
+    final paint = Paint()
+      ..color = tint.withValues(alpha: 0.6 * (1 - k))
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = side * 0.1 * (1 - k * 0.5);
+    canvas.drawCircle(centre, side * (0.25 + 0.55 * k), paint);
+  }
+
+  void _sparkles(
+    Canvas canvas,
+    Offset centre,
+    double side,
+    double k, {
+    Color color = const Color(0xFFFFE678),
+  }) {
+    final paint = Paint()..color = color.withValues(alpha: 1 - k);
     for (var i = 0; i < 8; i++) {
       final a = i * math.pi / 4;
       final r = side * (0.2 + 0.6 * k);
@@ -260,6 +357,23 @@ class _BrickBurst {
   _BrickBurst(this.x, this.y, this.born);
   final int x;
   final int y;
+  final double born;
+}
+
+class _PlayerDeath {
+  _PlayerDeath({
+    required this.x,
+    required this.y,
+    required this.sprites,
+    required this.tint,
+    required this.flip,
+    required this.born,
+  });
+  final double x;
+  final double y;
+  final List<String> sprites;
+  final Color tint;
+  final bool flip;
   final double born;
 }
 
