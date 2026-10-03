@@ -1,0 +1,42 @@
+# The room server, and Caddy in front of it for HTTPS (phones refuse plain
+# http). setup.sh writes .env next to this file and picks one of two modes:
+# - standalone: this Caddy owns ports 80/443 (COMPOSE_PROFILES=caddy);
+# - shared: a Caddy already running on the droplet proxies to us instead
+#   (docker-compose.shared.yml joins its network).
+name: bombario
+
+services:
+  server:
+    container_name: bombario-server
+    build:
+      context: ../..
+      dockerfile: apps/server/Dockerfile
+    restart: unless-stopped
+    environment:
+      PORT: "8080"
+      DATA_DIR: /data
+    volumes:
+      - bombario_data:/data
+    expose:
+      - "8080"
+
+  caddy:
+    profiles: [caddy]
+    image: caddy:2
+    restart: unless-stopped
+    depends_on:
+      - server
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      DOMAIN: ${DOMAIN:-localhost}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+
+volumes:
+  bombario_data: # leaderboards and analytics
+  caddy_data: # certificates
+  caddy_config:

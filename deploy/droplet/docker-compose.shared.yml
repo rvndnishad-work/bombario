@@ -1,0 +1,12 @@
+# Shared mode: put the server on the network of the reverse proxy that
+# already runs on this droplet, so it can reach bombario-server:8080.
+services:
+  server:
+    networks:
+      - default
+      - proxy
+
+networks:
+  proxy:
+    external: true
+    name: ${PROXY_NETWORK:?set PROXY_NETWORK in .env}

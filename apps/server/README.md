@@ -11,6 +11,24 @@ docker build -f apps/server/Dockerfile -t bombario-server .   # from the repo ro
 docker run -p 8080:8080 -e DATA_DIR=/data -v bombario:/data bombario-server
 ```
 
+## Deploying to a DigitalOcean droplet
+
+`deploy/droplet` runs this server in Docker behind Caddy, which gets a free
+HTTPS certificate (phones refuse plain http). On a fresh Ubuntu droplet, as
+root:
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/rvndnishad-work/bombario/main/deploy/droplet/setup.sh | bash
+```
+
+It installs Docker, adds swap for the build, clones the repo to
+`/opt/bombario` and starts everything. If another Caddy container already
+serves ports 80/443 on the droplet, it runs only the game server, joins that
+Caddy's network and appends one site block to its Caddyfile (backed up,
+validated, then reloaded); other sites are untouched. Without `DOMAIN=...` the address is
+`https://<ip-with-dashes>.sslip.io`. Run the same command again to update.
+Logs: `cd /opt/bombario/deploy/droplet && docker compose logs -f`.
+
 ## Deploying to Fly.io
 
 `fly.toml` at the repo root deploys this server as the Fly app

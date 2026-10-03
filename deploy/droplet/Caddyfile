@@ -1,0 +1,5 @@
+# HTTPS for the room server. Caddy fetches and renews the certificate and
+# passes WebSocket upgrades through on its own.
+{$DOMAIN} {
+	reverse_proxy server:8080
+}
