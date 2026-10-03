@@ -146,4 +146,5 @@ const Map<String, int> spriteIndex = {
   'arrow-right': 135,
   'arrow-down': 136,
   'arrow-left': 137,
+  'kingcrown': 138,
 };
