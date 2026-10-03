@@ -11,8 +11,9 @@ import 'kit/sprite_icon.dart';
 /// layout): a D-pad under the left thumb, bomb and action buttons under the
 /// right, and in rooms a quick-chat ping button.
 ///
-/// The D-pad rests in the corner and jumps to wherever the left thumb lands,
-/// so it never needs looking at.
+/// The D-pad stays put in the corner: it used to jump to wherever the thumb
+/// landed, which made it shift under the thumb on every tap. Presses read
+/// relative to its fixed centre, so pressing an arm (or past it) steers.
 class ControlsOverlay extends StatefulWidget {
   const ControlsOverlay({
     super.key,
@@ -75,31 +76,51 @@ abstract final class _Ctl {
 }
 
 class _ControlsOverlayState extends State<ControlsOverlay> {
-  Offset? _padOrigin;
+  Offset? _padCentre;
+  int? _padPointer;
   Direction _current = Direction.none;
   bool _wheelOpen = false;
 
-  static const double _deadZone = 12;
-
   double get _padRadius => 70 * widget.scale;
 
+  /// A press this close to the centre keeps the last direction, so the
+  /// player doesn't stutter when the thumb rolls over the middle.
+  double get _deadZone => _padRadius * 0.2;
+
+  /// Presses further than this from the pad are not steering.
+  double get _reach => _padRadius * 2.4;
+
+  /// To switch between horizontal and vertical the thumb has to lean
+  /// clearly the new way, so a diagonal thumb doesn't flicker between two.
+  static const double _axisBias = 1.3;
+
   void _updateDirection(Offset position) {
-    final origin = _padOrigin;
-    if (origin == null) return;
-    final delta = position - origin;
+    final centre = _padCentre;
+    if (centre == null) return;
+    final delta = position - centre;
+    final ax = delta.dx.abs();
+    final ay = delta.dy.abs();
     Direction next;
     if (delta.distance < _deadZone) {
-      // Inside the dead zone keep the last direction so the player doesn't
-      // stutter when the thumb drifts back towards the centre.
       next = _current;
-    } else if (delta.dx.abs() > delta.dy.abs()) {
-      next = delta.dx > 0 ? Direction.right : Direction.left;
     } else {
-      next = delta.dy > 0 ? Direction.down : Direction.up;
+      final wasHorizontal =
+          _current == Direction.left || _current == Direction.right;
+      final wasVertical =
+          _current == Direction.up || _current == Direction.down;
+      final horizontal = wasHorizontal
+          ? ay <= ax * _axisBias
+          : wasVertical
+          ? ax > ay * _axisBias
+          : ax > ay;
+      next = horizontal
+          ? (delta.dx > 0 ? Direction.right : Direction.left)
+          : (delta.dy > 0 ? Direction.down : Direction.up);
     }
     if (next != _current) {
       setState(() => _current = next);
       widget.input.setDirection(next);
+      _haptic(HapticFeedback.selectionClick);
     }
   }
 
@@ -121,22 +142,31 @@ class _ControlsOverlayState extends State<ControlsOverlay> {
                 : _padRadius + 28,
             box.maxHeight - _padRadius - 24,
           );
-          final at = _padOrigin ?? rest;
+          _padCentre = rest;
           return Listener(
             key: const Key('dpad-area'),
             behavior: HitTestBehavior.opaque,
             onPointerDown: (e) {
-              setState(() => _padOrigin = e.localPosition);
+              // One thumb steers; a second finger landing here is ignored.
+              if (_padPointer != null) return;
+              if ((e.localPosition - rest).distance > _reach) return;
+              _padPointer = e.pointer;
               _updateDirection(e.localPosition);
             },
-            onPointerMove: (e) => _updateDirection(e.localPosition),
-            onPointerUp: (_) => _releasePad(),
-            onPointerCancel: (_) => _releasePad(),
+            onPointerMove: (e) {
+              if (e.pointer == _padPointer) _updateDirection(e.localPosition);
+            },
+            onPointerUp: (e) {
+              if (e.pointer == _padPointer) _releasePad();
+            },
+            onPointerCancel: (e) {
+              if (e.pointer == _padPointer) _releasePad();
+            },
             child: Stack(
               children: [
                 Positioned(
-                  left: at.dx - _padRadius,
-                  top: at.dy - _padRadius,
+                  left: rest.dx - _padRadius,
+                  top: rest.dy - _padRadius,
                   child: _DPadVisual(
                     radius: _padRadius,
                     active: _current,
@@ -278,10 +308,8 @@ class _ControlsOverlayState extends State<ControlsOverlay> {
   );
 
   void _releasePad() {
-    setState(() {
-      _padOrigin = null;
-      _current = Direction.none;
-    });
+    _padPointer = null;
+    setState(() => _current = Direction.none);
     widget.input.release();
   }
 }
@@ -300,7 +328,7 @@ class _DPadVisual extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cell = radius * 0.72;
-    Widget key(Direction d, IconData icon, Alignment alignment) => Align(
+    Widget key(Direction d, String sprite, Alignment alignment) => Align(
       alignment: alignment,
       child: Container(
         width: cell,
@@ -309,10 +337,11 @@ class _DPadVisual extends StatelessWidget {
           color: active == d ? _Ctl.fillHot(opacity) : _Ctl.fill(opacity),
           border: Border.all(color: _Ctl.line(opacity), width: 2),
         ),
-        child: Icon(
-          icon,
-          size: cell * 0.6,
-          color: Px.paper.withValues(alpha: (active == d ? 1 : 0.8) * opacity),
+        alignment: Alignment.center,
+        child: SpriteIcon(
+          sprite,
+          size: cell * 0.7,
+          opacity: (active == d ? 1 : 0.75) * opacity,
         ),
       ),
     );
@@ -322,10 +351,17 @@ class _DPadVisual extends StatelessWidget {
         height: radius * 2,
         child: Stack(
           children: [
-            key(Direction.up, Icons.arrow_drop_up, Alignment.topCenter),
-            key(Direction.down, Icons.arrow_drop_down, Alignment.bottomCenter),
-            key(Direction.left, Icons.arrow_left, Alignment.centerLeft),
-            key(Direction.right, Icons.arrow_right, Alignment.centerRight),
+            Center(
+              child: Container(
+                width: cell,
+                height: cell,
+                color: _Ctl.fill(opacity),
+              ),
+            ),
+            key(Direction.up, 'arrow-up', Alignment.topCenter),
+            key(Direction.down, 'arrow-down', Alignment.bottomCenter),
+            key(Direction.left, 'arrow-left', Alignment.centerLeft),
+            key(Direction.right, 'arrow-right', Alignment.centerRight),
           ],
         ),
       ),

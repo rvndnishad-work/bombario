@@ -211,11 +211,15 @@ class BlastGame extends FlameGame {
   @override
   void update(double dt) {
     super.update(dt);
-    if (sim.cleared || (sim.failed && lives == 0)) return;
+    if (sim.cleared) return;
+
+    // Out of lives: the board freezes, but the respawn timer below still has
+    // to run so the game-over menu appears.
+    final outOfLives = sim.failed && lives == 0;
 
     // Fixed-step simulation so the rules behave identically everywhere.
     _accumulator += math.min(dt, 0.25) * settings.soloSpeed;
-    while (_accumulator >= core.World.tickDt) {
+    while (!outOfLives && _accumulator >= core.World.tickDt) {
       _accumulator -= core.World.tickDt;
       sim.tick({player.id: input.consume()});
       if (!sim.cleared) _ticks++;
