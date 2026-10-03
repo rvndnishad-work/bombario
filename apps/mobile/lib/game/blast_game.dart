@@ -65,6 +65,13 @@ class BlastGame extends FlameGame {
   GameMessage? _pendingTip;
   double _clearBeat = 0;
 
+  /// Tiles walked since the last footstep, and whether the exit has opened.
+  double _stride = 0;
+  bool _exitOpen = false;
+
+  /// One footstep per this many tiles walked.
+  static const double strideTiles = 0.5;
+
   final InputController input = InputController();
   final GameHud hud = GameHud();
   final GameMessages messages = GameMessages();
@@ -148,7 +155,12 @@ class BlastGame extends FlameGame {
       if (daily != null) 'mode': 'daily',
     });
     _hurry = false;
-    GameAudio.instance.playMusic(def.world);
+    _stride = 0;
+    _exitOpen = false;
+    // The fanfare plays under the stage card; the world's music follows it.
+    GameAudio.instance
+      ..stopMusic()
+      ..play(Sfx.stageStart);
     _hasPlayer = true;
     carryOver?.call(player);
 
@@ -257,7 +269,9 @@ class BlastGame extends FlameGame {
     _accumulator += math.min(dt, 0.25) * settings.soloSpeed;
     while (!outOfLives && _accumulator >= core.World.tickDt) {
       _accumulator -= core.World.tickDt;
+      final x0 = player.x, y0 = player.y;
       sim.tick({player.id: input.consume()});
+      _footsteps(x0, y0);
       if (!sim.cleared) _ticks++;
       _handleEvents();
       _announce(
@@ -304,6 +318,29 @@ class BlastGame extends FlameGame {
       _hudTimer = 0;
       _refreshHud();
     }
+  }
+
+  /// A footstep every half tile walked, pitched by axis like the original.
+  void _footsteps(double x0, double y0) {
+    if (!player.alive || sim.cleared) return;
+    final dx = (player.x - x0).abs(), dy = (player.y - y0).abs();
+    if (dx + dy < 1e-4 || dx + dy > 0.5) {
+      _stride = 0; // standing, or teleported (respawn, warp)
+      return;
+    }
+    _stride += dx + dy;
+    if (_stride >= strideTiles) {
+      _stride -= strideTiles;
+      GameAudio.instance.play(dx >= dy ? Sfx.stepH : Sfx.stepV);
+    }
+  }
+
+  /// The last enemy is down: chime once so you know to head for the exit.
+  void _checkExitOpen() {
+    if (_exitOpen || sim.cleared || stage.isBoss || stage.bonus) return;
+    if (sim.enemies.isEmpty || !sim.allEnemiesDead) return;
+    _exitOpen = true;
+    GameAudio.instance.play(Sfx.exitOpen);
   }
 
   void _buzz(Future<void> Function() f) {
@@ -353,6 +390,19 @@ class BlastGame extends FlameGame {
               seconds: 3,
             ),
           );
+        case core.EnemyDied():
+          _checkExitOpen();
+        case core.ItemBurned(releasedWave: true):
+          _shake = 0.4;
+          audio.play(Sfx.exitAngry);
+          messages.show(
+            GameMessage(
+              title: 'You bombed a power-up!',
+              body: 'It is gone, and Door Wardens poured out.',
+              sprite: 'doorWarden',
+              seconds: 4,
+            ),
+          );
         case core.ExitBombed():
           _shake = 0.4;
           audio.play(Sfx.exitAngry);
@@ -399,6 +449,7 @@ class BlastGame extends FlameGame {
   void _endIntro() {
     _introLeft = 0;
     intro.value = null;
+    GameAudio.instance.playMusic(stage.world);
     final tip = _pendingTip;
     _pendingTip = null;
     if (tip != null) messages.show(tip);

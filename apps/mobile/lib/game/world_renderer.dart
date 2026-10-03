@@ -337,6 +337,16 @@ class WorldRenderer extends PositionComponent {
   void _drawItems(Canvas canvas, core.WorldSnapshot sim) {
     for (final item in sim.items) {
       if (item.type == core.ItemType.exit) {
+        if (sim.enemies.every((e) => !e.alive)) {
+          // Open: a warm glow breathes behind the door.
+          final glow = 0.35 + 0.25 * math.sin(_time * 6);
+          canvas.drawRect(
+            _tileRect(item.x, item.y),
+            Paint()
+              ..color = const Color(0xFFFFD23F).withValues(alpha: glow)
+              ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 6),
+          );
+        }
         atlas.draw(canvas, 'exit', _tileRect(item.x, item.y));
       } else {
         // Power-ups bob gently so they read as "pick me up".

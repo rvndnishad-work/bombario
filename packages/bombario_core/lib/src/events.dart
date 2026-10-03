@@ -33,10 +33,13 @@ class ItemPicked extends GameEvent {
 }
 
 class ItemBurned extends GameEvent {
-  const ItemBurned(this.x, this.y, this.type);
+  const ItemBurned(this.x, this.y, this.type, {this.releasedWave = false});
   final int x;
   final int y;
   final ItemType type;
+
+  /// It was a power-up uncovered from a brick, so enemies poured out.
+  final bool releasedWave;
 }
 
 class PlayerDied extends GameEvent {

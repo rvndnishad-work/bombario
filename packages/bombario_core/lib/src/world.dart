@@ -884,7 +884,9 @@ class World {
       regrowing[GridPos(x, y)] = regrowSeconds;
     }
     final revealed = grid.takeHidden(x, y);
-    if (revealed != null) floorItems.add(FloorItem(x: x, y: y, type: revealed));
+    if (revealed != null) {
+      floorItems.add(FloorItem(x: x, y: y, type: revealed, fromBrick: true));
+    }
     playerById(ownerId)?.score += 10;
     events.add(BrickDestroyed(x, y, revealed));
   }
@@ -902,7 +904,19 @@ class World {
         }
       } else {
         floorItems.remove(item);
-        events.add(ItemBurned(x, y, item.type));
+        // Bombing a power-up you uncovered angers it too: it's gone and a
+        // wave pours out, as in the original. Dropped items just burn.
+        final wave = item.fromBrick &&
+            !config.versusMode &&
+            !config.bonusStage &&
+            !config.bossStage;
+        events.add(ItemBurned(x, y, item.type, releasedWave: wave));
+        if (wave) {
+          for (var i = 0; i < config.exitGuardCount; i++) {
+            spawnEnemy(GridPos(x, y), config.exitGuardKind).hitCooldown =
+                Flame.duration + 0.1;
+          }
+        }
       }
     }
   }

@@ -65,4 +65,42 @@ void main() {
     w.tick(const {});
     expect(p.alive, isFalse);
   });
+
+  test('bombing an uncovered power-up burns it and releases a wave', () {
+    final w = makeWorld('''
+#######
+#P..U.#
+#######
+''', kinds: const []);
+    final p = w.addPlayer();
+    p.fireRange = 5;
+    p.applyItem(ItemType.flamePass);
+    // First bomb uncovers it; the second burns it.
+    w.tick({p.id: const PlayerInput(placeBomb: true)});
+    run(w, Bomb.defaultFuse + 0.1);
+    expect(w.floorItems, hasLength(1));
+    w.tick({p.id: const PlayerInput(placeBomb: true)});
+    final events = run(w, Bomb.defaultFuse + 0.1);
+    expect(w.floorItems, isEmpty);
+    expect(events.whereType<ItemBurned>().single.releasedWave, isTrue);
+    expect(w.enemies.where((e) => e.kind == EnemyKind.doorWarden),
+        hasLength(WorldConfig.solo.exitGuardCount));
+  });
+
+  test('a power-up dropped by a fallen player just burns', () {
+    final w = makeWorld('''
+#######
+#P....#
+#######
+''', kinds: const []);
+    final p = w.addPlayer();
+    p.fireRange = 5;
+    p.applyItem(ItemType.flamePass);
+    w.floorItems.add(FloorItem(x: 4, y: 1, type: ItemType.bombUp));
+    w.tick({p.id: const PlayerInput(placeBomb: true)});
+    final events = run(w, Bomb.defaultFuse + 0.1);
+    expect(w.floorItems, isEmpty);
+    expect(events.whereType<ItemBurned>().single.releasedWave, isFalse);
+    expect(w.enemies, isEmpty);
+  });
 }
