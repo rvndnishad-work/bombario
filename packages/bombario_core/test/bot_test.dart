@@ -177,6 +177,58 @@ void main() {
     expect(w.livesLeft, lives - 1);
   });
 
+  test('a co-op bot blasts through bricks to revive a walled-off teammate', () {
+    final w = World(
+      LevelData.parse('''
+###########
+#P.+......#
+#.#+#.#.#.#
+#..+......#
+#.#+#.#.#.#
+#..+.....P#
+###########
+'''),
+      config: WorldConfig.coop,
+    );
+    final human = w.addPlayer(name: 'human');
+    final bot = Bot(w, w.addPlayer(name: 'bot').id);
+    human
+      ..alive = false
+      ..ghost = true
+      ..tombstone = human.tile;
+    final revived = <PlayerRevived>[];
+    runBots(w, [bot], 40, each: () {
+      revived.addAll(w.events.whereType<PlayerRevived>());
+      if (revived.isNotEmpty) w.cleared = true; // stop here
+    });
+    expect(revived.single.byPlayerId, bot.playerId);
+  });
+
+  test('a co-op bot with a fallen teammate never just runs out the clock', () {
+    // Regression: the bot used to chase enemies it could never catch, or
+    // stop short of a grave behind bricks, until the timer ran out.
+    for (var seed = 1; seed <= 12; seed++) {
+      final stage = Campaign.first;
+      final w = World(stage.level(seed: seed, players: 2),
+          seed: seed, config: stage.config(players: 2));
+      final human = w.addPlayer(name: 'human');
+      final bot = Bot(w, w.addPlayer(name: 'bot').id, seed: seed);
+      human
+        ..alive = false
+        ..ghost = true
+        ..tombstone = human.tile;
+      var revived = false;
+      runBots(w, [bot], w.timeLeft + 1, each: () {
+        if (w.events.any((e) => e is PlayerRevived)) {
+          revived = true;
+          w.cleared = true; // stop here
+        }
+      });
+      expect(revived || w.failed, isTrue, reason: 'seed $seed');
+      expect(w.timeLeft, greaterThan(0), reason: 'seed $seed');
+    }
+  });
+
   test('a ghost bot floats by its tombstone', () {
     final w = World(LevelData.parse(openArena), config: WorldConfig.coop);
     final p = w.addPlayer();
