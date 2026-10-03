@@ -6,6 +6,7 @@ import 'package:flame/game.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 
+import '../admin/admin_cheats.dart';
 import '../audio/game_audio.dart';
 import '../net/analytics.dart';
 import '../progress/achievements.dart';
@@ -34,9 +35,12 @@ class BlastGame extends FlameGame {
   BlastGame({
     int seed = 1,
     this.daily,
+    this.admin,
+    this.startStage = 0,
     AppSettings? settings,
     Achievements? achievements,
   }) : _seed = seed,
+       stageIndex = startStage,
        settings = settings ?? AppSettings.memory(),
        achievements = achievements ?? Achievements.memory();
 
@@ -46,6 +50,12 @@ class BlastGame extends FlameGame {
   /// Set when playing the Daily Dungeon instead of the campaign: one stage,
   /// the day's seed, timed for the leaderboard.
   final core.DailyDungeon? daily;
+
+  /// Set when launched from the admin stage viewer.
+  final AdminCheats? admin;
+
+  /// The campaign stage to start on (and to restart from).
+  final int startStage;
 
   static const double tileSize = 32;
   static const int startingLives = 3;
@@ -101,7 +111,7 @@ class BlastGame extends FlameGame {
   int _seed;
 
   /// Index into [core.Campaign.stages].
-  int stageIndex = 0;
+  int stageIndex;
   int lives = startingLives;
 
   /// Score at which the next points life is due.
@@ -173,7 +183,7 @@ class BlastGame extends FlameGame {
       title: daily != null
           ? 'Daily Dungeon: ${def.name}'
           : 'Stage ${def.id}: ${def.name}',
-      body: def.tip,
+      body: [def.tip, def.extraTip].where((t) => t.isNotEmpty).join('\n\n'),
       sprite: 'p1',
     );
     _introLeft = introSeconds;
@@ -208,6 +218,7 @@ class BlastGame extends FlameGame {
       ..play(Sfx.stageStart);
     _hasPlayer = true;
     carryOver?.call(player);
+    _applyCheats();
 
     final old = _renderer;
     if (old != null) world.remove(old);
@@ -216,6 +227,7 @@ class BlastGame extends FlameGame {
       tileSize: tileSize,
       atlas: _atlas,
       highContrast: () => settings.highContrastFlames,
+      revealHidden: () => admin?.revealHidden ?? false,
       look: WorldRenderer.lookFor(def),
     );
     _renderer = renderer;
@@ -239,6 +251,17 @@ class BlastGame extends FlameGame {
       showPlayers: false,
     );
     actionLabel.value = snap.player(player.id)?.actionLabel;
+  }
+
+  void _applyCheats() {
+    final a = admin;
+    if (a == null) return;
+    player
+      ..godMode = a.invincible
+      ..noClip = a.noClip;
+    sim.noEnemies = a.noEnemies;
+    // The clock can't run out on someone exploring.
+    if (a.invincible) sim.timeLeft = math.max(sim.timeLeft, 60);
   }
 
   /// Power-ups carry over between stages, as in the original.
@@ -324,6 +347,7 @@ class BlastGame extends FlameGame {
         : _accumulator + math.min(dt, 0.25) * settings.soloSpeed;
     while (!outOfLives && _accumulator >= core.World.tickDt) {
       _accumulator -= core.World.tickDt;
+      _applyCheats();
       final x0 = player.x, y0 = player.y;
       sim.tick({player.id: input.consume()});
       _footsteps(x0, y0);
@@ -531,6 +555,8 @@ class BlastGame extends FlameGame {
           );
         case core.BombKicked():
           audio.play(Sfx.kick);
+        case core.PipeEntered() || core.PipeExited():
+          audio.play(Sfx.pipe);
         case core.EnemyFrozen() || core.PlayerFrozen():
           audio.play(Sfx.freeze);
         case core.BossDamaged():
@@ -584,6 +610,44 @@ class BlastGame extends FlameGame {
               title: 'The exit is angry!',
               body: 'Door Wardens are pouring out. Run!',
               sprite: 'doorWarden',
+              seconds: 4,
+            ),
+          );
+        case core.TreasureHit(:final hp) when hp > 0:
+          _shake = 0.15;
+          audio.play(Sfx.bossHit);
+        case core.TreasureOpened(:final item) ||
+            core.MiniBossDefeated(:final item):
+          final chest = event is core.TreasureOpened;
+          audio.play(Sfx.exitOpen);
+          messages.show(
+            GameMessage(
+              title: chest ? 'Treasure!' : 'Mini-boss down!',
+              body:
+                  '+${chest ? core.World.treasurePoints : core.World.miniBossPoints}'
+                  ' points. It dropped a ${itemInfo(item).$1}.',
+              sprite: WorldRenderer.itemSprite(item),
+              seconds: 3,
+            ),
+          );
+        case core.ChallengeFailed():
+          messages.show(
+            GameMessage(
+              title: 'Challenge failed',
+              body: 'You got hit. Clear the stage anyway!',
+              sprite: 'tomb',
+              seconds: 3,
+            ),
+          );
+        case core.ChallengeComplete():
+          final life = gainLives(1) > 0;
+          messages.show(
+            GameMessage(
+              title: 'Challenge complete!',
+              body:
+                  '+${core.World.challengePoints} points'
+                  '${life ? ' and an extra life' : ''}.',
+              sprite: 'p1',
               seconds: 4,
             ),
           );
@@ -716,9 +780,19 @@ class BlastGame extends FlameGame {
     _startStage();
   }
 
+  /// Admin view: jumps straight to campaign stage [index], fresh lives.
+  void goToStage(int index) {
+    overlays
+      ..remove(Overlays.stageCleared)
+      ..remove(Overlays.gameOver);
+    stageIndex = index.clamp(0, core.Campaign.stages.length - 1);
+    lives = startingLives;
+    _startStage();
+  }
+
   void restart() {
     overlays.remove(Overlays.gameOver);
-    stageIndex = 0;
+    stageIndex = admin != null ? startStage : 0;
     _hasPlayer = false;
     lives = startingLives;
     _nextLifeAt = pointsPerLife;

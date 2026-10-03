@@ -1,4 +1,3 @@
-import 'dart:math' as math;
 import 'dart:ui';
 
 import 'package:bombario_core/bombario_core.dart' as core;
@@ -7,10 +6,9 @@ import 'package:flutter/painting.dart' show TextPainter, TextSpan, TextStyle;
 import 'sprite_atlas.dart';
 
 /// Short-lived animations the rules don't track: bricks bursting into
-/// chunks, enemies doing the classic Bomberman death (a shocked white
-/// flash, then shrinking away in sparkles while their points float up), and
-/// players popping the way the original's bomber does (a shocked shiver,
-/// then a spin that deflates into a puff of their colour).
+/// chunks, and enemies and players dying frame by frame the way the 8-bit
+/// original's do (a shocked white flash, then hand-drawn death frames; an
+/// enemy's points float up as it goes).
 ///
 /// Effects are spotted by comparing consecutive snapshots, so they work the
 /// same in solo play and in rooms, where the server's events never reach
@@ -51,8 +49,7 @@ class DeathEffects {
     core.WorldSnapshot sim,
     double now,
     String? Function(core.EnemyState) spriteFor, {
-    ({List<String> sprites, Color tint}) Function(int slot, core.PlayerState)?
-    playerSprites,
+    List<String> Function(int slot, core.PlayerState)? playerSprites,
   }) {
     final grid = sim.grid;
     final tiles = [
@@ -116,13 +113,11 @@ class DeathEffects {
         final p = sim.players[slot];
         final was = _standing[p.id];
         if (was == null || p.alive) continue;
-        final look = playerSprites(slot, was);
         _players.add(
           _PlayerDeath(
             x: was.x,
             y: was.y,
-            sprites: look.sprites,
-            tint: look.tint,
+            sprites: playerSprites(slot, was),
             flip: was.facing == core.Direction.left,
             born: now,
           ),
@@ -197,7 +192,39 @@ class DeathEffects {
       BlendMode.srcATop,
     );
 
-  /// Enemies flash, shrink away in sparkles, and leave their points behind.
+  /// When each step of an enemy's death ends, as a share of [enemyTime]:
+  /// the shocked flash, then the X-shaped burst that puffs up, shrinks and
+  /// flies apart (`<sprite>-die-1` to `-4` in the atlas).
+  static const List<double> enemySteps = [0.45, 0.62, 0.76, 0.88, 1.0];
+
+  /// Same for players: a white flash, then the six frames of the bomber's
+  /// death (`p<n>-die-1` to `-6`): X-eyed shock, a squash into a puddle,
+  /// and a ring that breaks into specks.
+  static const List<double> playerSteps = [
+    0.1,
+    0.3,
+    0.42,
+    0.54,
+    0.68,
+    0.84,
+    1.0,
+  ];
+
+  /// How far the hat sits below its usual place on each frame, in sprite
+  /// pixels; it is lost once the head has sunk.
+  static const List<int> _hatDrop = [0, 0, 1, 4];
+
+  /// Which step a death [t] (0 to 1) of the way through is on.
+  static int step(List<double> steps, double t) {
+    var i = 0;
+    while (i < steps.length - 1 && t >= steps[i]) {
+      i++;
+    }
+    return i;
+  }
+
+  /// Enemies flash in shock, burst frame by frame like the original's, and
+  /// leave their points behind.
   void drawEnemies(
     Canvas canvas,
     SpriteAtlas atlas,
@@ -209,30 +236,25 @@ class DeathEffects {
       final centre = Offset(e.x * tileSize, e.y * tileSize);
       final side = e.size * tileSize;
       if (age < enemyTime) {
-        final t = age / enemyTime;
-        var scale = 1.0;
+        final frame = step(enemySteps, age / enemyTime);
+        var name = e.sprite;
         Paint? paint;
-        if (t < 0.5) {
-          // Shocked: blinks white and shivers in place.
+        if (frame == 0) {
+          // Shocked: blinks white, frozen in place.
           if ((age * 16).floor().isEven) paint = _white;
-          scale = 1 + 0.12 * math.sin(age * 40);
         } else {
-          final k = (t - 0.5) / 0.5;
-          scale = 1 - k;
-          paint = SpriteAtlas.faded(1 - k * 0.6);
-          _sparkles(canvas, centre, side, k);
+          final own = '${e.sprite}-die-$frame';
+          name = SpriteAtlas.has(own) ? own : 'edie-$frame';
         }
         canvas.save();
         canvas.translate(centre.dx, centre.dy);
-        canvas.scale(e.flip ? -scale : scale, scale);
-        if (t >= 0.5) canvas.rotate((t - 0.5) * 6);
+        if (e.flip) canvas.scale(-1, 1);
         final dst = Rect.fromCenter(
           center: Offset.zero,
           width: side,
           height: side,
         );
-        final sprite = e.sprite;
-        if (sprite == null || !atlas.draw(canvas, sprite, dst, paint: paint)) {
+        if (name == null || !atlas.draw(canvas, name, dst, paint: paint)) {
           canvas.drawOval(dst, Paint()..color = const Color(0xFFF58CCB));
         }
         canvas.restore();
@@ -250,8 +272,7 @@ class DeathEffects {
     }
   }
 
-  /// Players shiver in shock, then spin and deflate into a puff of their
-  /// colour: the original's six-frame pop, built from the standing sprite.
+  /// Players flash white, then play the bomber's death frame by frame.
   void drawPlayers(
     Canvas canvas,
     SpriteAtlas atlas,
@@ -260,63 +281,35 @@ class DeathEffects {
   ) {
     for (final p in _players) {
       final t = ((now - p.born) / playerTime).clamp(0.0, 1.0);
+      final frame = step(playerSteps, t);
       final centre = Offset(p.x * tileSize, p.y * tileSize - tileSize * 0.08);
-      var scale = 1.0;
-      var wobble = 0.0;
-      Paint? paint;
-      if (t < 0.3) {
-        // Shocked: a white blink and a shiver, feet planted.
-        if (((now - p.born) * 16).floor().isEven) paint = _white;
-        wobble = math.sin((now - p.born) * 50) * 0.12;
-      } else {
-        // Deflating: a spin while the body shrinks away in a puff.
-        final k = (t - 0.3) / 0.7;
-        scale = 1 - k * k;
-        paint = SpriteAtlas.faded(1 - k * 0.5);
-        _sparkles(canvas, centre, tileSize, k, color: p.tint);
-        _puff(canvas, centre, tileSize, k, p.tint);
-      }
-      if (scale <= 0.02) continue;
-      canvas.save();
-      canvas.translate(centre.dx, centre.dy);
-      canvas.rotate(wobble + (t < 0.3 ? 0 : (t - 0.3) / 0.7 * math.pi * 2));
-      canvas.scale(p.flip ? -scale : scale, scale);
       final dst = Rect.fromCenter(
-        center: Offset.zero,
+        center: centre,
         width: tileSize,
         height: tileSize,
       );
-      for (final sprite in p.sprites) {
-        atlas.draw(canvas, sprite, dst, paint: paint);
+      final body = p.sprites.first;
+      canvas.save();
+      if (p.flip) {
+        canvas.translate(centre.dx, 0);
+        canvas.scale(-1, 1);
+        canvas.translate(-centre.dx, 0);
+      }
+      if (frame == 0) {
+        for (final sprite in p.sprites) {
+          atlas.draw(canvas, sprite, dst, paint: _white);
+        }
+      } else {
+        final own = '$body-die-$frame';
+        atlas.draw(canvas, SpriteAtlas.has(own) ? own : 'p1-die-$frame', dst);
+        if (frame < _hatDrop.length) {
+          final hat = dst.shift(Offset(0, _hatDrop[frame] * tileSize / 16));
+          for (final sprite in p.sprites.skip(1)) {
+            atlas.draw(canvas, sprite, hat);
+          }
+        }
       }
       canvas.restore();
-    }
-  }
-
-  /// A ring of the player's colour that swells and fades: the puff left
-  /// where the bomber was.
-  void _puff(Canvas canvas, Offset centre, double side, double k, Color tint) {
-    final paint = Paint()
-      ..color = tint.withValues(alpha: 0.6 * (1 - k))
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = side * 0.1 * (1 - k * 0.5);
-    canvas.drawCircle(centre, side * (0.25 + 0.55 * k), paint);
-  }
-
-  void _sparkles(
-    Canvas canvas,
-    Offset centre,
-    double side,
-    double k, {
-    Color color = const Color(0xFFFFE678),
-  }) {
-    final paint = Paint()..color = color.withValues(alpha: 1 - k);
-    for (var i = 0; i < 8; i++) {
-      final a = i * math.pi / 4;
-      final r = side * (0.2 + 0.6 * k);
-      final p = centre + Offset(math.cos(a) * r, math.sin(a) * r);
-      final s = side * 0.08 * (1 - k * 0.5);
-      canvas.drawRect(Rect.fromCenter(center: p, width: s, height: s), paint);
     }
   }
 
@@ -368,14 +361,12 @@ class _PlayerDeath {
     required this.x,
     required this.y,
     required this.sprites,
-    required this.tint,
     required this.flip,
     required this.born,
   });
   final double x;
   final double y;
   final List<String> sprites;
-  final Color tint;
   final bool flip;
   final double born;
 }

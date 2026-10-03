@@ -1,11 +1,30 @@
 import 'package:flutter/material.dart';
 
+import '../admin/admin_screen.dart';
 import '../settings/settings.dart';
 import 'kit/pixel_theme.dart';
 
 /// Sound, controls and accessibility (§9.2, §9.6).
-class SettingsScreen extends StatelessWidget {
+///
+/// Tapping the title five times opens the hidden admin stage viewer.
+class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
+
+  @override
+  State<SettingsScreen> createState() => _SettingsScreenState();
+}
+
+class _SettingsScreenState extends State<SettingsScreen> {
+  static const _adminTaps = 5;
+  int _taps = 0;
+
+  void _tapTitle() {
+    if (++_taps < _adminTaps) return;
+    _taps = 0;
+    Navigator.of(
+      context,
+    ).push(MaterialPageRoute(builder: (_) => const AdminScreen()));
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -13,7 +32,11 @@ class SettingsScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Px.night,
-        title: Text('Settings', style: Px.title(14)),
+        title: GestureDetector(
+          key: const Key('settings-title'),
+          onTap: _tapTitle,
+          child: Text('Settings', style: Px.title(14)),
+        ),
       ),
       body: SafeArea(
         child: ListView(

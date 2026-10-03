@@ -62,6 +62,10 @@ void main() {
     final p = w.addPlayer()..invincibleFor = 1e9;
     run(w, (def.timeLimit + 1).ceil() * World.tickRate.round());
     expect(w.timeUp, isTrue);
+    // Anything that isn't the boss or a Hunter (a mini-boss) is beaten.
+    for (final e in w.enemies) {
+      if (!e.kind.boss && e.kind != EnemyKind.hunterCoin) e.alive = false;
+    }
     final boss = w.enemies.firstWhere((e) => e.kind.boss)
       ..hp = 1
       ..hitCooldown = 0;
@@ -69,6 +73,7 @@ void main() {
     run(w, 25 * World.tickRate.round());
     expect(boss.alive, isFalse);
     expect(w.cleared, isTrue);
+    expect(w.enemies.where((e) => e.alive), isEmpty);
   });
 
   test('only the first exit wave pays points', () {

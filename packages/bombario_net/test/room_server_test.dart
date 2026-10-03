@@ -243,8 +243,12 @@ void main() {
       ..mode = GameMode.coop
       ..stageId = '1-10';
     room.startMatch();
-    expect(room.world!.enemies.single.kind, EnemyKind.kingPuffball);
-    room.world!.enemies.single.alive = false;
+    final enemies = room.world!.enemies;
+    expect(
+        enemies.where((e) => e.kind.boss).single.kind, EnemyKind.kingPuffball);
+    for (final e in enemies) {
+      e.alive = false; // the boss and its mini-boss
+    }
     room.tick();
     expect(room.state, RoomState.lobby);
     expect(room.stageId, '2-1');

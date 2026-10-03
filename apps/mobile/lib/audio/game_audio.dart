@@ -27,6 +27,7 @@ enum Sfx {
   stepV,
   stageStart,
   exitOpen,
+  pipe,
   timeLow,
   timeUp,
   tick,

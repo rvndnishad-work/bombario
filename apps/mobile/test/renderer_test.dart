@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'dart:ui';
 
 import 'package:bombario/game/sprite_atlas.dart';
@@ -135,4 +136,58 @@ void main() {
     expect(WorldRenderer.facingSprite('moleNest', Direction.up), 'moleNest');
     expect(WorldRenderer.facingSprite('mimic', Direction.left), 'mimic');
   });
+
+  test(
+    'draws the chest, a cracked chest, the mini-boss and hidden items',
+    () async {
+      final atlas = await SpriteAtlas.load();
+      for (final id in ['1-5', '1-10', '1-6', '2-3']) {
+        final stage = Campaign.byId(id)!;
+        final w = World(
+          stage.level(seed: 2, players: 1),
+          seed: 2,
+          config: stage.config(players: 1, coop: false),
+        );
+        final p = w.addPlayer();
+        w.treasure?.hp = 2;
+        // A player half way into the first pipe.
+        final pipes = w.grid.pipes;
+        if (pipes.isNotEmpty) {
+          final front = w.grid.pipeFront(pipes.first);
+          p.setPosition(front.x + 0.5, front.y + 0.5);
+          w.enemies.clear();
+          w.tick(const {});
+          w.tick({p.id: const PlayerInput(action: true)});
+          for (var i = 0; i < 4; i++) {
+            w.tick(const {});
+          }
+          expect(p.inPipe, isTrue);
+        }
+        final renderer = WorldRenderer(
+          () => WorldSnapshot.of(w),
+          tileSize: 32,
+          atlas: atlas,
+          revealHidden: () => true,
+        );
+        final recorder = PictureRecorder();
+        renderer.update(0.2);
+        renderer.render(Canvas(recorder));
+        final picture = recorder.endRecording();
+        // PREVIEW_DIR=... flutter test saves a PNG of each stage to look at.
+        final dir = Platform.environment['PREVIEW_DIR'];
+        if (dir != null) {
+          final image = await picture.toImage(
+            w.grid.width * 32,
+            w.grid.height * 32,
+          );
+          final png = await image.toByteData(format: ImageByteFormat.png);
+          File(
+            '$dir/stage-$id.png',
+          ).writeAsBytesSync(png!.buffer.asUint8List());
+          image.dispose();
+        }
+        picture.dispose();
+      }
+    },
+  );
 }

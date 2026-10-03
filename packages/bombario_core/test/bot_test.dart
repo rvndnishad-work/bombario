@@ -192,11 +192,30 @@ void main() {
   });
 
   test('co-op bots clear a small stage together', () {
+    // The old 15 x 11 first stage, from before 1-1 went full width.
+    const small = '''
+###############
+#P.+.+...+.+.P#
+#.#+#.#+#.#+#.#
+#+..+.e.+e.U..#
+#.#.#+#.#+#.#+#
+#+.+e..U+..e.+#
+#.#+#.#.#+#.#.#
+#..+..e.+e.+.+#
+#+#.#+#.#E#.#.#
+#P.+...+...+.P#
+###############
+''';
     var cleared = 0;
     for (var seed = 0; seed < 4; seed++) {
       final stage = Campaign.first;
-      final w = World(stage.level(seed: seed, players: 2),
-          seed: seed, config: stage.config(players: 2));
+      final level = LevelData.parse(
+        StageDef.shuffleBricks(small, seed),
+        items: stage.items,
+        enemyKinds: stage.layoutEnemies,
+        timeLimit: stage.timeLimit,
+      );
+      final w = World(level, seed: seed, config: stage.config(players: 2));
       final bots = [
         for (var i = 0; i < 2; i++)
           Bot(w, w.addPlayer().id, skill: BotSkill.hard, seed: seed + i),
