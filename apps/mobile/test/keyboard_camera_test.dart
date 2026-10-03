@@ -1,6 +1,7 @@
 import 'package:bombario/game/blast_game.dart';
 import 'package:bombario/game/follow_camera.dart';
 import 'package:bombario/game/sprite_atlas.dart';
+import 'package:bombario/settings/settings.dart';
 import 'package:bombario/ui/game_screen.dart';
 import 'package:flame/components.dart';
 import 'package:flutter/material.dart';
@@ -82,5 +83,11 @@ void main() {
       }
       expect(at(48, 980).y, closeTo(800, 1e-6));
     });
+  });
+
+  test('screen shake is reduced unless the player turns it back on', () {
+    final s = AppSettings.memory();
+    expect(s.reduceShake, isTrue);
+    expect(s.shake, 0);
   });
 }

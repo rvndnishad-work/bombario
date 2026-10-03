@@ -41,7 +41,7 @@ class AppSettings extends ChangeNotifier {
   bool leftHanded = false;
 
   // ---- Accessibility
-  bool reduceShake = false;
+  bool reduceShake = true;
   bool highContrastFlames = false;
 
   /// Solo only: 0.75 slows the whole game down (§9.6).
@@ -68,7 +68,9 @@ class AppSettings extends ChangeNotifier {
     opacity: 'controlsOpacity',
     scale: 'controlsScale',
     leftHanded: 'leftHanded',
-    shake: 'reduceShake',
+    // Renamed when shake became off by default, so installs that saved the
+    // old default pick up the new one.
+    shake: 'reduceShake2',
     flames: 'highContrastFlames',
     speed: 'soloSpeed',
     skin: 'skin',
