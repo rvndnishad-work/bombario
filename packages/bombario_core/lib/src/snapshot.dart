@@ -379,10 +379,14 @@ class PlayerState {
     this.active = ActiveItem.none,
     this.cursedFor = 0,
     this.momentum = Direction.none,
+    this.skin = Player.defaultSkin,
   });
 
   final int id;
   final String name;
+
+  /// Cosmetic look, `classic` unless the player picked another.
+  final String skin;
   final double x;
   final double y;
   final bool alive;
@@ -458,6 +462,7 @@ class PlayerState {
         active: p.active,
         cursedFor: p.cursedFor,
         momentum: p.momentum,
+        skin: p.skin,
       );
 
   PlayerState copyWith({double? x, double? y, Direction? facing}) =>
@@ -488,10 +493,11 @@ class PlayerState {
         active: active,
         cursedFor: cursedFor,
         momentum: momentum,
+        skin: skin,
       );
 
   /// A mutable [Player] body with this state, for client-side prediction.
-  Player toPlayer() => Player(id: id, x: x, y: y, name: name)
+  Player toPlayer() => Player(id: id, x: x, y: y, name: name, skin: skin)
     ..alive = alive
     ..facing = facing
     ..speed = speed
@@ -529,6 +535,7 @@ class PlayerState {
         if (active != ActiveItem.none) 'ac': active.index,
         if (cursedFor > 0) 'cu': cursedFor,
         if (momentum != Direction.none) 'mo': momentum.index,
+        if (skin != Player.defaultSkin) 'sk': skin,
       };
 
   static PlayerState fromJson(Map<String, dynamic> j) {
@@ -560,6 +567,7 @@ class PlayerState {
       active: ActiveItem.values[j['ac'] as int? ?? 0],
       cursedFor: (j['cu'] as num?)?.toDouble() ?? 0,
       momentum: Direction.values[j['mo'] as int? ?? 0],
+      skin: j['sk'] as String? ?? Player.defaultSkin,
     );
   }
 }
