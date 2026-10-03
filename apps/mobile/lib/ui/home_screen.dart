@@ -63,6 +63,14 @@ class HomeScreen extends StatelessWidget {
                     ),
                   ),
                   const Spacer(),
+                  _SmallTile(
+                    key: const Key('locker'),
+                    sprite: 'crown',
+                    label: 'Locker',
+                    wide: true,
+                    onTap: () => _go(context, const LockerScreen()),
+                  ),
+                  const SizedBox(height: 8),
                   Row(
                     children: [
                       Expanded(
@@ -70,15 +78,6 @@ class HomeScreen extends StatelessWidget {
                           sprite: 'star',
                           label: 'Awards',
                           onTap: () => _go(context, const AchievementsScreen()),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: _SmallTile(
-                          key: const Key('locker'),
-                          sprite: 'crown',
-                          label: 'Locker',
-                          onTap: () => _go(context, const LockerScreen()),
                         ),
                       ),
                       const SizedBox(width: 8),

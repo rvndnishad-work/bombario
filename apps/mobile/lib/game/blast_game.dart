@@ -9,6 +9,7 @@ import 'package:flutter/services.dart';
 import '../audio/game_audio.dart';
 import '../net/analytics.dart';
 import '../progress/achievements.dart';
+import '../progress/cosmetics.dart';
 import '../settings/settings.dart';
 import 'game_hud.dart';
 import 'input_controller.dart';
@@ -109,12 +110,17 @@ class BlastGame extends FlameGame {
       ..clear()
       ..show(
         GameMessage(
-          title: 'Stage ${def.id}: ${def.name}',
+          title: daily != null
+              ? 'Daily Dungeon: ${def.name}'
+              : 'Stage ${def.id}: ${def.name}',
           body: def.tip,
           sprite: 'p1',
         ),
       );
-    player = sim.addPlayer(name: 'You');
+    player = sim.addPlayer(
+      name: 'You',
+      skin: Cosmetics.equipped(settings.skin, achievements),
+    );
     achievements.startStage();
     _ticks = 0;
     Analytics.instance.log('stage_start', {
@@ -149,7 +155,7 @@ class BlastGame extends FlameGame {
     hud.updateFrom(
       snap,
       myId: player.id,
-      stage: stage.id,
+      stage: daily != null ? 'Daily' : stage.id,
       lives: lives,
       showPlayers: false,
     );

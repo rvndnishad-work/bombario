@@ -68,7 +68,9 @@ class _GameScreenState extends State<GameScreen> {
                           ),
                       Overlays.pause: (context, BlastGame game) => MenuCard(
                         title: 'Paused',
-                        subtitle: 'Stage ${game.stage.id}: ${game.stage.name}',
+                        subtitle: game.daily != null
+                            ? 'Daily Dungeon: ${game.stage.name}'
+                            : 'Stage ${game.stage.id}: ${game.stage.name}',
                         actions: [
                           OutlinedButton(
                             onPressed: () => Navigator.of(context).pop(),
@@ -122,9 +124,10 @@ class _GameScreenState extends State<GameScreen> {
                       Overlays.gameOver: (context, BlastGame game) => MenuCard(
                         border: const Color(0xFFFF4B4B),
                         title: 'Game over',
-                        subtitle:
-                            'Reached stage ${game.stage.id} with '
-                            '${game.player.score} points',
+                        subtitle: game.daily != null
+                            ? 'Out of lives. Try the dungeon again?'
+                            : 'Reached stage ${game.stage.id} with '
+                                  '${game.player.score} points',
                         actions: [
                           OutlinedButton(
                             onPressed: () => Navigator.of(context).pop(),

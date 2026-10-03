@@ -57,6 +57,7 @@ class _OnlineScreenState extends State<OnlineScreen> {
     () => RoomSession.createOnline(
       server: _serverUri,
       playerName: PlayerName.current,
+      skin: currentSkin(context),
     ),
   );
 
@@ -64,12 +65,14 @@ class _OnlineScreenState extends State<OnlineScreen> {
   /// fills empty seats with bots after 20 seconds.
   void _quick(String mode) => _go(() async {
     final server = _serverUri;
+    final skin = currentSkin(context);
     final code = await OnlineServer.quickMatch(server, mode);
     Analytics.instance.log('quick_match', {'mode': mode});
     return RoomSession.joinOnline(
       server: server,
       code: code,
       playerName: PlayerName.current,
+      skin: skin,
     );
   });
 
@@ -86,6 +89,7 @@ class _OnlineScreenState extends State<OnlineScreen> {
         server: _serverUri,
         code: code,
         playerName: PlayerName.current,
+        skin: currentSkin(context),
       ),
     );
   }

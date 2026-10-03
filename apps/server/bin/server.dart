@@ -13,7 +13,7 @@ import 'package:bombario_server/bombario_server.dart';
 /// - `ROOM_TTL_MINUTES` (default 10): how long an empty room keeps its code.
 /// - `QUICK_START_SECONDS` (default 20): how long a quick-match room waits
 ///   for more people after its first player joins before bots fill in.
-/// - `BOT_SKINS` (default `classic`): comma-separated skins bots pick from.
+/// - `BOT_SKINS` (default: every app hat): comma-separated skins bots pick from.
 /// - `DATA_DIR` (unset by default): where leaderboards and analytics are
 ///   saved. Unset keeps leaderboards in memory and only the latest analytics
 ///   events, so a restart forgets them.
@@ -25,11 +25,12 @@ Future<void> main() async {
   final ttl = int.tryParse(env['ROOM_TTL_MINUTES'] ?? '') ?? 10;
   final quickStart = int.tryParse(env['QUICK_START_SECONDS'] ?? '') ??
       Room.defaultQuickStartDelay.inSeconds;
-  final botSkins = (env['BOT_SKINS'] ?? 'classic')
-      .split(',')
-      .map((s) => s.trim())
-      .where((s) => s.isNotEmpty)
-      .toList();
+  final botSkins =
+      (env['BOT_SKINS'] ?? 'classic,cap,sprout,horns,wizard,tophat,halo,crown')
+          .split(',')
+          .map((s) => s.trim())
+          .where((s) => s.isNotEmpty)
+          .toList();
   final dataDir = env['DATA_DIR'];
 
   final api =

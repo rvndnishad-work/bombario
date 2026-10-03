@@ -21,6 +21,17 @@ play and client-side prediction, so the rules only ever exist once.
 
 ## Status
 
+Phase 5 (launch features):
+- [x] Bots (`Bot`, `BotSkill` in `bombario_core`): path-finding, a danger map of every bomb's future blast, safe bombing with an escape route, versus hunting and co-op teamwork including revives
+- [x] Bot seats in rooms: the host adds or removes bots in the lobby, on Wi-Fi or online, so versus works with fewer than two people
+- [x] Quick match: `POST /quickmatch` puts you in an open co-op or versus room; after 20 s bots fill the empty seats and it starts
+- [x] Daily Dungeon: one generated stage per UTC day, the same for everyone, timed for a global leaderboard (`GET /leaderboards/<board>`, `POST /scores`)
+- [x] Cosmetics: a locker of hats unlocked by achievements, worn in solo and rooms (bots wear them too)
+- [x] Anonymous analytics batched to `POST /events` (JSONL per day under `DATA_DIR`), with a switch in Settings
+- [x] Player name is saved between launches
+- [ ] Scores are reported by the app and can be faked until accounts exist
+- [ ] Store listings, in-app purchases and a deployed public server
+
 Phase 4 (content and polish):
 - [x] Worlds 3 to 5 (Factory, Haunted Manor, Sky Fortress): 30 more stages, so the campaign runs 1-1 to 5-10
 - [x] Every remaining enemy from the design doc: Tigerclaw, Mimic, Bomb Goblin, Kicker Crab, Shade, Mole Queen Nest, Mirror Knight, Fuse Eater, Phase Wraith, Herder

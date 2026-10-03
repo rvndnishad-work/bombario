@@ -7,6 +7,7 @@ import 'package:bombario_net/bombario_net.dart';
 import 'package:flutter/foundation.dart';
 
 import 'discovery.dart';
+import '../progress/cosmetics.dart';
 import 'online.dart';
 
 /// Where a networked session stands, from the UI's point of view.
@@ -78,14 +79,20 @@ class RoomSession extends ChangeNotifier {
   String? hostAddress;
 
   /// Starts a room on this device and joins it over loopback.
-  static Future<RoomSession> host({required String playerName}) async {
-    final server = await RoomServer.start();
+  static Future<RoomSession> host({
+    required String playerName,
+    String skin = 'classic',
+  }) async {
+    final server = await RoomServer.start(
+      botSkins: [for (final s in Cosmetics.skins) s.id],
+    );
     final broadcast = RoomBroadcast(code: server.room.code, port: server.port);
     await broadcast.start();
     final client = await GameClient.connectLocal(
       '127.0.0.1',
       server.port,
       playerName: playerName,
+      skin: skin,
     );
     final session = RoomSession._(client, server, broadcast);
     session.hostAddress = '${await _localIPv4()}:${server.port}';
@@ -98,11 +105,13 @@ class RoomSession extends ChangeNotifier {
     required String host,
     required int port,
     required String playerName,
+    String skin = 'classic',
   }) async {
     final client = await GameClient.connectLocal(
       host,
       port,
       playerName: playerName,
+      skin: skin,
     );
     final session = RoomSession._(client, null, null);
     session.hostAddress = '$host:$port';
@@ -114,9 +123,10 @@ class RoomSession extends ChangeNotifier {
   static Future<RoomSession> createOnline({
     required Uri server,
     required String playerName,
+    String skin = 'classic',
   }) async {
     final code = await OnlineServer.createRoom(server);
-    return _connectOnline(server, code, playerName);
+    return _connectOnline(server, code, playerName, skin);
   }
 
   /// Joins an online room by its code.
@@ -124,22 +134,25 @@ class RoomSession extends ChangeNotifier {
     required Uri server,
     required String code,
     required String playerName,
+    String skin = 'classic',
   }) async {
     final c = OnlineServer.normalizeCode(code);
     await OnlineServer.checkRoom(server, c);
-    return _connectOnline(server, c, playerName);
+    return _connectOnline(server, c, playerName, skin);
   }
 
   static Future<RoomSession> _connectOnline(
     Uri server,
     String code,
     String playerName,
+    String skin,
   ) async {
     final GameClient client;
     try {
       client = await GameClient.connect(
         OnlineServer.socketUri(server, code),
         playerName: playerName,
+        skin: skin,
       );
     } on Exception catch (e) {
       throw OnlineException('Could not join room $code ($e)');
@@ -148,6 +161,11 @@ class RoomSession extends ChangeNotifier {
     session._attach();
     return session;
   }
+
+  /// Host only: fills a seat with a bot, or frees the last bot's seat.
+  void addBot([BotSkill skill = BotSkill.normal]) =>
+      _client.addBot(skill: skill);
+  void removeBot([int? lobbyId]) => _client.removeBot(lobbyId);
 
   void _attach() {
     _sub = _client.messages.listen(_onMessage);
