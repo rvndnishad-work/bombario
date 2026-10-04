@@ -292,6 +292,26 @@ void main() {
       expect(p.x, lessThan(3), reason: 'a pit blocks the way');
     });
 
+    test('cracked floor waits for your heel before it gives way', () {
+      final w = makeWorld('''
+#########
+#P.~....#
+#########
+''');
+      final p = w.addPlayer();
+      run(w, 1.2, inputs: {p.id: right});
+      // Back over it, then stop just past the tile edge: the body still
+      // overlaps the cracked tile, so it holds until we walk on.
+      while (p.tileX >= 3) {
+        w.tick({p.id: left});
+      }
+      expect(w.grid.at(3, 1), TileType.cracked);
+      run(w, 0.5, inputs: {p.id: left});
+      expect(w.grid.at(3, 1), TileType.pit);
+      // Walked clear rather than held at the edge by the new pit.
+      expect(p.x, lessThan(2.5));
+    });
+
     test('falling rocks are telegraphed, then hurt', () {
       final w =
           makeWorld(duo, config: const WorldConfig(stalactiteInterval: 1));
