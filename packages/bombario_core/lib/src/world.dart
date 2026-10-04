@@ -574,6 +574,7 @@ class World {
       if (input.action) _useActive(p);
       _trackTile(p);
     }
+    _tickCollapses();
     _updateBombPassability();
     _tickBombs(dt);
     _tickFlames(dt);
@@ -691,9 +692,10 @@ class World {
     if (before == now) return;
     if (before != null &&
         grid.atPos(before) == TileType.cracked &&
-        (_cracks[before] ?? 0) >= 2 &&
-        !players.any((o) => o.alive && o.tile == before)) {
-      _collapse(before);
+        (_cracks[before] ?? 0) >= 2) {
+      // It gives way once nobody is even partly on it, or the pit would
+      // close round the heel of whoever just stepped off and hold them.
+      _collapsing.add(before);
     }
     if (grid.atPos(now) == TileType.cracked) {
       _cracks[now] = (_cracks[now] ?? 0) + 1;
@@ -813,6 +815,22 @@ class World {
     p.momentum = Direction.none;
     p.warpCooldown = warpCooldown;
     events.add(PlayerWarped(p.id, from.x, from.y, to.x, to.y));
+  }
+
+  /// Cracked tiles walked off for the second time, waiting for the last
+  /// foot to leave before they fall in.
+  final Set<GridPos> _collapsing = {};
+
+  void _tickCollapses() {
+    if (_collapsing.isEmpty) return;
+    _collapsing.removeWhere((t) {
+      if (grid.atPos(t) != TileType.cracked) return true;
+      if (players.any((p) => p.alive && !p.ghost && _overlapsTile(p, t.x, t.y))) {
+        return false;
+      }
+      _collapse(t);
+      return true;
+    });
   }
 
   void _collapse(GridPos at) {

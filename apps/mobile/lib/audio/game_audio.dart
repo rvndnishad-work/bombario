@@ -46,6 +46,10 @@ class GameAudio {
   static final bool _underTest =
       !kIsWeb && Platform.environment.containsKey('FLUTTER_TEST');
 
+  /// Dev tool: hears every cue, even with audio off, so the playthrough
+  /// recorder can mix a soundtrack for its videos.
+  static void Function(String cue, String file)? cueListener;
+
   double musicVolume = 0.6;
   double sfxVolume = 0.8;
 
@@ -123,6 +127,7 @@ class GameAudio {
 
   /// Plays a sound effect. Fire-and-forget; never throws.
   void play(Sfx s) {
+    cueListener?.call('sfx', sfxFile(s));
     if (!enabled || sfxVolume <= 0) return;
     unawaited(_play(s));
   }
@@ -145,6 +150,7 @@ class GameAudio {
 
   /// Cuts a playing jingle short (no-op when disabled or not playing).
   void stopSfx(Sfx s) {
+    cueListener?.call('stopSfx', sfxFile(s));
     final stop = _stops.remove(s);
     // Still starting: stop it the moment it does.
     if (stop == null) _cancelled[s] = _gen[s] ?? 0;
@@ -171,8 +177,9 @@ class GameAudio {
     bool hurry = false,
     bool found = false,
   }) async {
-    if (!enabled) return;
     final file = musicFile(world, hurry: hurry, found: found);
+    cueListener?.call('music', file);
+    if (!enabled) return;
     if (file == _currentMusic) return;
     _currentMusic = file;
     try {
@@ -188,6 +195,7 @@ class GameAudio {
   }
 
   Future<void> stopMusic() async {
+    cueListener?.call('stopMusic', '');
     if (!enabled) return;
     _currentMusic = null;
     try {
@@ -199,6 +207,7 @@ class GameAudio {
 
   /// Holds the music behind the pause menu; [resumeMusic] picks it back up.
   Future<void> pauseMusic() async {
+    cueListener?.call('pauseMusic', '');
     if (!enabled || _currentMusic == null) return;
     try {
       await FlameAudio.bgm.pause();
@@ -208,6 +217,7 @@ class GameAudio {
   }
 
   Future<void> resumeMusic() async {
+    cueListener?.call('resumeMusic', '');
     if (!enabled || _currentMusic == null) return;
     try {
       await FlameAudio.bgm.resume();

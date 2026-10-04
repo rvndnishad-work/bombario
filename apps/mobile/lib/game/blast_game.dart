@@ -14,6 +14,7 @@ import '../progress/cosmetics.dart';
 import '../settings/settings.dart';
 import 'follow_camera.dart';
 import 'game_hud.dart';
+import 'game_pilot.dart';
 import 'input_controller.dart';
 import 'sprite_atlas.dart';
 import 'world_renderer.dart';
@@ -102,6 +103,9 @@ class BlastGame extends FlameGame {
   static const double strideTiles = 0.5;
 
   final InputController input = InputController();
+
+  /// Dev tool (the playthrough recorder): plays instead of the controls.
+  GamePilot? pilot;
   final GameHud hud = GameHud();
   final GameMessages messages = GameMessages();
 
@@ -219,6 +223,7 @@ class BlastGame extends FlameGame {
     _hasPlayer = true;
     carryOver?.call(player);
     _applyCheats();
+    pilot?.onStage(stageIndex, sim, player);
 
     final old = _renderer;
     if (old != null) world.remove(old);
@@ -349,7 +354,13 @@ class BlastGame extends FlameGame {
       _accumulator -= core.World.tickDt;
       _applyCheats();
       final x0 = player.x, y0 = player.y;
-      sim.tick({player.id: input.consume()});
+      final pressed = input.consume();
+      final auto = pilot;
+      sim.tick({
+        player.id: auto == null
+            ? pressed
+            : (sim.over ? core.PlayerInput.idle : auto.next()),
+      });
       _footsteps(x0, y0);
       if (!sim.cleared) _ticks++;
       _handleEvents();
