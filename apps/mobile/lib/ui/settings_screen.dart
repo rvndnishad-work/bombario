@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../admin/admin_screen.dart';
 import '../settings/settings.dart';
+import 'account_section.dart';
 import 'kit/pixel_theme.dart';
 
 /// Sound, controls and accessibility (§9.2, §9.6).
@@ -42,6 +43,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
         child: ListView(
           padding: const EdgeInsets.fromLTRB(24, 12, 24, 24),
           children: [
+            const _Header('Account'),
+            const AccountSection(),
             const _Header('Sound'),
             _SliderRow(
               label: 'Music',

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Facebook login (see docs/accounts.md). The Facebook SDK refuses to start
+     without these, so placeholders stand in until the Facebook app exists.
+     Replace all three with the real app id and client token; the login
+     scheme is "fb" followed by the app id. -->
+<resources>
+    <string name="facebook_app_id" translatable="false">000000000000000</string>
+    <string name="fb_login_protocol_scheme" translatable="false">fb000000000000000</string>
+    <string name="facebook_client_token" translatable="false">00000000000000000000000000000000</string>
+</resources>

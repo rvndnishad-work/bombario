@@ -1,0 +1,26 @@
+rules_version = '2';
+
+// Bombario keeps one profile document per signed-in player:
+// users/{uid} = { name, skin, unlocked[], stats{}, updatedAt }.
+// Each player can read and write only their own; everything else is closed.
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /users/{uid} {
+      allow read, delete: if request.auth != null && request.auth.uid == uid;
+      allow create, update: if request.auth != null
+        && request.auth.uid == uid
+        && request.resource.data.keys().hasOnly(
+             ['name', 'skin', 'unlocked', 'stats', 'updatedAt'])
+        && request.resource.data.name is string
+        && request.resource.data.name.size() <= 24
+        && request.resource.data.skin is string
+        && request.resource.data.unlocked is list
+        && request.resource.data.unlocked.size() <= 200
+        && request.resource.data.stats is map
+        && request.resource.data.stats.size() <= 2000;
+    }
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
