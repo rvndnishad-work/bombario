@@ -244,6 +244,23 @@ class Achievements extends ChangeNotifier {
     return true;
   }
 
+  /// Takes progress synced from the player's account (already merged with
+  /// this phone's, so nothing here goes backwards) and saves it.
+  void absorb(Set<String> ids, Map<String, int> values) {
+    final known = ids.where((id) => byId(id) != null);
+    final changed =
+        !unlocked.containsAll(known) ||
+        values.entries.any((e) => stats[e.key] != e.value);
+    if (!changed) return;
+    unlocked.addAll(known);
+    for (final e in values.entries) {
+      stats[e.key] = e.value;
+      _prefs?.setInt('stat.${e.key}', e.value);
+    }
+    _save();
+    notifyListeners();
+  }
+
   void _bump(String key, List<AchievementDef> got) {
     _set(key, stat(key) + 1);
     if (key == bombsPlaced && stat(key) >= 100) _unlock('bomber-100', got);

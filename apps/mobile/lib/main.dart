@@ -3,6 +3,8 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import 'account/account.dart';
+import 'account/firebase_accounts.dart';
 import 'ads/rewarded_ads.dart';
 import 'audio/game_audio.dart';
 import 'game/sprite_atlas.dart';
@@ -21,10 +23,11 @@ Future<void> main() async {
     DeviceOrientation.landscapeRight,
   ]);
   await SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
-  final (settings, achievements, _) = await (
+  final (settings, achievements, _, accounts) = await (
     AppSettings.load(),
     Achievements.load(),
     SpriteAtlas.load(),
+    FirebaseAccounts.start(),
   ).wait;
   final audio = GameAudio.instance;
   void applyVolumes() =>
@@ -44,17 +47,40 @@ Future<void> main() async {
   PlayerName.value.addListener(
     () => settings.update((s) => s.playerName = PlayerName.value.value),
   );
+  // Guest by default; a signed-in player's progress syncs in the background.
+  final account = accounts == null
+      ? Account.offline(settings: settings, achievements: achievements)
+      : Account(
+          backend: accounts,
+          settings: settings,
+          achievements: achievements,
+        );
+  unawaited(account.start());
   unawaited(audio.preload().then((_) => audio.playMusic(0)));
   // Loads the first "extra life" ad in the background.
   unawaited(RewardedAds.instance.start());
-  runApp(BombarioApp(settings: settings, achievements: achievements));
+  runApp(
+    BombarioApp(
+      settings: settings,
+      achievements: achievements,
+      account: account,
+    ),
+  );
 }
 
 class BombarioApp extends StatelessWidget {
-  const BombarioApp({super.key, this.settings, this.achievements});
+  const BombarioApp({
+    super.key,
+    this.settings,
+    this.achievements,
+    this.account,
+  });
 
   final AppSettings? settings;
   final Achievements? achievements;
+
+  /// Null in tests: Settings then shows sign-in as not set up.
+  final Account? account;
 
   @override
   Widget build(BuildContext context) {
@@ -62,13 +88,20 @@ class BombarioApp extends StatelessWidget {
       settings: settings ?? AppSettings.memory(),
       child: AchievementsScope(
         achievements: achievements ?? Achievements.memory(),
-        child: MaterialApp(
-          title: 'Bombario',
-          debugShowCheckedModeBanner: false,
-          theme: Px.theme(),
-          home: const HomeScreen(),
+        child: _withAccount(
+          MaterialApp(
+            title: 'Bombario',
+            debugShowCheckedModeBanner: false,
+            theme: Px.theme(),
+            home: const HomeScreen(),
+          ),
         ),
       ),
     );
+  }
+
+  Widget _withAccount(Widget child) {
+    final a = account;
+    return a == null ? child : AccountScope(account: a, child: child);
   }
 }

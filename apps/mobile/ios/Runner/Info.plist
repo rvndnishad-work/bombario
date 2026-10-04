@@ -76,5 +76,33 @@
 	     id; replace it with the real one before publishing. -->
 	<key>GADApplicationIdentifier</key>
 	<string>ca-app-pub-3940256099942544~1458002511</string>
+	<!-- Facebook login (see docs/accounts.md): placeholders until the
+	     Facebook app exists. The URL scheme is "fb" + the app id. After
+	     flutterfire configure, also add the encoded iOS app id from
+	     GoogleService-Info.plist as a second scheme for Google sign-in. -->
+	<key>FacebookAppID</key>
+	<string>000000000000000</string>
+	<key>FacebookClientToken</key>
+	<string>00000000000000000000000000000000</string>
+	<key>FacebookDisplayName</key>
+	<string>Bombario</string>
+	<key>FacebookAutoLogAppEventsEnabled</key>
+	<false/>
+	<key>FacebookAdvertiserIDCollectionEnabled</key>
+	<false/>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>fb000000000000000</string>
+			</array>
+		</dict>
+	</array>
+	<key>LSApplicationQueriesSchemes</key>
+	<array>
+		<string>fbapi</string>
+		<string>fb-messenger-share-api</string>
+	</array>
 </dict>
 </plist>
