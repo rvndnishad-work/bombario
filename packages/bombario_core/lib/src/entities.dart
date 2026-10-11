@@ -879,6 +879,12 @@ class Enemy extends Entity {
   /// over and over can't farm points (and points lives).
   bool noPoints = false;
 
+  /// Fraction of the kind's points a kill pays (time-up Hunters pay less).
+  double pointsShare = 1;
+
+  /// What a kill pays before any multi-kill bonus.
+  int get killPoints => noPoints ? 0 : (kind.points * pointsShare).round();
+
   EnemyStateKind state = EnemyStateKind.normal;
 
   /// Seconds left in the current [state] (telegraph, airborne, stunned...).

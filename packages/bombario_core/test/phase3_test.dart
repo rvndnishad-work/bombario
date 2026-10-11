@@ -533,7 +533,8 @@ void main() {
                 reason: stage.id);
           }
           // One power-up per player (all of them on bonus stages).
-          for (final item in stage.bonus ? stage.items : stage.items.take(n)) {
+          for (final item
+              in stage.bonus ? stage.items : stage.itemsFor(n).take(n)) {
             expect(hidden, contains(item), reason: '${stage.id} hides $item');
           }
           run(w, 2);

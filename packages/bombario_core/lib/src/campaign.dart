@@ -1,5 +1,6 @@
 import 'dart:math';
 
+import 'direction.dart';
 import 'entities.dart';
 import 'grid.dart';
 import 'level.dart';
@@ -158,6 +159,19 @@ class StageDef {
   static int scaleBossHp(int hp, int players) =>
       (hp * (1 + 0.6 * (max(1, players) - 1))).round();
 
+  /// Power-ups that do nothing without a teammate: Tether revives a ghost,
+  /// Team Boost powers up the others.
+  static const coopOnlyItems = {ItemType.tether, ItemType.teamBoost};
+
+  /// The stage's item list as [players] players get it: solo skips the
+  /// items that only help teammates. Each player gets one, in this order.
+  List<ItemType> itemsFor(int players) => players > 1
+      ? items
+      : [
+          for (final i in items)
+            if (!coopOnlyItems.contains(i)) i,
+        ];
+
   /// One stage in this many (by seed) hides a 1-Up under a brick.
   static const int extraLifeOdds = 4;
 
@@ -204,11 +218,12 @@ class StageDef {
     const basics = [ItemType.bombUp, ItemType.fireUp, ItemType.speedUp];
     // One power-up per player, as in the original's one per stage (bonus
     // stages are a power-up party); the exit is hidden separately.
+    final pool = itemsFor(n);
     final hidden = bonus
         ? items
         : [
-            ...items.take(n),
-            for (var i = items.length; i < n; i++)
+            ...pool.take(n),
+            for (var i = pool.length; i < n; i++)
               basics[rng.nextInt(basics.length)],
           ];
     final mix = bonus
@@ -242,7 +257,8 @@ class StageDef {
   /// number of bricks (with the power-up and exit under some of them) and
   /// the same enemies land on new tiles. The tiles next to each spawn stay
   /// clear so there is always room for a first bomb, and enemies start well
-  /// away from the players.
+  /// away from the players. A room shut behind a gate (3-3's power-up room)
+  /// keeps exactly what was drawn in it.
   static String shuffleBricks(String layout, int seed) {
     final rows = [
       for (final r in layout.split('\n'))
@@ -254,9 +270,26 @@ class StageDef {
     var foes = 0;
     for (var y = 0; y < rows.length; y++) {
       for (var x = 0; x < rows[y].length; x++) {
+        if (rows[y][x] == 'P') spawns.add(GridPos(x, y));
+      }
+    }
+    // Everything the players can reach without passing a pillar or a gate.
+    final outside = <GridPos>{...spawns};
+    final queue = [...spawns];
+    while (queue.isNotEmpty) {
+      final t = queue.removeLast();
+      for (final d in Direction.cardinal) {
+        final n = t.step(d.dx, d.dy);
+        if (n.y < 0 || n.y >= rows.length) continue;
+        if (n.x < 0 || n.x >= rows[n.y].length) continue;
+        if (const {'#', 'G'}.contains(rows[n.y][n.x])) continue;
+        if (outside.add(n)) queue.add(n);
+      }
+    }
+    for (var y = 0; y < rows.length; y++) {
+      for (var x = 0; x < rows[y].length; x++) {
+        if (!outside.contains(GridPos(x, y))) continue;
         switch (rows[y][x]) {
-          case 'P':
-            spawns.add(GridPos(x, y));
           case '+':
             bricks++;
             rows[y][x] = '.';
@@ -277,7 +310,10 @@ class StageDef {
     final open = [
       for (var y = 0; y < rows.length; y++)
         for (var x = 0; x < rows[y].length; x++)
-          if (rows[y][x] == '.' && nearest(x, y) > 2) GridPos(x, y),
+          if (rows[y][x] == '.' &&
+              nearest(x, y) > 2 &&
+              outside.contains(GridPos(x, y)))
+            GridPos(x, y),
     ]..shuffle(rng);
     final brickTiles = open.take(bricks).toList();
     for (final t in brickTiles) {
@@ -1059,8 +1095,10 @@ abstract final class Campaign {
     StageDef(
       id: '5-8',
       name: "Hunter's Moon",
+      // No regular Hunter Coin: at 4.5 tiles/s through walls no player can
+      // outrun it. Time-up still sends them.
       enemies: [
-        (EnemyKind.hunterCoin, 1),
+        (EnemyKind.tigerclaw, 1),
         (EnemyKind.phaseWraith, 3),
         (EnemyKind.herder, 1),
         (EnemyKind.mirrorKnight, 2),
@@ -1076,11 +1114,10 @@ abstract final class Campaign {
       id: '5-9',
       name: 'Sky Gauntlet',
       enemies: [
-        (EnemyKind.hunterCoin, 1),
         (EnemyKind.herder, 2),
         (EnemyKind.phaseWraith, 3),
         (EnemyKind.fuseEater, 2),
-        (EnemyKind.tigerclaw, 2),
+        (EnemyKind.tigerclaw, 3),
       ],
       items: [ItemType.heart, ItemType.remote, ItemType.sonar],
       brickDensity: 0.65,

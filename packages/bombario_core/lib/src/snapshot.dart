@@ -680,6 +680,7 @@ class EnemyState {
     this.disguise,
     this.visible = true,
     this.herded = false,
+    this.points,
   });
 
   final int id;
@@ -708,7 +709,14 @@ class EnemyState {
   /// Sped up by a nearby Herder: draw an aura.
   final bool herded;
 
+  /// What a kill pays before any multi-kill bonus, when it differs from the
+  /// kind's points (time-up Hunters, nest hatchlings, repeat exit waves).
+  final int? points;
+
   EnemyKind? get kindData => EnemyKind.byName[kind];
+
+  /// What a kill pays before any multi-kill bonus.
+  int get killPoints => points ?? kindData?.points ?? 0;
 
   EnemyState copyWith({double? x, double? y}) => EnemyState(
         id,
@@ -726,6 +734,7 @@ class EnemyState {
         disguise: disguise,
         visible: visible,
         herded: herded,
+        points: points,
       );
 
   static EnemyState of(Enemy e) => EnemyState(
@@ -744,6 +753,7 @@ class EnemyState {
         disguise: e.state == EnemyStateKind.disguised ? e.disguise : null,
         visible: e.visible,
         herded: e.herded,
+        points: e.killPoints == e.kind.points ? null : e.killPoints,
       );
 
   List<Object> toJson() => [
@@ -763,6 +773,7 @@ class EnemyState {
         disguise?.index ?? -1,
         visible,
         herded,
+        points ?? -1,
       ];
 
   static EnemyState fromJson(List e) => EnemyState(
@@ -787,5 +798,6 @@ class EnemyState {
             : null,
         visible: e.length <= 14 || e[14] as bool,
         herded: e.length > 15 && e[15] as bool,
+        points: e.length > 16 && (e[16] as int) >= 0 ? e[16] as int : null,
       );
 }
