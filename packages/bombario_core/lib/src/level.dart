@@ -458,18 +458,22 @@ class LevelData {
         }
       }
     }
+    // A door never goes over a hidden exit or power-up (stepping on the
+    // exit would warp you away from it) or over a buried enemy.
+    bool doorSpot(GridPos p) =>
+        bare(p) &&
+        grid.hiddenAt(p.x, p.y) == null &&
+        enemies.every((e) => e.pos != p);
     for (var i = 0; i < warpPairs; i++) {
-      final a = pick();
-      if (a == null) break;
-      final far = open
-          .where((p) => bare(p) && p != a && p.manhattanTo(a) >= 10)
-          .toList();
+      final ends = open.where(doorSpot).toList();
+      if (ends.isEmpty) break;
+      final a = ends[rng.nextInt(ends.length)];
+      final far = ends.where((p) => p != a && p.manhattanTo(a) >= 10).toList();
       if (far.isEmpty) break;
       final b = far[rng.nextInt(far.length)];
       for (final w in [a, b]) {
         // Doors stand on open floor so they can be seen from the start.
-        if (grid.atPos(w) == TileType.brick &&
-            grid.hiddenAt(w.x, w.y) == null) {
+        if (grid.atPos(w) == TileType.brick) {
           grid.set(w.x, w.y, TileType.floor);
         }
         grid.setFeature(w.x, w.y, TileFeature.warp);

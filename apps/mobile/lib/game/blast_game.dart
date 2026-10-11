@@ -139,6 +139,10 @@ class BlastGame extends FlameGame {
   bool get isLastStage =>
       daily != null || stageIndex == core.Campaign.stages.length - 1;
 
+  /// The Daily Dungeon is a race on a shared leaderboard, so it always runs
+  /// at full speed; the slow-down setting is for the campaign.
+  double get gameSpeed => daily != null ? 1 : settings.soloSpeed;
+
   /// Simulation time spent on this stage, deaths included: the Daily
   /// Dungeon's leaderboard time.
   int get stageTimeMs => (_ticks * core.World.tickDt * 1000).round();
@@ -349,7 +353,7 @@ class BlastGame extends FlameGame {
     // would replay all that time in a burst.
     _accumulator = outOfLives
         ? 0
-        : _accumulator + math.min(dt, 0.25) * settings.soloSpeed;
+        : _accumulator + math.min(dt, 0.25) * gameSpeed;
     while (!outOfLives && _accumulator >= core.World.tickDt) {
       _accumulator -= core.World.tickDt;
       _applyCheats();

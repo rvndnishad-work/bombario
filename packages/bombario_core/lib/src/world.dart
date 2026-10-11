@@ -613,8 +613,7 @@ class World {
       _hunterTimer += dt;
       if (_hunterTimer >= config.hunterInterval) {
         _hunterTimer = 0;
-        final tile = _randomFloorTileFarFromPlayers(6);
-        if (tile != null) spawnEnemy(tile, config.hunterKind);
+        _sendHunter();
       }
       return;
     }
@@ -624,9 +623,25 @@ class World {
       timeUp = true;
       events.add(const TimeUp());
       // First wave arrives immediately, like the NES Pontans.
-      final tile = _randomFloorTileFarFromPlayers(6);
-      if (tile != null) spawnEnemy(tile, config.hunterKind);
+      _sendHunter();
     }
+  }
+
+  /// Time-up Hunters alive at once. More would make the exit, which waits
+  /// for every enemy, all but unreachable.
+  static const int maxHunters = 3;
+
+  /// What a time-up Hunter pays: a tenth of its points, so outlasting the
+  /// clock isn't a way to farm lives.
+  static const double hunterPointsShare = 0.1;
+
+  void _sendHunter() {
+    final alive =
+        enemies.where((e) => e.alive && e.kind == config.hunterKind).length;
+    if (alive >= maxHunters) return;
+    final tile = _randomFloorTileFarFromPlayers(6);
+    if (tile == null) return;
+    spawnEnemy(tile, config.hunterKind).pointsShare = hunterPointsShare;
   }
 
   void _topUpBonusEnemies() {
@@ -825,7 +840,8 @@ class World {
     if (_collapsing.isEmpty) return;
     _collapsing.removeWhere((t) {
       if (grid.atPos(t) != TileType.cracked) return true;
-      if (players.any((p) => p.alive && !p.ghost && _overlapsTile(p, t.x, t.y))) {
+      if (players
+          .any((p) => p.alive && !p.ghost && _overlapsTile(p, t.x, t.y))) {
         return false;
       }
       _collapse(t);
@@ -1434,7 +1450,7 @@ class World {
     if (killer != null && !e.noPoints) {
       final nth = _killsThisTick[killerId] ?? 0;
       _killsThisTick[killerId] = nth + 1;
-      killer.score += multiKillPoints(e.kind.points, nth);
+      killer.score += multiKillPoints(e.killPoints, nth);
     }
     events.add(EnemyDied(e, killerId));
     if (e.id == miniBossId) {
@@ -1871,7 +1887,10 @@ class World {
     ];
     if (options.isEmpty) return;
     final at = options[_rng.nextInt(options.length)];
-    spawnEnemy(at, EnemyKind.pebble).parentId = nest.id;
+    // Hatchlings pay nothing, so an unfound nest isn't a points tap.
+    spawnEnemy(at, EnemyKind.pebble)
+      ..parentId = nest.id
+      ..noPoints = true;
   }
 
   /// Fuse Eater: next to a still bomb it stops to eat it (0.5 s, the moment

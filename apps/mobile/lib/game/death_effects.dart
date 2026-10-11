@@ -89,7 +89,7 @@ class DeathEffects {
     var caught = 0;
     for (final MapEntry(key: id, value: e) in _alive.entries) {
       if (newMaze || alive.containsKey(id)) continue;
-      final points = e.kindData?.points ?? 0;
+      final points = e.killPoints;
       _enemies.add(
         _EnemyDeath(
           x: e.x,

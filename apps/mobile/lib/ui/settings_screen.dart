@@ -98,7 +98,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               onChanged: (v) => s.update((s) => s.highContrastFlames = v),
             ),
             _SliderRow(
-              label: 'Solo game speed',
+              label: 'Campaign game speed',
               value: s.soloSpeed,
               min: 0.5,
               max: 1,
