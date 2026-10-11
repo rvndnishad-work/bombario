@@ -6,7 +6,7 @@ are written as data in this file and rendered with simple oscillators
 (pulse, triangle, noise). Nothing is sampled or transcribed from any existing
 game (see game-design-document.md, section 18).
 
-Pure Python 3 standard library. Output: 16-bit mono WAV, 16000 Hz, written to
+Pure Python 3 standard library. Output: 16-bit mono WAV, 22050 Hz, written to
 apps/mobile/assets/audio/. The output is deterministic (fixed random seed).
 
     python3 tools/audio/make_audio.py
@@ -18,7 +18,7 @@ import random
 import struct
 import wave
 
-SR = 16000
+SR = 22050
 OUT_DIR = os.path.join(
     os.path.dirname(os.path.abspath(__file__)), "..", "..", "apps", "mobile", "assets", "audio"
 )
@@ -196,13 +196,21 @@ def pad(track, seconds):
     return track + [0.0] * max(0, int(seconds * SR) - len(track))
 
 
+def pump_bass(roots, step, vol=0.8):
+    """Jingle bass: one 16th per entry, bouncing root/octave on a triangle."""
+    seq = [(m + (12 if j % 2 else 0), step) for j, m in enumerate(roots)]
+    return notes_seq(seq, kind="tri", vol=vol, gate=0.7)
+
+
 def make_sfx():
     s = {}
     # Your own bomb: a hard click plus a 12.5 % duty pitch drop.
-    s["bomb_place"] = (mix(
+    # A sine thunk underneath gives it weight on phone speakers.
+    s["bomb_place"] = (squash(mix(
         noise_burst(0.012, vol=0.9, decay=0.004, lp=1.0, hp=True),
         sweep(0.07, 900, 220, duty=0.125, vol=0.8, curve=0.45, r=0.03, decay=0.03),
-    ), 0.75)
+        sweep(0.09, 170, 60, kind="sine", vol=0.8, curve=0.4, r=0.02, decay=0.03),
+    ), 1.3), 0.8)
     # Someone else's bomb: lower, softer triangle thud with a tiny click.
     s["bomb_place_other"] = (mix(
         sweep(0.07, 380, 150, kind="tri", vol=0.8, curve=0.5, decay=0.03),
@@ -210,14 +218,17 @@ def make_sfx():
     ), 0.5)
     # Explosion: crack, then bright / mid / low noise periods over a sub thump.
     # The core action, so it is the loudest thing in the game (soft-clipped).
+    # An arcade "BOOM": crack, a crunchy pulse pitch-dive, then bright, mid and
+    # low noise periods over a heavy sub, with a long crumbling tail.
     s["explode"] = (squash(mix(
         noise_burst(0.04, vol=1.0, decay=0.012, lp=1.0),                                   # crack
-        noise_burst(0.30, vol=0.9, decay=0.09, lp=0.95, rate=1),                           # bright period
-        delay(noise_burst(0.40, vol=0.8, decay=0.14, lp=0.6, lp_end=0.2, rate=3), 0.08),   # mid period
-        delay(noise_burst(0.45, vol=0.7, decay=0.2, lp=0.25, lp_end=0.05, rate=8), 0.2),   # low rumble
-        sweep(0.22, 140, 38, kind="sine", vol=1.0, curve=0.35, a=0.001, decay=0.09),       # sub thump
-        sweep(0.12, 70, 45, kind="tri", vol=0.6, decay=0.05),
-    ), 1.2), 0.95)
+        sweep(0.20, 240, 40, duty=0.5, vol=0.55, curve=0.3, a=0.001, decay=0.06),          # boom dive
+        noise_burst(0.30, vol=0.95, decay=0.08, lp=0.95, rate=1),                          # bright period
+        delay(noise_burst(0.45, vol=0.85, decay=0.15, lp=0.6, lp_end=0.2, rate=3), 0.06),  # mid period
+        delay(noise_burst(0.70, vol=0.75, decay=0.26, lp=0.25, lp_end=0.04, rate=10), 0.15),  # rumble
+        sweep(0.30, 160, 34, kind="sine", vol=1.1, curve=0.3, a=0.001, decay=0.12),        # sub thump
+        sweep(0.14, 75, 42, kind="tri", vol=0.7, decay=0.06),
+    ), 1.7), 0.97)
     # Distant explosion: no crack, dull rumble and a sub.
     s["explode_far"] = (squash(mix(
         noise_burst(0.35, vol=0.8, decay=0.12, lp=0.35, lp_end=0.06, rate=3),
@@ -225,12 +236,17 @@ def make_sfx():
         sweep(0.2, 90, 35, kind="sine", vol=0.9, curve=0.4, decay=0.08),
     ), 1.4), 0.5)
     # Power-up pickup: a click and a 12.5 % duty C6-C7 run, the top note doubled.
+    # Power-up pickup: a click and a two-octave 12.5 % duty run up to a
+    # warbling top note, doubled and echoed.
+    run = [(72, 0.032), (76, 0.032), (79, 0.032), (84, 0.032), (88, 0.032), (91, 0.032),
+           (96, 0.2)]
+    up = notes_seq(run, duty=0.125, vol=0.7, gate=0.85, decay=0.12, vib=0.0)
     s["pickup"] = (mix(
         noise_burst(0.008, vol=0.4, decay=0.003, lp=1.0),
-        notes_seq([(84, 0.045), (88, 0.045), (91, 0.045), (96, 0.14)],
-                  duty=0.125, vol=0.7, gate=0.8, decay=0.09),
-        notes_seq([(None, 0.135), (96, 0.14)], duty=0.5, vol=0.2, decay=0.06),
-    ), 0.75)
+        up,
+        notes_seq([(None, 0.192), (96, 0.2)], duty=0.5, vol=0.22, decay=0.08, vib=0.02),
+        delay([v * 0.35 for v in up], 0.09),
+    ), 0.8)
     # Death: a hit, a two-voice stepwise fall, a drooping last note with a
     # wobble, a low thud, then silence (fits inside the 1.5 s respawn delay).
     hit = mix(noise_burst(0.05, vol=0.8, decay=0.015, lp=0.9),
@@ -271,10 +287,9 @@ def make_sfx():
                       (76, q), (79, q), (84, q), (None, q)],
                      duty=0.25, vol=0.24, gate=0.55, decay=0.1)
     harm_tail = delay(notes_seq([(91, 0.58)], duty=0.25, vol=0.2, gate=1.0, decay=0.25), 1.32)
-    bass = notes_seq([(48, 2 * q), (52, 2 * q), (55, 2 * q), (53, 2 * q), (55, 2 * q), (55, 2 * q)],
-                     kind="tri", vol=0.85, gate=0.8, decay=0.15)
+    bass = pump_bass([r for r in (48, 52, 55, 53, 55, 55) for _ in range(4)], q / 2, vol=0.85)
     bass_tail = delay(notes_seq([(48, 0.58)], kind="tri", vol=0.9, gate=1.0, decay=0.35), 1.32)
-    hats = hits(noise_burst(0.02, vol=0.3, decay=0.006, hp=True), [k * q for k in range(12)])
+    hats = hits(noise_burst(0.02, vol=0.3, decay=0.006, hp=True), [k * q / 2 for k in range(24)])
     snares = hits(noise_burst(0.05, vol=0.45, decay=0.018, lp=0.8), [4 * q, 8 * q])
     crash = delay(mix(noise_burst(0.5, vol=0.7, decay=0.14, lp=0.95, lp_end=0.3),
                       sweep(0.2, 120, 45, kind="sine", vol=0.8, decay=0.08)), 1.32)
@@ -309,7 +324,8 @@ def make_sfx():
         noise_burst(0.015, vol=0.9, decay=0.005, lp=0.9),
         sweep(0.09, 180, 520, duty=0.25, vol=0.5, curve=0.8, decay=0.04),
         sweep(0.05, 150, 70, kind="tri", vol=0.7, decay=0.02),
-    ), 0.75)
+        sweep(0.07, 130, 50, kind="sine", vol=0.6, decay=0.025),
+    ), 0.8)
     # Freeze: a crack, an icy descending shimmer and a frosty hiss.
     shimmer = [(100 - k * 2 + (3 if k % 2 else 0), 0.03) for k in range(12)]
     s["freeze"] = (mix(
@@ -330,7 +346,8 @@ def make_sfx():
         sweep(0.25, 180, 55, duty=0.125, vol=0.6, curve=0.5, decay=0.07),
         sweep(0.2, 90, 40, kind="sine", vol=0.9, decay=0.07),
         noise_burst(0.2, vol=0.5, decay=0.06, lp=0.4, rate=4),
-    ), 1.5), 0.9)
+        delay(notes_seq([(60, 0.04), (54, 0.04), (48, 0.08)], duty=0.25, vol=0.35, decay=0.05), 0.03),
+    ), 1.6), 0.92)
     # Ghost: wobbly "wooo" up and down.
     n = int(0.75 * SR)
     ghost = []
@@ -358,14 +375,16 @@ def make_sfx():
     harm = notes_seq([(67, q), (67, q), (67, q), (None, q), (72, q), (76, q), (None, q), (79, q),
                       (None, q), (77, q)], duty=0.25, vol=0.24, gate=0.6, decay=0.12)
     harm_final = delay(notes_seq([(88, 0.7)], duty=0.25, vol=0.22, gate=1.0, decay=0.3), 0.99)
-    bass = notes_seq([(48, q * 3), (None, q), (52, q * 2), (None, q), (55, q * 2), (53, q)],
-                     kind="tri", vol=0.85, gate=0.8, decay=0.15)
+    bass = pump_bass([r for r in (48, 48, 48, 48, 52, 52, 52, 55, 55, 53) for _ in range(2)],
+                     q / 2, vol=0.85)
     bass_final = delay(notes_seq([(48, 0.7)], kind="tri", vol=0.9, gate=1.0, decay=0.35), 0.99)
-    snares = hits(noise_burst(0.05, vol=0.45, decay=0.018, lp=0.8), [0.0, 4 * q, 7 * q])
+    snares = hits(noise_burst(0.05, vol=0.45, decay=0.018, lp=0.8), [0.0, 4 * q, 7 * q, 9 * q])
+    hats = hits(noise_burst(0.02, vol=0.28, decay=0.006, hp=True), [k * q / 2 for k in range(20)])
+    riser = delay(noise_burst(0.27, vol=0.3, decay=1.0, lp=0.05, lp_end=0.9), 0.72)
     crash = delay(noise_burst(0.5, vol=0.7, decay=0.14, lp=0.95, lp_end=0.3), 0.99)
     sub = delay(sweep(0.2, 120, 45, kind="sine", vol=0.9, curve=0.4, decay=0.08), 0.99)
     s["stage_start"] = (mix(slide, lead, lead_final, harm, harm_final, bass, bass_final, snares,
-                            crash, sub), 0.85)
+                            hats, riser, crash, sub), 0.85)
     # Exit open: the last enemy is down; a clunk and a triangle bell G5/C6/G6.
     bell = [(79, 0.09), (84, 0.09), (91, 0.42)]
     s["exit_open"] = (mix(
@@ -450,135 +469,172 @@ def parse_melody(text):
 # (scale degrees, lengths in eighths) and style choices for the other
 # channels. Section keys override song keys. `hurry` renders a whole step up
 # with a clipped lead, louder drums and an alarm arpeggio every bar.
+#
+# The arcade recipe: fast tempos, a short syncopated hook (3+3+2 sixteenths)
+# stated in the first bar of every song, pumping 16th-note octave bass,
+# staccato chip-chord stabs on every 8th, a dotted-8th echo on the lead and
+# busy 16th hats. Every song ends its loop on a reprise of its hook.
 FOUND_A = """0:0.5! 2:0.5 4:0.5 7:0.5 9:2 7:1 4:1 7:1 9:1 |
              8:1! 7:0.5 8:0.5 6:1 4:1 2:2 4:1 6:1 |
              9:1! 9:0.5. 9:0.5. 11:1 9:1 7:1 5:1 7:1 9:1 |
              8:1! 7:1 5:1 3:1 4:1. 5:1. 6:1. 7:1."""
 
+MENU_A = """4:1.5! 4:1.5 2:1 4:1 7:1! r:1 7:1 | 5:1.5! 5:1.5 4:1 2:1 0:1 2:2 |
+            3:1.5! 3:1.5 5:1 7:1 7:1! r:1 7:1 | 6:1! 6:0.5. 6:0.5. 6:1 4:1 1:1 2:1 4:2"""
+
+W1_A = """0:1! 2:1 4:1 7:1! r:0.5 7:0.5 6:1 7:1 4:1 | 5:1.5! 5:1.5 3:1 5:1 7:1 8:1 7:1 |
+          6:1.5! 6:1.5 4:1 6:1 8:1 9:0.5 8:0.5 6:1 | 7:1! 4:0.5 7:0.5 9:1! 7:1 4:1. 2:1. 0:2"""
+
+W2_A = """0:1! 0:0.5. 0:0.5. 2:1 4:1 6:1! 4:1 2:1 4:1 | 6:1! 6:0.5. 6:0.5. 4:1 6:1 8:1! 6:1 4:1 1:1 |
+          3:1.5! 5:1.5 7:1 5:1 3:1 5:0.5 6:0.5 7:1 | 9:1! 7:1 4:1 2:1 0:2_ r:2"""
+
+W3_A = """4:1! 7:1 4:1 2:1 0:1 2:1 4:2 | 3:1! 5:1 3:1 1:1 5:1.5 3:1.5 1:1 |
+          4:1! 7:1 9:1 7:1 4:1 7:1 11:2 | 10:1! 8:1 5:1 3:1 1:2_ r:2"""
+
+W4_A = """0:1! 2:0.5 4:0.5 7:1 4:1 2:1 4:1 | 7:1! 6:0.5 7:0.5 9:1 7:1 6:1 4:1 |
+          5:1! 3:0.5 5:0.5 8:1 5:1 3:1 5:1 | 6:1! 6:0.5. 6:0.5. 8:1 6:1 4:2_"""
+
+W5_A = """0:0.5! 0:0.5 7:1 0:0.5 0:0.5 6:1 0:0.5 0:0.5 5:1 4:1 3:1 |
+          0:0.5! 0:0.5 7:1 0:0.5 0:0.5 6:1 8:2_ 7:1 6:1 |
+          1:0.5! 1:0.5 8:1 1:0.5 1:0.5 7:1 1:0.5 1:0.5 6:1 5:1 3:1 |
+          4:1! 3:1 1:1 0:1 -1:1 0:3_"""
+
+ECHO = ((3, 0.1),)
+
 SONGS = {
     "menu": dict(
-        name="menu", tonic=72, mode="major", bpm=112, beats=4, swing=0.08,
-        lead_duty=[0.5, 0.25], lead_env=dict(d=0.08, s=0.5),
+        name="menu", tonic=72, mode="major", bpm=150, beats=4, swing=0.04,
+        lead_env=dict(d=0.07, s=0.5),
         sections=[
-            dict(chords=[0, 5, 3, 4],
-                 melody="""4:2! 2:1 4:1 7:2! 4:2 | 5:3! 4:1 2:2 0:2 |
-                           3:2! 5:1 7:1 8:2! 7:2 | 6:3! 4:1 1:2 r:2""",
-                 harm="offbeat", bass="rootfifth", drums=["K-h-S-h-k-h-S-h-"], crash=False,
-                 drum_vol=0.8, harm_vol=0.85),
-            dict(chords=[5, 3, 1, 4],
-                 melody="""9:2! 7:1 5:1 7:1 9:1 11:2 | 10:2! 8:1 7:1 5:2 3:2 |
-                           5:1! 3:1 5:2 8:1 7:1 6:2 | 8:2! 7:1 6:1 4:4_""",
-                 harm=["thirds", "stab"], bass="walk", lead_duty=[0.25, 0.5],
-                 drums=["K-h-S-hoK-h-S-oh"], lead_vol=1.1, fill="k-sS-s-S"),
+            dict(chords=[0, 5, 3, 4], melody=MENU_A,
+                 harm="chug", bass="pump", lead_duty=[0.125, 0.25], echo=ECHO,
+                 drums=["K-hhS-hkK-hhS-hh"], fill="k-sS-sSS", drum_vol=0.85, harm_vol=0.9),
+            dict(chords=[5, 3, 0, 4],
+                 melody="""9:1! 7:0.5 9:0.5 11:1 9:1 7:1 5:1 7:2 |
+                           8:1! 7:0.5 8:0.5 10:1 8:1 7:1 5:1 3:2 |
+                           7:1! 9:1 11:1 9:1 7:1. 7:1. 4:2 |
+                           8:1! 8:0.5. 8:0.5. 8:1 6:1 4:1 6:1 8:2_""",
+                 harm=["thirds", "climb"], bass="walk", lead_duty=[0.25, 0.5], lead_vol=1.1,
+                 drums=["K-hoS-hhK-hoS-oh"], fill="k-sS-tTS"),
+            dict(chords=[0, 5, 3, 4], melody=MENU_A,
+                 harm="chug", bass="gallop", lead_duty=0.5, lead_vol=1.15,
+                 lead_double=dict(octave=1, duty=0.125, vol=0.22),
+                 drums=["K-hkS-hkK-hkS-hh"], fill="K-SSk-tT"),
         ],
     ),
     "w1": dict(
-        name="w1", tonic=67, mode="major", bpm=126, beats=4, swing=0.12,
-        lead_env=dict(d=0.09, s=0.45),
+        name="w1", tonic=67, mode="major", bpm=160, beats=4, swing=0.05,
+        lead_env=dict(d=0.07, s=0.45),
         sections=[
-            dict(chords=[0, 3, 4, 0],
-                 melody="""4:1! 4:0.5. 4:0.5. 7:1 6:0.5 7:0.5 4:2 2:1 0:1 |
-                           3:1! 5:1 7:2 5:0.5 7:0.5 8:1 7:1 5:1 |
-                           4:1! 6:1 8:2 6:1 4:1 1:1 2:1 |
-                           0:1 2:1 4:1! 7:1_ 7:2 r:2""",
-                 harm="arp16", bass="synco", lead_duty=[0.125, 0.25],
-                 drums=["K-h-S-h-k-h-S-hh"], fill="k-ssk-SS", drum_vol=0.8, harm_vol=0.85),
+            dict(chords=[0, 3, 4, 0], melody=W1_A,
+                 harm="arp16", bass="pump", lead_duty=[0.125, 0.25], echo=ECHO,
+                 drums=["K-hhS-hkK-hhS-hh"], fill="k-ssk-SS", drum_vol=0.85, harm_vol=0.85),
             dict(chords=[5, 3, 1, 4],
                  melody="""9:2! 7:1 5:1 7:1.5 9:0.5 7:2 | 8:2! 7:1 5:1 3:1~ 5:1 7:2 |
                            5:1! 3:1 5:1 8:1 7:0.5 6:0.5 5:0.5 3:0.5 1:2 |
                            2:1 4:1 6:1 8:1! 11:2_ 11:1 r:1""",
-                 harm=["thirds", "stab"], bass="walk", lead_duty=[0.25, 0.5], lead_vol=1.1,
-                 drums=["K-hoS-h-K-h-S-ho"], fill="k-sS-tTS"),
+                 harm=["thirds", "stab"], bass="gallop", lead_duty=[0.25, 0.5], lead_vol=1.1,
+                 drums=["K-hoS-h-K-hkS-ho"], fill="k-sS-tTS"),
+            dict(chords=[0, 3, 4, 0], melody=W1_A,
+                 harm="chug", bass="pump", lead_duty=0.5, lead_vol=1.15,
+                 lead_double=dict(octave=1, duty=0.125, vol=0.22),
+                 drums=["K-hkS-hkK-hkS-sS"], fill="K-SSk-tT"),
         ],
     ),
     "w2": dict(
-        name="w2", tonic=62, mode="dorian", bpm=100, beats=4, lp=0.7,
-        lead_env=dict(d=0.1, s=0.7), lead_gate=0.92,
+        name="w2", tonic=62, mode="dorian", bpm=144, beats=4, lp=0.75, swing=0.06,
+        lead_env=dict(d=0.08, s=0.55),
         sections=[
-            dict(chords=[0, 0, 6, 6],
-                 melody="""0:2! 2:1 4:3 r:2 | 3:1 2:1 0:2 r:4 | 6:2! 1:1 3:3 r:2 |
-                           4:1 3:1 1:2 -1:4_""",
-                 harm="echo", bass="drone", lead_duty=0.5, kit="metal",
-                 drums=["K-----h-S-----h-", "K-----h-S---k-h-"], crash=False, fill="t-t-T-S-"),
+            dict(chords=[0, 6, 3, 0], melody=W2_A,
+                 harm="chug", bass="pump", lead_duty=[0.125, 0.25], kit="metal", echo=ECHO,
+                 drums=["K-hkS-hkK-hkS-hk"], fill="t-tt-T-S", drum_vol=0.85, harm_vol=0.85),
             dict(chords=[3, 3, 4, 6],
                  melody="""3:2! 5:1 7:3 r:2 | 9:1! 7:1 5:2 3:2 2:2 | 4:3! 6:1 8:2 7:2 |
                            6:2! 5:1 4:1 3:2 1:2""",
                  harm=["thirds", "echo"], bass="octave", lead_duty=[0.125, 0.25], lead_vol=1.1,
-                 kit="metal", drums=["K-h-h-S-h-k-h-S-"], fill="t-tt-T-S"),
+                 kit="metal", drums=["K-h-hkS-h-k-hkS-"], fill="t-tt-T-S"),
+            dict(chords=[0, 6, 3, 0], melody=W2_A,
+                 harm="chug", bass="gallop", lead_duty=0.5, lead_vol=1.15, kit="metal",
+                 lead_double=dict(octave=1, duty=0.125, vol=0.22),
+                 drums=["K-hkS-hkK-hkS-sS"], fill="K-SSt-tT"),
         ],
     ),
     "w3": dict(
-        name="w3", tonic=76, mode="lydian", bpm=108, beats=4,
-        lead_env=dict(d=0.12, s=0.7), lead_gate=0.9,
+        name="w3", tonic=71, mode="lydian", bpm=148, beats=4,
+        lead_env=dict(d=0.09, s=0.6),
         sections=[
-            dict(chords=[0, 1, 0, 1],
-                 melody="""4:4! 3:2 4:2 | 5:4! 3:2 1:2 | 7:3! 6:1 4:4_ | 8:2! 5:2 3:4""",
-                 harm="sparkle", bass="rootfifth", lead_duty=0.25,
-                 drums=["K---h---S---h--h"], fill="r-r-S-rr", drum_vol=0.8),
+            dict(chords=[0, 1, 0, 1], melody=W3_A,
+                 harm="sparkle", bass="pump", lead_duty=0.25, echo=ECHO,
+                 drums=["K-h-S-hkK-hhS-h-"], fill="r-rS-rSS", drum_vol=0.8),
             dict(chords=[5, 3, 1, 4],
                  melody="""2:2! 5:2 7:4_ | 7:2! 5:2 3:2 0:2 | 1:3! 3:1 5:2 8:2 | 6:4! 4:2 r:2""",
-                 harm=["thirds", "sparkle"], bass="walk", lead_duty=[0.25, 0.5], lead_vol=1.1,
-                 echo=((2, 0.08),), drums=["K-h-h-S-h-k-h-S-"], fill="r-rS-rSS"),
+                 harm=["thirds", "climb"], bass="gallop", lead_duty=[0.25, 0.5], lead_vol=1.1,
+                 echo=((3, 0.09),), drums=["K-hhS-h-K-hhS-hh"], fill="r-rS-rSS"),
+            dict(chords=[0, 1, 0, 1], melody=W3_A,
+                 harm=["sparkle", "chug"], bass="pump", lead_duty=0.5, lead_vol=1.15,
+                 lead_double=dict(octave=1, duty=0.125, vol=0.2),
+                 drums=["K-hkS-hkK-hkS-sS"], fill="K-SSr-rS"),
         ],
     ),
     "w4": dict(
-        name="w4", tonic=69, mode="harmonic_minor", bpm=132, beats=3, vibrato=0.012,
-        lead_env=dict(d=0.08, s=0.55),
+        name="w4", tonic=69, mode="harmonic_minor", bpm=168, beats=3, vibrato=0.01,
+        lead_env=dict(d=0.07, s=0.5),
         sections=[
-            dict(chords=[0, 0, 3, 3],
-                 melody="""4:2! 3:1 2:1 1:1 2:1 | 0:4! -3:2~ | 3:2! 5:2 7:2 | 6:3! 5:1 3:2""",
-                 harm="waltz", bass="waltz", lead_duty=0.125, drums=["K---h-S-h---"],
-                 crash=False, fill="t-tT-S", drum_vol=0.8, harm_vol=0.85),
+            dict(chords=[0, 0, 3, 4], melody=W4_A,
+                 harm="chug", bass="pump", lead_duty=[0.125, 0.25], echo=ECHO,
+                 drums=["K-hkS-K-hkS-"], fill="t-tT-S", drum_vol=0.85, harm_vol=0.85),
             dict(chords=[5, 5, 4, 4],
                  melody="""5:2! 7:2 9:2 | 8:3! 7:1 5:2 | 4:2! 6:2 8:2 | 7:3! 6:3_""",
-                 harm=["waltz", "thirds"], bass="waltz", lead_duty=0.25, lead_vol=1.1,
-                 drums=["K---h-S-h-h-"], fill="t-tT-S"),
+                 harm=["waltz", "thirds"], bass="gallop", lead_duty=0.25, lead_vol=1.1,
+                 drums=["K-h-S-hkS-h-"], fill="t-tT-S"),
+            dict(chords=[0, 0, 3, 4], melody=W4_A,
+                 harm="chug", bass="gallop", lead_duty=0.5, lead_vol=1.1, echo=ECHO,
+                 drums=["K-hkS-hkS-hk"], fill="K-tT-S"),
             dict(chords=[0, 3, 4, 4],
                  melody="""7:2! 4:1 2:1 0:2 | 3:2! 5:1 3:1 2:2 | 1:2! 4:2 6:2 | 4:4! r:2""",
-                 harm=["chipchord", "thirds"], bass="octave", lead_duty=[0.125, 0.5],
-                 lead_vol=1.15, drums=["K-h-S-h-S-hh"], fill="K-tT-S"),
+                 harm=["chipchord", "thirds"], bass="pump", lead_duty=[0.125, 0.5],
+                 lead_vol=1.15, lead_double=dict(octave=1, duty=0.125, vol=0.2),
+                 drums=["K-hkS-hkS-sS"], fill="K-tT-S"),
         ],
     ),
     "w5": dict(
-        name="w5", tonic=72, mode="phrygian", bpm=152, beats=4,
-        lead_env=dict(d=0.07, s=0.5),
+        name="w5", tonic=72, mode="phrygian", bpm=168, beats=4,
+        lead_env=dict(d=0.06, s=0.5),
         sections=[
-            dict(chords=[0, 0, 1, 0],
-                 melody="""0:1! 0:1. 2:1 0:1 3:2 2:2 | 1:1 0:1 -1:2~ 0:4_ |
-                           1:1! 1:1. 3:1 1:1 5:2 3:2 | 2:1 1:1 0:2 r:4""",
-                 harm="power", bass="root8", lead_duty=[0.125, 0.5],
-                 drums=["K-h-S-hkK-h-S-h-"], fill="k-sS-ttT", drum_vol=0.85, harm_vol=0.85),
+            dict(chords=[0, 0, 1, 0], melody=W5_A,
+                 harm="power", bass="pump", lead_duty=[0.125, 0.5],
+                 drums=["K-hkS-hkK-hkS-kk"], fill="k-sS-ttT", drum_vol=0.85, harm_vol=0.85),
             dict(chords=[5, 6, 0, 0],
                  melody="""7:2! 5:1 7:1 9:2 7:2 | 8:2! 6:1 4:1 6:4_ |
                            7:1! 7:1. 9:1 7:1 11:2 9:2 | 8:1 7:1 6:2 7:4_""",
-                 harm="stab", bass="synco", lead_duty=0.25, lead_vol=1.05,
+                 harm="stab", bass="gallop", lead_duty=0.25, lead_vol=1.05, echo=ECHO,
                  drums=["K-h-S-hkK-hkS-sS"], fill="k-sS-ttT"),
             dict(chords=[3, 5, 1, 1],
                  melody="""3:2! 5:2 7:2 5:2 | 5:1 7:1 9:2! 8:2 7:2 | 8:2! 1:2 3:2 5:2 |
                            6:1 5:1 3:1 1:1 8:4!""",
-                 harm=["thirds", "power"], bass="walk", lead_duty=0.5, lead_vol=1.15,
+                 harm=["thirds", "power"], bass="pump", lead_duty=0.5, lead_vol=1.15,
                  lead_double=dict(octave=1, duty=0.125, vol=0.25),
                  drums=["K-k-S-k-K-k-S-kk"], fill="K-SSk-tT"),
         ],
     ),
     "found": dict(
-        name="found", tonic=72, mode="major", bpm=150, beats=4, swing=0.06,
+        name="found", tonic=72, mode="major", bpm=168, beats=4, swing=0.05,
         lead_env=dict(d=0.07, s=0.45),
         sections=[
             dict(chords=[0, 4, 5, 3], melody=FOUND_A,
-                 harm="chipchord", bass="octave", lead_duty=[0.125, 0.25],
-                 drums=["K-hhS-hhk-hhS-hh"], fill="k-sS-sSS", drum_vol=0.8, harm_vol=0.85),
+                 harm="chug", bass="pump", lead_duty=[0.125, 0.25], echo=ECHO,
+                 drums=["K-hhS-hkK-hhS-hh"], fill="k-sS-sSS", drum_vol=0.85, harm_vol=0.85),
             dict(chords=[1, 4, 5, 3],
                  melody="""5:1.5! 5:0.5 3:1 1:1 3:1 5:1 8:2 |
                            8:1! 6:1 4:1 6:1 8:0.5 9:0.5 8:0.5 6:0.5 4:2 |
                            9:1! 11:1 9:1 7:1 5:1 7:1 9:2_ |
                            10:1! 9:1 7:1 5:1 7:1 9:1 11:2""",
-                 harm="arp16", bass="walk", lead_duty=[0.25, 0.5], lead_vol=1.1,
+                 harm="arp16", bass="gallop", lead_duty=[0.25, 0.5], lead_vol=1.1,
                  drums=["K-hoS-hhK-hoS-oh"], fill="k-sS-tTS"),
             dict(chords=[0, 4, 5, 3], melody=FOUND_A,
-                 harm=["thirds", "stab"], bass="synco", lead_duty=0.5, lead_vol=1.15,
+                 harm=["thirds", "chug"], bass="pump", lead_duty=0.5, lead_vol=1.15,
                  lead_double=dict(octave=1, duty=0.125, vol=0.22),
-                 drums=["K-hhS-hhK-hhS-oh"], fill="K-SSk-tT"),
+                 drums=["K-hkS-hkK-hkS-sS"], fill="K-SSk-tT"),
         ],
     ),
 }
@@ -624,20 +680,27 @@ class Track:
 
 
 def drum_kit(kind="std"):
-    kick = mix(sweep(0.12, 150, 40, kind="tri", vol=1.0, curve=0.4, r=0.02),
-               noise_burst(0.02, vol=0.4, decay=0.008, lp=0.5),
-               sweep(0.01, 1200, 600, duty=0.5, vol=0.5))  # click so it cuts through
+    # Arcade kick: a fast triangle drop, a sine sub for weight and a click so
+    # it cuts through the pulse channels.
+    kick = mix(sweep(0.11, 180, 42, kind="tri", vol=1.0, curve=0.35, r=0.02),
+               sweep(0.14, 110, 40, kind="sine", vol=0.7, curve=0.4, r=0.03, decay=0.06),
+               noise_burst(0.02, vol=0.45, decay=0.006, lp=0.6),
+               sweep(0.008, 1400, 700, duty=0.5, vol=0.5))
+    # Snares get a short pitched body under the noise so they crack.
+    body = sweep(0.05, 260, 170, kind="tri", vol=0.55, curve=0.6, decay=0.02)
     if kind == "metal":
-        snare = noise_burst(0.12, vol=0.7, decay=0.04, lp=0.9, rate=2, short=True)
+        snare = mix(noise_burst(0.12, vol=0.75, decay=0.04, lp=0.9, rate=2, short=True), body)
         hat = noise_burst(0.025, vol=0.35, decay=0.008, hp=True, short=True)
     else:
-        snare = noise_burst(0.14, vol=0.7, decay=0.05, lp=0.8, rate=1)
-        hat = noise_burst(0.035, vol=0.35, decay=0.012, hp=True, short=True)
+        snare = mix(noise_burst(0.14, vol=0.75, decay=0.045, lp=0.85, rate=1), body)
+        hat = noise_burst(0.03, vol=0.32, decay=0.01, hp=True, short=True)
     ohat = noise_burst(0.09, vol=0.4, decay=0.045, hp=True, short=True)
     crash = noise_burst(0.45, vol=0.6, decay=0.22, lp=0.9, lp_end=0.3)
     tom = sweep(0.10, 260, 140, kind="tri", vol=0.9, curve=0.5)
     rim = noise_burst(0.02, vol=0.5, decay=0.006, lp=0.9, short=True)
-    return {"k": kick, "s": snare, "h": hat, "o": ohat, "c": crash, "t": tom, "r": rim}
+    riser = noise_burst(0.3, vol=0.35, decay=1.0, lp=0.04, lp_end=0.9)
+    return {"k": kick, "s": snare, "h": hat, "o": ohat, "c": crash, "t": tom, "r": rim,
+            "z": riser}
 
 
 KITS = {}
@@ -821,6 +884,30 @@ def render_song(spec, tempo_mult=1.0, hurry=False):
                                       0.16 * hv * math.exp(-k * cyc / SR / 0.45),
                                       duty=0.25, a=0.001, d=0.0, s=1.0, r=0.002)
                         k += 1
+            elif style == "chug":
+                # A staccato chip chord on every 8th: the triad cycled per 60 Hz
+                # frame, decaying fast. Off-beats a little louder for push.
+                cyc = SR // 60
+                for k in range(0, spb, 2):
+                    L = int(span(base + k, 2) * 0.55)
+                    acc = 0.75 if k % 4 == 0 else 1.0
+                    j = 0
+                    while j * cyc < L:
+                        d = triad[j % 3]
+                        harm.add_tone(pos(base + k) + j * cyc, cyc, note(d, -1),
+                                      0.15 * hv * acc * math.exp(-j * cyc / SR / 0.06),
+                                      duty=0.25, a=0.001, d=0.0, s=1.0, r=0.002)
+                        j += 1
+            elif style == "climb":
+                # Rising 16th arpeggio over two octaves, restarting each beat.
+                pat = [0, 1, 2, 3]
+                for k in range(spb):
+                    p = pat[k % 4]
+                    d = triad[p] if p < 3 else root + 7
+                    d += 7 * ((k // 4) % 2)
+                    acc = 1.0 if k % 4 == 0 else 0.7
+                    harm.add_tone(pos(base + k), int(span(base + k, 1) * 0.75), note(d, -1),
+                                  0.15 * acc * hv, duty=0.125, d=0.025, s=0.35)
             elif style == "thirds":
                 pass  # handled below (needs lead events)
     # thirds: a diatonic third below every lead note of a quarter or longer.
@@ -895,6 +982,25 @@ def render_song(spec, tempo_mult=1.0, hurry=False):
             for st, L, up in ev:
                 bass.add_tone(pos(base + st), int(span(base + st, L) * 0.8), r0 * (2 if up else 1),
                               0.5 * bv * (1.0 if st == 0 else 0.85), kind="tri", d=0.02, s=0.9)
+
+        elif bstyle == "pump":
+            # Driving 16ths bouncing root/octave, the classic arcade engine room.
+            # The last two 16ths of the bar lead into the next chord.
+            for k in range(spb):
+                if k >= spb - 2:
+                    f = note(nxt + (-1 if k == spb - 2 else 0), -2) if nxt != root else r0 * 2
+                else:
+                    f = r0 * 2 if k % 2 else r0
+                acc = 1.0 if k % 4 == 0 else 0.8
+                bass.add_tone(pos(base + k), int(span(base + k, 1) * 0.7), f, 0.48 * bv * acc,
+                              kind="tri", a=0.001, d=0.02, s=0.9, r=0.005)
+        elif bstyle == "gallop":
+            # Per beat: an 8th on the root and two 16ths (root, octave).
+            for k in range(0, spb, 4):
+                for st, L, f in ((0, 2, r0), (2, 1, r0), (3, 1, r0 * 2)):
+                    bass.add_tone(pos(base + k + st), int(span(base + k + st, L) * 0.7), f,
+                                  0.5 * bv * (1.0 if st == 0 else 0.8), kind="tri", a=0.001,
+                                  d=0.02, s=0.9, r=0.005)
 
     # ---- Drums ------------------------------------------------------------
     kick_pos = []
@@ -978,7 +1084,7 @@ def make_music():
         write_wav("music_" + key, render_song(spec), peak=0.8)
         names.append("music_" + key)
         if key.startswith("w") or key == "found":
-            write_wav("music_%s_fast" % key, render_song(spec, 1.25, hurry=True), peak=0.8)
+            write_wav("music_%s_fast" % key, render_song(spec, 1.2, hurry=True), peak=0.8)
             names.append("music_%s_fast" % key)
     return names
 
