@@ -81,6 +81,30 @@ class _SettingsScreenState extends State<SettingsScreen> {
               onChanged: (v) => s.update((s) => s.controlsScale = v),
             ),
             _SwitchRow(
+              key: const Key('joystick'),
+              label: 'Joystick (off: arrow pad)',
+              value: s.joystick,
+              onChanged: (v) => s.update((s) => s.joystick = v),
+            ),
+            if (s.joystick) ...[
+              _SliderRow(
+                key: const Key('stick-tiles'),
+                label: 'Stick sensitivity',
+                value: s.stickTiles,
+                min: 0.25,
+                max: 4,
+                divisions: 15,
+                display: _tiles(s.stickTiles),
+                onChanged: (v) => s.update((s) => s.stickTiles = v),
+              ),
+              Text(
+                'How far the player walks when you drag the stick from its '
+                'centre to its rim. Hold it at the rim to keep walking.',
+                style: Px.label(12, color: Px.muted, bold: false),
+              ),
+              const SizedBox(height: 8),
+            ],
+            _SwitchRow(
               key: const Key('left-handed'),
               label: 'Left-handed (bomb on the left)',
               value: s.leftHanded,
@@ -159,8 +183,15 @@ class _SwitchRow extends StatelessWidget {
   );
 }
 
+/// "0.25 tiles", "1 tile", "1.5 tiles".
+String _tiles(double t) {
+  final n = t.toStringAsFixed(2).replaceFirst(RegExp(r'\.?0+$'), '');
+  return t == 1 ? '1 tile' : '$n tiles';
+}
+
 class _SliderRow extends StatelessWidget {
   const _SliderRow({
+    super.key,
     required this.label,
     required this.value,
     required this.display,
@@ -198,7 +229,7 @@ class _SliderRow extends StatelessWidget {
         ),
       ),
       SizedBox(
-        width: 56,
+        width: 104,
         child: Text(display, style: Px.label(13), textAlign: TextAlign.end),
       ),
     ],

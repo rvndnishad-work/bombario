@@ -1,0 +1,162 @@
+import 'package:bombario/game/input_controller.dart';
+import 'package:bombario/ui/controls_overlay.dart';
+import 'package:bombario_core/bombario_core.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_test/flutter_test.dart';
+
+/// Tiles [input] walks before it stops, at the base 0.1 tile a tick.
+double walkedOut(InputController input) {
+  var tiles = 0.0;
+  for (var i = 0; i < 100; i++) {
+    final step = input.consume();
+    if (step.direction == Direction.none) break;
+    tiles += step.walk * 0.1;
+  }
+  return tiles;
+}
+
+void main() {
+  // The D-pad's box (which places the rest spot) and the stick's ring at
+  // scale 1, and how far the knob reaches.
+  const padRadius = 70.0;
+  const radius = 60.0;
+  const rim = radius * 0.85;
+
+  Future<(InputController, Offset)> pumpStick(
+    WidgetTester tester, {
+    double stickTiles = 1,
+  }) async {
+    tester.view.physicalSize = const Size(900, 420);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    final input = InputController();
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: ControlsOverlay(
+            input: input,
+            actionLabel: ValueNotifier<String?>(null),
+            haptics: false,
+            stickTiles: stickTiles,
+          ),
+        ),
+      ),
+    );
+    // The stick sits low in the left corner, where the D-pad would.
+    final area = tester.getRect(find.byKey(const Key('joystick-area')));
+    return (
+      input,
+      area.bottomLeft + const Offset(padRadius + 28, -padRadius - 24),
+    );
+  }
+
+  testWidgets('a drag of half the rim walks half a tile, then stops', (
+    tester,
+  ) async {
+    final (input, rest) = await pumpStick(tester);
+    final g = await tester.startGesture(rest);
+    await g.moveBy(const Offset(rim / 2, 0));
+    await tester.pump();
+    expect(input.held, Direction.none);
+    expect(input.moving, Direction.right);
+    expect(walkedOut(input), closeTo(0.5, 1e-6));
+    await g.up();
+  });
+
+  testWidgets('sensitivity scales the distance a drag walks', (tester) async {
+    final (input, rest) = await pumpStick(tester, stickTiles: 0.5);
+    final g = await tester.startGesture(rest);
+    await g.moveBy(const Offset(0, -rim / 2));
+    await tester.pump();
+    expect(input.moving, Direction.up);
+    expect(walkedOut(input), closeTo(0.25, 1e-6));
+    await g.up();
+  });
+
+  testWidgets('the ring never moves; a press away from it steers from '
+      'its centre', (tester) async {
+    final (input, rest) = await pumpStick(tester);
+    final ring = tester.getRect(find.byKey(const Key('stick-ring')));
+    expect(ring.center, rest);
+    final g = await tester.startGesture(rest + const Offset(-rim / 2, 0));
+    await tester.pump();
+    expect(tester.getRect(find.byKey(const Key('stick-ring'))), ring);
+    expect(input.moving, Direction.left);
+    expect(walkedOut(input), closeTo(0.5, 1e-6));
+    await g.moveBy(const Offset(-200, 40));
+    await tester.pump();
+    expect(tester.getRect(find.byKey(const Key('stick-ring'))), ring);
+    expect(input.held, Direction.left);
+    await g.up();
+  });
+
+  testWidgets('a diagonal press keeps walking its dominant way', (
+    tester,
+  ) async {
+    final (input, rest) = await pumpStick(tester);
+    // 0.7 of the rim, up and a little more right than up.
+    final g = await tester.startGesture(
+      rest + Offset(rim * 0.7 * 0.75, -rim * 0.7 * 0.66),
+    );
+    await tester.pump();
+    expect(input.moving, Direction.right);
+    // Round the rim to straight up and back: never stops.
+    for (final angle in [-0.6, -0.9, -1.2, -1.5]) {
+      await g.moveTo(rest + Offset.fromDirection(angle, rim + 10));
+      await tester.pump();
+      expect(input.moving, isNot(Direction.none));
+      input.consume();
+    }
+    expect(input.held, Direction.up);
+    await g.up();
+  });
+
+  testWidgets('the rim holds the direction; back inside drags; lifting '
+      'stops', (tester) async {
+    final (input, rest) = await pumpStick(tester);
+    final g = await tester.startGesture(rest);
+    await g.moveBy(const Offset(rim + 20, 0));
+    await tester.pump();
+    expect(input.held, Direction.right);
+    for (var i = 0; i < 10; i++) {
+      expect(input.consume().walk, 1);
+    }
+    // Back inside the rim: the hold ends and drag walks again.
+    await g.moveBy(const Offset(-rim / 2, 0));
+    await tester.pump();
+    expect(input.held, Direction.none);
+    // Pushed out again, then lifted: nothing more walks.
+    await g.moveBy(const Offset(rim, 0));
+    await tester.pump();
+    expect(input.held, Direction.right);
+    await g.up();
+    await tester.pump();
+    expect(input.held, Direction.none);
+    expect(input.consume().direction, Direction.none);
+  });
+
+  testWidgets('the knob stays inside the ring at the rim', (tester) async {
+    final (_, rest) = await pumpStick(tester);
+    final ring = tester.getRect(find.byKey(const Key('stick-ring')));
+    final g = await tester.startGesture(rest + const Offset(0, -200));
+    await tester.pump();
+    final knob = tester.getRect(find.byKey(const Key('stick-knob')));
+    expect(knob.top, greaterThanOrEqualTo(ring.top - 0.01));
+    expect(
+      (knob.center - ring.center).distance + knob.width / 2,
+      lessThanOrEqualTo(ring.width / 2 + 0.01),
+    );
+    await g.up();
+  });
+
+  testWidgets('a quick full drag at high sensitivity walks all of it', (
+    tester,
+  ) async {
+    final (input, rest) = await pumpStick(tester, stickTiles: 4);
+    final g = await tester.startGesture(rest);
+    await g.moveBy(const Offset(rim - 1, 0));
+    await tester.pump();
+    expect(walkedOut(input), closeTo(4 * (rim - 1) / rim, 1e-6));
+    await g.up();
+  });
+}

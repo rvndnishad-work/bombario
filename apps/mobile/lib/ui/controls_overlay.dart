@@ -8,12 +8,17 @@ import 'kit/pixel_theme.dart';
 import 'kit/sprite_icon.dart';
 
 /// Touch controls drawn see-through over the board (Arvind's in-game
-/// layout): a D-pad under the left thumb, bomb and action buttons under the
-/// right, and in rooms a quick-chat ping button.
+/// layout): a joystick (or a D-pad) under the left thumb, bomb and action
+/// buttons under the right, and in rooms a quick-chat ping button.
 ///
-/// The D-pad stays put in the corner: it used to jump to wherever the thumb
+/// The stick stays put in the corner: it used to jump to wherever the thumb
 /// landed, which made it shift under the thumb on every tap. Presses read
-/// relative to its fixed centre, so pressing an arm (or past it) steers.
+/// relative to its fixed centre.
+///
+/// The joystick turns drag into distance: dragging the knob from the
+/// centre to the edge walks [stickTiles] tiles, a shorter drag
+/// proportionally less, and holding it at the edge keeps walking. The
+/// D-pad walks while an arm is held.
 class ControlsOverlay extends StatefulWidget {
   const ControlsOverlay({
     super.key,
@@ -24,6 +29,8 @@ class ControlsOverlay extends StatefulWidget {
     this.scale = 1,
     this.leftHanded = false,
     this.haptics = true,
+    this.joystick = true,
+    this.stickTiles = 1,
   });
 
   final InputController input;
@@ -42,6 +49,11 @@ class ControlsOverlay extends StatefulWidget {
   /// Swaps the D-pad and the buttons.
   final bool leftHanded;
   final bool haptics;
+
+  /// The round joystick rather than the D-pad, and the tiles a full drag
+  /// of it walks.
+  final bool joystick;
+  final double stickTiles;
 
   static String actionText(String? label) => switch (label) {
     'detonate' => 'Detonate',
@@ -86,7 +98,7 @@ class _ControlsOverlayState extends State<ControlsOverlay> {
 
   /// A press this close to the centre keeps the last direction, so the
   /// player doesn't stutter when the thumb rolls over the middle.
-  double get _deadZone => _padRadius * 0.2;
+  double get _deadZone => _ringRadius * 0.2;
 
   /// Presses further than this from the pad are not steering.
   double get _reach => _padRadius * 2.4;
@@ -95,34 +107,97 @@ class _ControlsOverlayState extends State<ControlsOverlay> {
   /// clearly the new way, so a diagonal thumb doesn't flicker between two.
   static const double _axisBias = 1.3;
 
+  /// The direction [delta] from the centre leans: [_current] in the dead
+  /// zone, and until the thumb leans clearly another way.
+  Direction _lean(Offset delta) {
+    if (delta.distance < _deadZone) return _current;
+    final ax = delta.dx.abs();
+    final ay = delta.dy.abs();
+    final wasHorizontal =
+        _current == Direction.left || _current == Direction.right;
+    final wasVertical = _current == Direction.up || _current == Direction.down;
+    final horizontal = wasHorizontal
+        ? ay <= ax * _axisBias
+        : wasVertical
+        ? ax > ay * _axisBias
+        : ax > ay;
+    return horizontal
+        ? (delta.dx > 0 ? Direction.right : Direction.left)
+        : (delta.dy > 0 ? Direction.down : Direction.up);
+  }
+
   void _updateDirection(Offset position) {
     final centre = _padCentre;
     if (centre == null) return;
-    final delta = position - centre;
-    final ax = delta.dx.abs();
-    final ay = delta.dy.abs();
-    Direction next;
-    if (delta.distance < _deadZone) {
-      next = _current;
-    } else {
-      final wasHorizontal =
-          _current == Direction.left || _current == Direction.right;
-      final wasVertical =
-          _current == Direction.up || _current == Direction.down;
-      final horizontal = wasHorizontal
-          ? ay <= ax * _axisBias
-          : wasVertical
-          ? ax > ay * _axisBias
-          : ax > ay;
-      next = horizontal
-          ? (delta.dx > 0 ? Direction.right : Direction.left)
-          : (delta.dy > 0 ? Direction.down : Direction.up);
+    if (widget.joystick) {
+      _updateStick(position - centre);
+      return;
     }
+    final next = _lean(position - centre);
     if (next != _current) {
       setState(() => _current = next);
       widget.input.setDirection(next);
       _haptic(HapticFeedback.selectionClick);
     }
+  }
+
+  // ---- Joystick
+
+  /// Where the knob sits, relative to the centre (at most [_rim]).
+  Offset _knob = Offset.zero;
+
+  /// The knob at the rim: walking in its direction until it comes back in.
+  bool _atRim = false;
+
+  /// Drag made in the dead zone before the stick had a direction.
+  double _unspent = 0;
+
+  /// The joystick's ring: smaller than the D-pad's box, and sized by the
+  /// same Button size setting. Its touch area is the D-pad's [_reach].
+  double get _stickRadius => 60 * widget.scale;
+
+  /// The ring showing: the joystick's or the D-pad's.
+  double get _ringRadius => widget.joystick ? _stickRadius : _padRadius;
+
+  /// How far the knob reaches from the centre.
+  double get _rim => _stickRadius * 0.85;
+
+  /// The knob's radius as a share of the ring's.
+  static const double _knobSize = 0.4;
+
+  void _updateStick(Offset delta) {
+    final input = widget.input;
+    final knob = delta.distance > _rim ? delta / delta.distance * _rim : delta;
+    final moved = (knob - _knob).distance;
+    final dir = _lean(knob);
+    if (dir != _current && dir != Direction.none) {
+      _haptic(HapticFeedback.selectionClick);
+    }
+    _current = dir;
+    if (dir == Direction.none) {
+      _unspent += moved;
+    } else if (knob.distance >= _rim - 0.5) {
+      // Pushed to the rim: keep walking. The player is already moving.
+      if (!_atRim || input.held != dir) input.setDirection(dir, ease: false);
+      _atRim = true;
+      _unspent = 0;
+    } else {
+      if (_atRim) {
+        // Back inside the rim: stop holding, and drag again.
+        _atRim = false;
+        input.release();
+      }
+      // Every bit of drag walks its share: centre to rim is [stickTiles].
+      // The budget holds a whole quick centre-to-rim drag, however
+      // sensitive the stick.
+      input.walk(
+        dir,
+        (moved + _unspent) * widget.stickTiles / _rim,
+        cap: widget.stickTiles.clamp(1, 4),
+      );
+      _unspent = 0;
+    }
+    setState(() => _knob = knob);
   }
 
   void _haptic(Future<void> Function() f) {
@@ -145,7 +220,7 @@ class _ControlsOverlayState extends State<ControlsOverlay> {
           );
           _padCentre = rest;
           return Listener(
-            key: const Key('dpad-area'),
+            key: Key(widget.joystick ? 'joystick-area' : 'dpad-area'),
             behavior: HitTestBehavior.opaque,
             onPointerDown: (e) {
               // One thumb steers; a second finger landing here is ignored.
@@ -166,13 +241,24 @@ class _ControlsOverlayState extends State<ControlsOverlay> {
             child: Stack(
               children: [
                 Positioned(
-                  left: rest.dx - _padRadius,
-                  top: rest.dy - _padRadius,
-                  child: _DPadVisual(
-                    radius: _padRadius,
-                    active: _current,
-                    opacity: o,
-                  ),
+                  left: rest.dx - _ringRadius,
+                  top: rest.dy - _ringRadius,
+                  child: widget.joystick
+                      ? _StickVisual(
+                          key: const Key('stick-ring'),
+                          radius: _stickRadius,
+                          // At the rim the knob touches the ring's edge
+                          // from inside rather than poking out of it.
+                          knob: _knob / _rim * (_stickRadius * (1 - _knobSize)),
+                          active: _padPointer != null,
+                          atRim: _atRim,
+                          opacity: o,
+                        )
+                      : _DPadVisual(
+                          radius: _padRadius,
+                          active: _current,
+                          opacity: o,
+                        ),
                 ),
               ],
             ),
@@ -317,8 +403,88 @@ class _ControlsOverlayState extends State<ControlsOverlay> {
 
   void _releasePad() {
     _padPointer = null;
-    setState(() => _current = Direction.none);
-    widget.input.lift();
+    setState(() {
+      _current = Direction.none;
+      _knob = Offset.zero;
+      _atRim = false;
+    });
+    _unspent = 0;
+    if (widget.joystick) {
+      // Stops a rim hold; a drag's last bit of budget (under a tile) walks.
+      widget.input.release();
+    } else {
+      widget.input.lift();
+    }
+  }
+}
+
+/// A round base with a knob that follows the thumb, lit at the rim.
+class _StickVisual extends StatelessWidget {
+  const _StickVisual({
+    super.key,
+    required this.radius,
+    required this.knob,
+    required this.active,
+    required this.atRim,
+    required this.opacity,
+  });
+
+  final double radius;
+  final Offset knob;
+  final bool active;
+  final bool atRim;
+  final double opacity;
+
+  @override
+  Widget build(BuildContext context) {
+    final knobRadius = radius * _ControlsOverlayState._knobSize;
+    Widget chevron(String sprite, Alignment alignment) => Align(
+      alignment: alignment,
+      child: Padding(
+        padding: EdgeInsets.all(radius * 0.08),
+        child: SpriteIcon(sprite, size: radius * 0.32, opacity: 0.6 * opacity),
+      ),
+    );
+    return IgnorePointer(
+      child: SizedBox(
+        width: radius * 2,
+        height: radius * 2,
+        child: Stack(
+          children: [
+            Container(
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: _Ctl.fill(opacity),
+                border: Border.all(color: _Ctl.line(opacity), width: 2),
+              ),
+            ),
+            chevron('arrow-up', Alignment.topCenter),
+            chevron('arrow-down', Alignment.bottomCenter),
+            chevron('arrow-left', Alignment.centerLeft),
+            chevron('arrow-right', Alignment.centerRight),
+            Positioned(
+              key: const Key('stick-knob'),
+              left: radius + knob.dx - knobRadius,
+              top: radius + knob.dy - knobRadius,
+              child: Container(
+                width: knobRadius * 2,
+                height: knobRadius * 2,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: active ? _Ctl.fillHot(opacity) : _Ctl.fill(opacity),
+                  border: Border.all(
+                    color: atRim
+                        ? Px.paper.withValues(alpha: opacity)
+                        : _Ctl.line(opacity),
+                    width: atRim ? 4 : 3,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
 
