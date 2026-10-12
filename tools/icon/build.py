@@ -1,167 +1,189 @@
-"""Builds the app's launcher icons from the game's own sprites.
+"""Builds the app's launcher icons from the vector art in this folder.
 
     python3 tools/icon/build.py
 
-Draws the blue player beside a lit bomb on the title's yellow, each with a
-dark outline, on a 28x28 pixel canvas, and scales it up with hard pixel
-edges. Writes:
+Sources, each a 108x108 canvas (Android's adaptive-icon grid):
 
-  Android  res/mipmap-*/ic_launcher.png            legacy square icons
-           res/mipmap-*/ic_launcher_foreground.png  adaptive foreground,
-                                                    art inside the 66dp
-                                                    safe zone of 108dp
-           res/mipmap-*/ic_launcher_monochrome.png  themed-icon silhouette
-           res/mipmap-anydpi-v26/ic_launcher.xml    adaptive icon
-           res/values/ic_launcher_background.xml    its background colour
-  iOS      Runner/Assets.xcassets/AppIcon.appiconset/*.png (opaque)
+  background.svg   the warm burst behind the bomb
+  foreground.svg   the glossy bomb, art inside the central 66x66 safe zone
+  monochrome.svg   one-colour shape for Android 13+ themed icons
 
-Reads the sprites through tools/sprites/build.py, so rerun this after
-changing the player or bomb there. Pure standard library.
+Needs Google Chrome or Chromium: renders them at every size headless. It
+looks in the usual places on Windows, macOS and Linux and on PATH; set
+CHROME to the browser's path otherwise. Writes:
+
+  Android  res/mipmap-*/ic_launcher.png             legacy square icons
+           res/mipmap-*/ic_launcher_background.png  adaptive layers
+           res/mipmap-*/ic_launcher_foreground.png
+           res/mipmap-*/ic_launcher_monochrome.png
+           res/mipmap-anydpi-v26/ic_launcher.xml     adaptive icon
+  iOS      Runner/Assets.xcassets/AppIcon.appiconset/*.png (no alpha)
+
+Legacy and iOS icons show the middle 88x88 of the canvas, so the art has
+room inside rounded corners. Otherwise pure standard library.
 """
-import importlib.util
 import json
 import os
+import shutil
+import struct
+import subprocess
+import tempfile
+import zlib
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.normpath(os.path.join(HERE, '..', '..'))
-
-# Loaded by path: both tools are called build.py.
-_spec = importlib.util.spec_from_file_location(
-    'sprites_build', os.path.join(ROOT, 'tools', 'sprites', 'build.py'))
-sprites_build = importlib.util.module_from_spec(_spec)
-_spec.loader.exec_module(sprites_build)
-
 RES = os.path.join(ROOT, 'apps/mobile/android/app/src/main/res')
 IOS_SET = os.path.join(
     ROOT, 'apps/mobile/ios/Runner/Assets.xcassets/AppIcon.appiconset')
 
-ART = 28
-BACKGROUND = (0xff, 0xd2, 0x3f, 255)  # the title logo's yellow
-OUTLINE = (0x1e, 0x22, 0x30, 255)
-CLEAR = (0, 0, 0, 0)
-WHITE = (255, 255, 255, 255)
-
 # Android densities: legacy icon is 48dp, adaptive layers are 108dp.
 DENSITIES = {'mdpi': 1, 'hdpi': 1.5, 'xhdpi': 2, 'xxhdpi': 3, 'xxxhdpi': 4}
 
+# The part of the 108 canvas a legacy or iOS icon shows.
+VISIBLE = 88
 
-def load_sprites():
-    sprites, order = {}, []
-    for name in ('mockup.txt', 'extra.txt'):
-        sprites_build.parse(
-            os.path.join(sprites_build.HERE, name), sprites, order)
-    return sprites
-
-
-def outlined(grid):
-    """[grid] with a one-pixel outline round its opaque pixels."""
-    n = len(grid)
-    out = [row[:] for row in grid]
-    for y in range(n):
-        for x in range(n):
-            if grid[y][x][3]:
-                continue
-            for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)):
-                if 0 <= x + dx < n and 0 <= y + dy < n and grid[y + dy][x + dx][3]:
-                    out[y][x] = OUTLINE
-                    break
-    return out
+CHROME_PATHS = [
+    r'C:\Program Files\Google\Chrome\Application\chrome.exe',
+    r'C:\Program Files (x86)\Google\Chrome\Application\chrome.exe',
+    '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
+    '/usr/bin/google-chrome',
+    '/usr/bin/chromium',
+    '/usr/bin/chromium-browser',
+]
 
 
-def blit(canvas, grid, ox, oy):
-    for y, row in enumerate(grid):
-        for x, p in enumerate(row):
-            if p[3] and 0 <= oy + y < ART and 0 <= ox + x < ART:
-                canvas[oy + y][ox + x] = p
+def find_chrome():
+    for path in [os.environ.get('CHROME')] + CHROME_PATHS:
+        if path and os.path.exists(path):
+            return path
+    found = (shutil.which('google-chrome') or shutil.which('chromium')
+             or shutil.which('chromium-browser') or shutil.which('chrome'))
+    if not found:
+        raise SystemExit('Chrome not found; set CHROME to its path.')
+    return found
 
 
-def art():
-    """The 28x28 icon art on a clear background."""
-    s = load_sprites()
-    pad = lambda g: [[CLEAR] * 18] + [[CLEAR] + r + [CLEAR] for r in g] + [[CLEAR] * 18]
-    canvas = [[CLEAR] * ART for _ in range(ART)]
-    blit(canvas, outlined(pad(s['bomb'])), 12, 7)
-    blit(canvas, outlined(pad(s['p1'])), 0, 4)
-    return canvas
+class Renderer:
+    def __init__(self):
+        self.chrome = find_chrome()
+        self.tmp = tempfile.mkdtemp(prefix='bombario-icon-')
+        for name in ('background.svg', 'foreground.svg', 'monochrome.svg'):
+            shutil.copy(os.path.join(HERE, name), self.tmp)
+
+    def render(self, path, size, layers, visible=108):
+        """Draws [layers] (SVG names, bottom first) at [size] px square,
+        showing the middle [visible] units of the 108 canvas."""
+        side = size * 108 / visible
+        offset = (size - side) / 2
+        imgs = ''.join(
+            f'<img src="{name}" style="position:absolute;left:{offset}px;'
+            f'top:{offset}px;width:{side}px;height:{side}px">'
+            for name in layers)
+        page = os.path.join(self.tmp, 'page.html')
+        open(page, 'w').write(
+            '<!doctype html><html><body style="margin:0;background:transparent;'
+            f'overflow:hidden;width:{size}px;height:{size}px;position:relative">'
+            f'{imgs}</body></html>')
+        shot = os.path.join(self.tmp, 'shot.png')
+        subprocess.run([
+            self.chrome, '--headless=new', '--disable-gpu', '--hide-scrollbars',
+            f'--user-data-dir={os.path.join(self.tmp, "profile")}',
+            '--default-background-color=00000000',
+            f'--window-size={size},{size}', f'--screenshot={shot}',
+            'file:///' + page.replace(os.sep, '/').lstrip('/'),
+        ], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        shutil.move(shot, path)
+
+    def close(self):
+        shutil.rmtree(self.tmp, ignore_errors=True)
 
 
-def render(art_px, size, extent, background):
-    """[size]x[size] image with the art [extent] pixels wide, centred.
+def strip_alpha(path):
+    """Rewrites an 8-bit RGBA PNG as RGB: App Store icons can't have alpha."""
+    data = open(path, 'rb').read()
+    width, height, depth, colour = struct.unpack('>IIBB', data[16:26])
+    if (depth, colour) != (8, 6):
+        return
+    idat, pos = b'', 8
+    while pos < len(data):
+        length, kind = struct.unpack('>I4s', data[pos:pos + 8])
+        if kind == b'IDAT':
+            idat += data[pos + 8:pos + 8 + length]
+        pos += 12 + length
+    raw, bpp, stride = zlib.decompress(idat), 4, width * 4
+    rows, prev = [], bytearray(stride)
+    for y in range(height):
+        start = y * (stride + 1)
+        kind, line = raw[start], bytearray(raw[start + 1:start + 1 + stride])
+        for i in range(stride):
+            a = line[i - bpp] if i >= bpp else 0
+            b, c = prev[i], prev[i - bpp] if i >= bpp else 0
+            if kind == 1:
+                line[i] = (line[i] + a) & 255
+            elif kind == 2:
+                line[i] = (line[i] + b) & 255
+            elif kind == 3:
+                line[i] = (line[i] + (a + b) // 2) & 255
+            elif kind == 4:
+                p = a + b - c
+                pa, pb, pc = abs(p - a), abs(p - b), abs(p - c)
+                pred = a if pa <= pb and pa <= pc else b if pb <= pc else c
+                line[i] = (line[i] + pred) & 255
+        rows.append(line)
+        prev = line
+    rgb = b''.join(b'\x00' + bytes(r[i] for i in range(stride) if i % 4 != 3)
+                   for r in rows)
 
-    Scales by a whole number when the art is at least that big, so pixels
-    stay square; smaller icons sample the art nearest-neighbour."""
-    if extent >= ART:
-        extent = extent // ART * ART
-    off = (size - extent) / 2
-    out = []
-    for y in range(size):
-        row = []
-        for x in range(size):
-            ax = int((x - off) * ART // extent) if x >= off else -1
-            ay = int((y - off) * ART // extent) if y >= off else -1
-            p = art_px[ay][ax] if 0 <= ax < ART and 0 <= ay < ART else CLEAR
-            row.append(p if p[3] else background)
-        out.append(row)
-    return out
+    def chunk(kind, body):
+        return (struct.pack('>I', len(body)) + kind + body
+                + struct.pack('>I', zlib.crc32(kind + body)))
+
+    open(path, 'wb').write(
+        b'\x89PNG\r\n\x1a\n'
+        + chunk(b'IHDR', struct.pack('>IIBBBBB', width, height, 8, 2, 0, 0, 0))
+        + chunk(b'IDAT', zlib.compress(rgb, 9)) + chunk(b'IEND', b''))
 
 
-def write(path, image):
-    sprites_build.write_png(path, len(image), len(image), image)
-
-
-def android(art_px):
-    # Themed icons tint one shape: cut the outlines and eyes out of it so
-    # the player and bomb still read.
-    mono = [[WHITE if p[3] and p != OUTLINE and sum(p[:3]) > 60 else CLEAR
-             for p in row] for row in art_px]
+def android(r):
     for name, k in DENSITIES.items():
         folder = os.path.join(RES, f'mipmap-{name}')
-        legacy = round(48 * k)
-        write(os.path.join(folder, 'ic_launcher.png'),
-              render(art_px, legacy, round(44 * k), BACKGROUND))
-        layer, safe = round(108 * k), round(66 * k)
-        write(os.path.join(folder, 'ic_launcher_foreground.png'),
-              render(art_px, layer, safe, CLEAR))
-        write(os.path.join(folder, 'ic_launcher_monochrome.png'),
-              render(mono, layer, safe, CLEAR))
+        r.render(os.path.join(folder, 'ic_launcher.png'), round(48 * k),
+                 ['background.svg', 'foreground.svg'], VISIBLE)
+        layer = round(108 * k)
+        for part in ('background', 'foreground', 'monochrome'):
+            r.render(os.path.join(folder, f'ic_launcher_{part}.png'), layer,
+                     [f'{part}.svg'])
     anydpi = os.path.join(RES, 'mipmap-anydpi-v26')
     os.makedirs(anydpi, exist_ok=True)
-    open(os.path.join(anydpi, 'ic_launcher.xml'), 'w').write(
+    open(os.path.join(anydpi, 'ic_launcher.xml'), 'w', newline='\n').write(
         '<?xml version="1.0" encoding="utf-8"?>\n'
         '<!-- GENERATED by tools/icon/build.py. Do not edit by hand. -->\n'
         '<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">\n'
-        '    <background android:drawable="@color/ic_launcher_background" />\n'
+        '    <background android:drawable="@mipmap/ic_launcher_background" />\n'
         '    <foreground android:drawable="@mipmap/ic_launcher_foreground" />\n'
         '    <monochrome android:drawable="@mipmap/ic_launcher_monochrome" />\n'
         '</adaptive-icon>\n')
-    colour = '#{:02x}{:02x}{:02x}'.format(*BACKGROUND[:3])
-    open(os.path.join(RES, 'values', 'ic_launcher_background.xml'), 'w').write(
-        '<?xml version="1.0" encoding="utf-8"?>\n'
-        '<!-- GENERATED by tools/icon/build.py. Do not edit by hand. -->\n'
-        '<resources>\n'
-        f'    <color name="ic_launcher_background">{colour}</color>\n'
-        '</resources>\n')
 
 
-def ios(art_px):
+def ios(r):
     images = json.load(open(os.path.join(IOS_SET, 'Contents.json')))['images']
-    done = set()
-    for entry in images:
-        name = entry['filename']
-        if name in done:
-            continue
-        done.add(name)
+    for name in sorted({e['filename'] for e in images}):
+        entry = next(e for e in images if e['filename'] == name)
         points = float(entry['size'].split('x')[0])
         size = round(points * int(entry['scale'][0]))
-        # iOS rounds the corners itself; keep the art clear of them.
-        write(os.path.join(IOS_SET, name),
-              render(art_px, size, round(size * 0.86), BACKGROUND))
+        path = os.path.join(IOS_SET, name)
+        r.render(path, size, ['background.svg', 'foreground.svg'], VISIBLE)
+        strip_alpha(path)
 
 
 def main():
-    art_px = art()
-    android(art_px)
-    ios(art_px)
+    r = Renderer()
+    try:
+        android(r)
+        ios(r)
+    finally:
+        r.close()
     print('icons -> android mipmaps, adaptive icon, iOS AppIcon set')
 
 
