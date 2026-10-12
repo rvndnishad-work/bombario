@@ -14,6 +14,7 @@ import 'settings/settings.dart';
 import 'ui/home_screen.dart';
 import 'ui/kit/motion.dart';
 import 'ui/kit/pixel_theme.dart';
+import 'ui/kit/ui_scale.dart';
 import 'ui/player_name.dart';
 import 'ui/title_screen.dart';
 
@@ -100,6 +101,8 @@ class BombarioApp extends StatelessWidget {
             title: 'Bombario',
             debugShowCheckedModeBanner: false,
             theme: Px.theme(),
+            // Tablets draw everything larger; phones are unchanged.
+            builder: (context, child) => UiScale(child: child!),
             home: (showTitle ?? Motion.ambient)
                 ? const TitleScreen()
                 : const HomeScreen(),

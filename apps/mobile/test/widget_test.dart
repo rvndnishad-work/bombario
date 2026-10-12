@@ -55,6 +55,11 @@ void main() {
     await tester.tap(find.byKey(const Key('settings')));
     await tester.pumpAndSettle();
     expect(settings.leftHanded, isFalse);
+    await tester.scrollUntilVisible(
+      find.byKey(const Key('left-handed')),
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
     await tester.tap(find.byKey(const Key('left-handed')));
     await tester.pump();
     expect(settings.leftHanded, isTrue);

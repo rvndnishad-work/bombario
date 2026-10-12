@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- The game's darkest ink (Px.ink): the launch screen behind the
+         icon, so a big screen doesn't flash white before the first frame. -->
+    <color name="launch_background">#0D1120</color>
+</resources>
