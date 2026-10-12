@@ -14,6 +14,7 @@ import '../progress/achievements.dart';
 import '../settings/settings.dart';
 import 'controls_overlay.dart';
 import 'keyboard_controls.dart';
+import 'settings_screen.dart';
 import 'kit/game_chrome.dart';
 import 'kit/pixel_theme.dart';
 
@@ -111,6 +112,17 @@ class _GameScreenState extends State<GameScreen> {
                               OutlinedButton(
                                 onPressed: () => Navigator.of(context).pop(),
                                 child: const Text('Quit'),
+                              ),
+                              OutlinedButton(
+                                key: const Key('pause-settings'),
+                                // The game stays paused under Settings, and
+                                // its changes apply as soon as it closes.
+                                onPressed: () => Navigator.of(context).push(
+                                  MaterialPageRoute<void>(
+                                    builder: (_) => const SettingsScreen(),
+                                  ),
+                                ),
+                                child: const Text('Settings'),
                               ),
                               FilledButton(
                                 key: const Key('resume'),

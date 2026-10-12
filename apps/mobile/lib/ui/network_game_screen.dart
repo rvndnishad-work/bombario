@@ -10,6 +10,7 @@ import '../progress/achievements.dart';
 import '../settings/settings.dart';
 import 'controls_overlay.dart';
 import 'keyboard_controls.dart';
+import 'settings_screen.dart';
 import 'kit/game_chrome.dart';
 import 'kit/pixel_theme.dart';
 
@@ -149,6 +150,17 @@ class _NetworkGameScreenState extends State<NetworkGameScreen> {
                               context,
                             ).popUntil((r) => r.isFirst),
                             child: const Text('Leave room'),
+                          ),
+                          OutlinedButton(
+                            key: const Key('pause-settings'),
+                            // The match runs on meanwhile; its changes apply
+                            // as soon as Settings closes.
+                            onPressed: () => Navigator.of(context).push(
+                              MaterialPageRoute<void>(
+                                builder: (_) => const SettingsScreen(),
+                              ),
+                            ),
+                            child: const Text('Settings'),
                           ),
                           FilledButton(
                             key: const Key('resume'),
