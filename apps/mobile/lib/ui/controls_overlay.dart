@@ -1,5 +1,3 @@
-import 'dart:math' as math;
-
 import 'package:bombario_core/bombario_core.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -100,7 +98,7 @@ class _ControlsOverlayState extends State<ControlsOverlay> {
 
   /// A press this close to the centre keeps the last direction, so the
   /// player doesn't stutter when the thumb rolls over the middle.
-  double get _deadZone => _padRadius * 0.2;
+  double get _deadZone => _ringRadius * 0.2;
 
   /// Presses further than this from the pad are not steering.
   double get _reach => _padRadius * 2.4;
@@ -145,11 +143,7 @@ class _ControlsOverlayState extends State<ControlsOverlay> {
 
   // ---- Joystick
 
-  /// Where the base sits while a thumb is down: under the thumb, where it
-  /// landed. Idle, it rests where the D-pad would.
-  Offset? _stickBase;
-
-  /// Where the knob sits, relative to the base (at most [_rim]).
+  /// Where the knob sits, relative to the centre (at most [_rim]).
   Offset _knob = Offset.zero;
 
   /// The knob at the rim: walking in its direction until it comes back in.
@@ -158,22 +152,15 @@ class _ControlsOverlayState extends State<ControlsOverlay> {
   /// Drag made in the dead zone before the stick had a direction.
   double _unspent = 0;
 
-  /// How far the knob reaches from the centre.
-  double get _rim => _padRadius * 0.85;
+  /// The joystick's ring: smaller than the D-pad's box, and sized by the
+  /// same Button size setting. Its touch area is the D-pad's [_reach].
+  double get _stickRadius => 60 * widget.scale;
 
-  /// Where the base goes for a thumb landing at [touch]: under it, but
-  /// with the whole ring inside the control zone round [rest] and inside
-  /// the [area].
-  Offset _pinBase(Offset touch, Offset rest, Size area) {
-    var base = touch;
-    final zone = _reach - _padRadius;
-    final off = base - rest;
-    if (off.distance > zone) base = rest + off / off.distance * zone;
-    return Offset(
-      base.dx.clamp(_padRadius, math.max(_padRadius, area.width - _padRadius)),
-      base.dy.clamp(_padRadius, math.max(_padRadius, area.height - _padRadius)),
-    );
-  }
+  /// The ring showing: the joystick's or the D-pad's.
+  double get _ringRadius => widget.joystick ? _stickRadius : _padRadius;
+
+  /// How far the knob reaches from the centre.
+  double get _rim => _stickRadius * 0.85;
 
   void _updateStick(Offset delta) {
     final input = widget.input;
@@ -222,8 +209,7 @@ class _ControlsOverlayState extends State<ControlsOverlay> {
                 : _padRadius + 28,
             box.maxHeight - _padRadius - 24,
           );
-          final centre = widget.joystick ? _stickBase ?? rest : rest;
-          _padCentre = centre;
+          _padCentre = rest;
           return Listener(
             key: Key(widget.joystick ? 'joystick-area' : 'dpad-area'),
             behavior: HitTestBehavior.opaque,
@@ -232,22 +218,6 @@ class _ControlsOverlayState extends State<ControlsOverlay> {
               if (_padPointer != null) return;
               if ((e.localPosition - rest).distance > _reach) return;
               _padPointer = e.pointer;
-              if (widget.joystick) {
-                // The base is pinned where the thumb lands for the whole
-                // press, kept inside the control zone and on screen.
-                final base = _pinBase(e.localPosition, rest, box.biggest);
-                final knob = e.localPosition - base;
-                setState(() {
-                  _stickBase = base;
-                  _knob = knob.distance > _rim
-                      ? knob / knob.distance * _rim
-                      : knob;
-                });
-                // Where the thumb sits on the pinned base is a starting
-                // point, not a drag: only moves from here walk.
-                _current = _lean(_knob);
-                return;
-              }
               _updateDirection(e.localPosition);
             },
             onPointerMove: (e) {
@@ -262,12 +232,12 @@ class _ControlsOverlayState extends State<ControlsOverlay> {
             child: Stack(
               children: [
                 Positioned(
-                  left: centre.dx - _padRadius,
-                  top: centre.dy - _padRadius,
+                  left: rest.dx - _ringRadius,
+                  top: rest.dy - _ringRadius,
                   child: widget.joystick
                       ? _StickVisual(
                           key: const Key('stick-ring'),
-                          radius: _padRadius,
+                          radius: _stickRadius,
                           knob: _knob,
                           active: _padPointer != null,
                           atRim: _atRim,
@@ -425,7 +395,6 @@ class _ControlsOverlayState extends State<ControlsOverlay> {
     setState(() {
       _current = Direction.none;
       _knob = Offset.zero;
-      _stickBase = null;
       _atRim = false;
     });
     _unspent = 0;
@@ -457,7 +426,7 @@ class _StickVisual extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final knobRadius = radius * 0.42;
+    final knobRadius = radius * 0.4;
     Widget chevron(String sprite, Alignment alignment) => Align(
       alignment: alignment,
       child: Padding(
