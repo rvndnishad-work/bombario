@@ -30,7 +30,7 @@ class ControlsOverlay extends StatefulWidget {
     this.leftHanded = false,
     this.haptics = true,
     this.joystick = true,
-    this.stickTiles = 2,
+    this.stickTiles = 1,
   });
 
   final InputController input;
@@ -188,7 +188,13 @@ class _ControlsOverlayState extends State<ControlsOverlay> {
         input.release();
       }
       // Every bit of drag walks its share: centre to rim is [stickTiles].
-      input.walk(dir, (moved + _unspent) * widget.stickTiles / _rim);
+      // The budget holds a whole quick centre-to-rim drag, however
+      // sensitive the stick.
+      input.walk(
+        dir,
+        (moved + _unspent) * widget.stickTiles / _rim,
+        cap: widget.stickTiles.clamp(1, 4),
+      );
       _unspent = 0;
     }
     setState(() => _knob = knob);

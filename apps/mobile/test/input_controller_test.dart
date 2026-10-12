@@ -131,14 +131,14 @@ void main() {
       expect(input.consume().direction, Direction.none);
     });
 
-    test('caps the budget at one tile', () {
+    test('caps the budget at one tile, or at a larger cap', () {
       final input = InputController();
       input.walk(Direction.down, 0.8);
       input.walk(Direction.down, 0.8);
-      expect(
-        walked(input, 30, base),
-        closeTo(InputController.maxWalkTiles, 1e-9),
-      );
+      expect(walked(input, 30, base), closeTo(1, 1e-9));
+      input.walk(Direction.down, 2.5, cap: 3);
+      input.walk(Direction.down, 2.5, cap: 3);
+      expect(walked(input, 60, base), closeTo(3, 1e-9));
     });
 
     test('a new direction replaces the budget', () {

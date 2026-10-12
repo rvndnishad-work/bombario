@@ -148,4 +148,15 @@ void main() {
     );
     await g.up();
   });
+
+  testWidgets('a quick full drag at high sensitivity walks all of it', (
+    tester,
+  ) async {
+    final (input, rest) = await pumpStick(tester, stickTiles: 4);
+    final g = await tester.startGesture(rest);
+    await g.moveBy(const Offset(rim - 1, 0));
+    await tester.pump();
+    expect(walkedOut(input), closeTo(4 * (rim - 1) / rim, 1e-6));
+    await g.up();
+  });
 }
