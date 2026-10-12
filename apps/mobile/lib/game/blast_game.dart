@@ -73,7 +73,7 @@ class BlastGame extends FlameGame {
 
   /// The board waits behind a "Stage N" card this long before play starts,
   /// like the original's stage screen.
-  static const double introSeconds = 2;
+  static const double introSeconds = 2.6;
 
   /// After the exit, the board holds still while the clear jingle plays
   /// before the results card comes up.
@@ -195,10 +195,6 @@ class BlastGame extends FlameGame {
       sprite: 'p1',
     );
     _introLeft = introSeconds;
-    intro.value = StageIntro(
-      title: daily != null ? 'DAILY DUNGEON' : 'STAGE ${def.id}',
-      subtitle: def.name,
-    );
     _clearBeat = 0;
     player = sim.addPlayer(
       name: 'You',
@@ -226,6 +222,17 @@ class BlastGame extends FlameGame {
       ..play(Sfx.stageStart);
     _hasPlayer = true;
     carryOver?.call(player);
+    intro.value = StageIntro(
+      title: daily != null ? 'DAILY DUNGEON' : 'STAGE ${def.id}',
+      subtitle: def.name,
+      lives: lives,
+      score: player.score,
+      bombs: player.maxBombs,
+      fire: player.fireRange,
+      speed: ((player.speed - core.Player.baseSpeed) / core.Player.speedStep)
+          .round(),
+      skin: player.skin,
+    );
     _applyCheats();
     pilot?.onStage(stageIndex, sim, player);
 

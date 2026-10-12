@@ -1,5 +1,6 @@
 ﻿import 'package:bombario/main.dart';
 import 'package:bombario/settings/settings.dart';
+import 'package:bombario/ui/home_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -12,6 +13,20 @@ void main() {
     expect(find.text('Start'), findsOneWidget);
     expect(find.text('Online'), findsOneWidget);
     expect(find.text('Host Wi-Fi room'), findsOneWidget);
+  });
+
+  testWidgets('the title screen opens Home on a tap', (tester) async {
+    tester.view.physicalSize = const Size(1600, 800);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(const BombarioApp(showTitle: true));
+    await tester.pumpAndSettle();
+    expect(find.text('TAP TO START'), findsOneWidget);
+    expect(find.byType(HomeScreen), findsNothing);
+    await tester.tap(find.byKey(const Key('title-start')));
+    await tester.pumpAndSettle();
+    expect(find.byType(HomeScreen), findsOneWidget);
+    expect(find.text('TAP TO START'), findsNothing);
   });
 
   testWidgets('online screen offers create and join by code', (tester) async {

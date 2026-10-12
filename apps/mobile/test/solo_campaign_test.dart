@@ -20,6 +20,9 @@ void main() {
     // The stage card holds the board still, then play starts on its own.
     expect(find.text('STAGE 1-1'), findsOneWidget);
     expect(game.sim.elapsed, 0);
+    // It shows the lives you bring to the stage.
+    expect(find.byKey(const Key('intro-lives')), findsOneWidget);
+    expect(find.text('x ${BlastGame.startingLives}'), findsOneWidget);
     for (var i = 0; i < 100; i++) {
       await tester.pump(const Duration(milliseconds: 50));
     }

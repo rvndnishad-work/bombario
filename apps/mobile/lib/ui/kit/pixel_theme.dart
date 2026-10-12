@@ -133,6 +133,7 @@ class PxPanel extends StatelessWidget {
     this.border = Px.edge,
     this.color = Px.night,
     this.padding = const EdgeInsets.all(16),
+    this.bevel = false,
   });
 
   final Widget child;
@@ -140,14 +141,33 @@ class PxPanel extends StatelessWidget {
   final Color color;
   final EdgeInsetsGeometry padding;
 
+  /// A lighter top edge and a darker bottom edge inside the border, like a
+  /// chunky arcade button.
+  final bool bevel;
+
   @override
   Widget build(BuildContext context) => Container(
-    padding: padding,
     decoration: BoxDecoration(
       color: color,
       border: Border.all(color: border, width: 3),
       boxShadow: const [BoxShadow(color: Px.ink, offset: Offset(4, 4))],
     ),
-    child: child,
+    child: bevel
+        ? DecoratedBox(
+            decoration: BoxDecoration(
+              border: Border(
+                top: BorderSide(
+                  color: Color.lerp(color, Colors.white, 0.35)!,
+                  width: 4,
+                ),
+                bottom: BorderSide(
+                  color: Color.lerp(color, Colors.black, 0.3)!,
+                  width: 5,
+                ),
+              ),
+            ),
+            child: Padding(padding: padding, child: child),
+          )
+        : Padding(padding: padding, child: child),
   );
 }
