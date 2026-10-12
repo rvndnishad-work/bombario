@@ -3,6 +3,7 @@ import 'dart:math';
 import 'direction.dart';
 import 'entities.dart';
 import 'grid.dart';
+import 'input.dart';
 
 /// Lane-constrained player movement with cornering assist.
 ///
@@ -40,13 +41,16 @@ class Movement {
   /// One tick of a living player's movement including terrain: the Witch's
   /// curse reverses controls, ice keeps you sliding, wind slows you down and
   /// conveyors carry you. Shared by the server and client prediction so both
-  /// agree. [grid] supplies the features; [wind] is the current gust.
+  /// agree. [grid] supplies the features; [wind] is the current gust;
+  /// [walk] is the fraction of the tick the player walks (see
+  /// [PlayerInput.walk]), which never shortens a conveyor's push.
   void step(
     Player p,
     Direction input,
     double dt, {
     Grid? grid,
     Direction wind = Direction.none,
+    double walk = 1,
   }) {
     var dir = p.cursed ? input.opposite : input;
     final feature = grid?.featureAt(p.tileX, p.tileY) ?? TileFeature.none;
@@ -54,7 +58,7 @@ class Movement {
     if (onIce && dir == Direction.none) dir = p.momentum;
     p.moveDir = dir;
     final x0 = p.x, y0 = p.y;
-    move(p, dir, dt,
+    move(p, dir, dt * walk,
         factor: wind != Direction.none && dir == wind.opposite
             ? headwindFactor
             : 1);

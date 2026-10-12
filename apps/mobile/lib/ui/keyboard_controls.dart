@@ -49,12 +49,6 @@ class KeyboardControls extends StatefulWidget {
     LogicalKeyboardKey.keyP,
   };
 
-  /// The host's key-repeat delay as last observed: the gap between the
-  /// first instant pair of a held key and its first auto-repeat. Shared by
-  /// every game screen for the life of the app, so one learning hold
-  /// tunes the rest. Starts at Windows' default.
-  static Duration hostRepeatDelay = const Duration(milliseconds: 500);
-
   /// Wall clock for timing presses; tests replace it.
   static DateTime Function() clock = DateTime.now;
 
@@ -73,31 +67,21 @@ class _KeyboardControlsState extends State<KeyboardControls> {
   /// finger lifts.
   static const _instant = Duration(milliseconds: 60);
 
-  /// The first pair can't tell a tap from a hold, so it keeps walking
-  /// until a repeat would have arrived, plus this slack: a hold must never
-  /// pause (the owner's call), at the cost of a tap on such a keyboard
-  /// walking for the whole repeat delay.
-  static const _bridgeSlack = Duration(milliseconds: 60);
+  /// A pair this soon after the last one is an auto-repeat (about 30 a
+  /// second on Windows); a person can't tap that fast. A lone pair is a
+  /// tap and walks exactly a tap's distance, so taps stay predictable: a
+  /// held key on such a keyboard takes one tap's step, waits out the
+  /// host's repeat delay, then walks.
+  static const _repeatGap = Duration(milliseconds: 100);
 
   /// How long to keep walking after a repeated pair, so a held key walks
   /// smoothly through the short gaps between repeats.
-  static const _bridgeRepeat = Duration(milliseconds: 150);
-
-  /// A press this soon after an instant release is an auto-repeat; hosts
-  /// allow repeat delays up to about a second.
-  static const _maxRepeatDelay = Duration(milliseconds: 1100);
-  static const _minRepeatDelay = Duration(milliseconds: 120);
-
-  /// Auto-repeats arrive this close together (30 a second on Windows); a
-  /// human can't double-tap that fast, so two in a row prove a hold.
-  static const _repeatBurst = Duration(milliseconds: 120);
+  static const _bridgeRepeat = Duration(milliseconds: 120);
 
   final Map<LogicalKeyboardKey, DateTime> _downAt = {};
   final Map<LogicalKeyboardKey, DateTime> _upAt = {};
   final Set<LogicalKeyboardKey> _instantUp = {};
   final Set<LogicalKeyboardKey> _repeating = {};
-  final Map<LogicalKeyboardKey, DateTime> _runStart = {};
-  final Map<LogicalKeyboardKey, Duration> _pendingDelay = {};
   final Map<LogicalKeyboardKey, Timer> _lateRelease = {};
 
   @override
@@ -134,24 +118,6 @@ class _KeyboardControlsState extends State<KeyboardControls> {
     }
   }
 
-  /// Learns the host's repeat delay from a run of instant pairs: the gap
-  /// to the first repeat, confirmed by a second repeat hard on its heels.
-  void _noteRepeat(LogicalKeyboardKey key, DateTime now) {
-    final pending = _pendingDelay[key];
-    if (pending == null) {
-      final start = _runStart[key];
-      if (start != null) _pendingDelay[key] = now.difference(start);
-      return;
-    }
-    final lastDown = _downAt[key];
-    if (lastDown != null && now.difference(lastDown) < _repeatBurst) {
-      if (pending > _minRepeatDelay && pending < _maxRepeatDelay) {
-        KeyboardControls.hostRepeatDelay = pending;
-      }
-      _pendingDelay.remove(key);
-    }
-  }
-
   KeyEventResult _onKey(FocusNode node, KeyEvent event) {
     final key = event.logicalKey;
     // A focused menu button (pause, game over) keeps the keys: arrows move
@@ -166,17 +132,14 @@ class _KeyboardControlsState extends State<KeyboardControls> {
       if (event is KeyDownEvent) {
         _lateRelease.remove(key)?.cancel();
         final now = KeyboardControls.clock();
-        // Pressed again soon after an instant release: an auto-repeat.
+        // Pressed again hard on an instant release: an auto-repeat.
         final lastUp = _upAt[key];
         if (lastUp != null &&
             _instantUp.contains(key) &&
-            now.difference(lastUp) < _maxRepeatDelay) {
-          _noteRepeat(key, now);
+            now.difference(lastUp) < _repeatGap) {
           _repeating.add(key);
         } else {
           _repeating.remove(key);
-          _pendingDelay.remove(key);
-          _runStart[key] = now;
         }
         _downAt[key] = now;
         _held
@@ -189,14 +152,13 @@ class _KeyboardControlsState extends State<KeyboardControls> {
         _upAt[key] = now;
         if (heldFor < _instant) {
           _instantUp.add(key);
-          // Keep walking: through the host's repeat delay after the first
-          // pair, and between repeats after that.
-          final bridge = _repeating.contains(key)
-              ? _bridgeRepeat
-              : KeyboardControls.hostRepeatDelay + _bridgeSlack;
-          _lateRelease[key] = Timer(bridge, () => _letGo(key));
         } else {
           _instantUp.remove(key);
+        }
+        if (heldFor < _instant && _repeating.contains(key)) {
+          // Keep walking between repeats.
+          _lateRelease[key] = Timer(_bridgeRepeat, () => _letGo(key));
+        } else {
           _letGo(key, lifted: true);
         }
       }

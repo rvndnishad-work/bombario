@@ -265,6 +265,20 @@ void main() {
     expect(inputFromJson(inputToJson(const PlayerInput())).ping, PingKind.none);
   });
 
+  test('a partial walk survives the trip, and bad values walk a whole tick',
+      () {
+    final whole = inputToJson(const PlayerInput(direction: Direction.left));
+    expect(whole.containsKey('w'), isFalse);
+    expect(inputFromJson(whole).walk, 1);
+    final part =
+        inputToJson(const PlayerInput(direction: Direction.left, walk: 0.25));
+    expect(inputFromJson(part).walk, 0.25);
+    expect(inputFromJson({...part, 'w': 7}).walk, 1);
+    expect(inputFromJson({...part, 'w': -1}).walk, 0);
+    expect(inputFromJson({...part, 'w': 'x'}).walk, 1);
+    expect(inputFromJson({...part, 'w': double.nan}).walk, 1);
+  });
+
   test('room ticks deterministically without sockets', () {
     final room = Room(seed: 42);
     expect(room.code.length, 6);

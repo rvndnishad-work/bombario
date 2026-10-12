@@ -568,7 +568,8 @@ class World {
         p.moveDir = Direction.none;
         continue;
       }
-      _movement.step(p, input.direction, dt, grid: grid, wind: wind);
+      _movement.step(p, input.direction, dt,
+          grid: grid, wind: wind, walk: input.walk);
       _tryKick(p, p.moveDir);
       if (input.placeBomb) _placeBomb(p);
       if (input.action) _useActive(p);

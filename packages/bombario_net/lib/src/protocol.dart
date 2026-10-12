@@ -63,6 +63,7 @@ Map<String, dynamic> inputToJson(PlayerInput input, {int seq = 0}) => {
       'b': input.placeBomb,
       'a': input.action,
       if (input.ping != PingKind.none) 'g': input.ping.index,
+      if (input.walk < 1) 'w': input.walk,
     };
 
 PlayerInput inputFromJson(Map<String, dynamic> j) => PlayerInput(
@@ -71,7 +72,15 @@ PlayerInput inputFromJson(Map<String, dynamic> j) => PlayerInput(
       action: j['a'] == true,
       ping: PingKind
           .values[(j['g'] as int?)?.clamp(0, PingKind.values.length - 1) ?? 0],
+      walk: _walkFromJson(j['w']),
     );
+
+/// A partial tick's walk; anything missing or malformed walks the whole
+/// tick, as clients without partial steps expect.
+double _walkFromJson(Object? w) {
+  if (w is! num || w.isNaN) return 1;
+  return w.toDouble().clamp(0, 1);
+}
 
 /// One row of the lobby list as clients see it.
 class LobbyPlayer {

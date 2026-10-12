@@ -2,12 +2,34 @@ import 'package:bombario/game/input_controller.dart';
 import 'package:bombario_core/bombario_core.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+/// Tiles [input] walks over its next [ticks] ticks at [per] tiles a tick.
+double walked(InputController input, int ticks, double per) {
+  var tiles = 0.0;
+  for (var i = 0; i < ticks; i++) {
+    final step = input.consume();
+    if (step.direction != Direction.none) tiles += step.walk * per;
+  }
+  return tiles;
+}
+
 void main() {
-  test('a tap is a quarter tile at the current speed', () {
+  const base = Player.baseSpeed * World.tickDt; // 0.1 tile a tick
+
+  test('a tap walks exactly an eighth of a tile at any speed', () {
     final input = InputController();
-    expect(input.tapTicks, 3); // 0.25 tile at 0.1 tile per tick
-    input.tilesPerTick = () => Player.maxSpeed * World.tickDt;
-    expect(input.tapTicks, 2);
+    input.tap(Direction.right);
+    final first = input.consume();
+    expect(first.direction, Direction.right);
+    expect(first.walk, closeTo(1, 1e-9));
+    final last = input.consume();
+    expect(last.direction, Direction.right);
+    expect(last.walk, closeTo(0.25, 1e-9)); // the last 0.025 tile
+    expect(input.consume().direction, Direction.none);
+
+    const fast = Player.maxSpeed * World.tickDt; // 0.2 tile a tick
+    input.tilesPerTick = () => fast;
+    input.tap(Direction.left);
+    expect(walked(input, 5, fast), closeTo(1 / 8, 1e-9));
   });
 
   test('a press shorter than a tap keeps walking until it is one', () {
@@ -16,10 +38,18 @@ void main() {
     expect(input.consume().direction, Direction.right);
     input.lift();
     expect(input.held, Direction.none);
-    // Two more ticks make up the quarter tile, then it stops.
-    expect(input.consume().direction, Direction.right);
-    expect(input.consume().direction, Direction.right);
+    // 0.1 tile walked held; the lift makes up the last 0.025.
+    final step = input.consume();
+    expect(step.direction, Direction.right);
+    expect(step.walk * base, closeTo(1 / 8 - base, 1e-9));
     expect(input.consume().direction, Direction.none);
+  });
+
+  test('a press lifted before any tick walks a whole tap', () {
+    final input = InputController();
+    input.setDirection(Direction.down);
+    input.lift();
+    expect(walked(input, 5, base), closeTo(1 / 8, 1e-9));
   });
 
   test('a long press owes nothing when lifted', () {
@@ -35,7 +65,6 @@ void main() {
   test('release (pausing) never tops up, and a new direction resets', () {
     final input = InputController();
     input.setDirection(Direction.left);
-    input.consume();
     input.release();
     expect(input.consume().direction, Direction.none);
 
@@ -43,10 +72,17 @@ void main() {
     input.consume();
     input.consume();
     input.setDirection(Direction.down);
-    input.consume();
     input.lift();
     expect(input.consume().direction, Direction.down);
     expect(input.consume().direction, Direction.down);
     expect(input.consume().direction, Direction.none);
+  });
+
+  test('held movement always walks whole ticks', () {
+    final input = InputController();
+    input.setDirection(Direction.right);
+    for (var i = 0; i < 3; i++) {
+      expect(input.consume().walk, 1);
+    }
   });
 }

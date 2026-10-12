@@ -76,6 +76,7 @@ class RoomClient {
           placeBomb: next.placeBomb || dropped.placeBomb,
           action: next.action || dropped.action,
           ping: next.ping != PingKind.none ? next.ping : dropped.ping,
+          walk: next.walk,
         ),
       ));
     }
