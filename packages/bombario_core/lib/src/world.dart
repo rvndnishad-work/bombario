@@ -544,7 +544,7 @@ class World {
       final input = inputs[p.id] ?? PlayerInput.idle;
       if (input.ping != PingKind.none) _ping(p, input.ping);
       if (p.ghost) {
-        _movePlayer(p, input.direction, dt);
+        _movePlayer(p, input.direction, dt * input.walk);
         if (input.action) _haunt(p);
         continue;
       }

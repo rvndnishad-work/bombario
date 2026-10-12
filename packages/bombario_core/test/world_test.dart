@@ -96,6 +96,16 @@ void main() {
       expect(p.facing, Direction.right);
     });
 
+    test('a ghost walks a partial tick too, as prediction does', () {
+      final w = makeWorld(openArena, config: WorldConfig.coop);
+      w.addPlayer();
+      final g = w.addPlayer()
+        ..alive = false
+        ..ghost = true;
+      w.tick({g.id: const PlayerInput(direction: Direction.right, walk: 0.25)});
+      expect(g.x, closeTo(1.5 + Player.baseSpeed * World.tickDt * 0.25, 1e-9));
+    });
+
     test('stops flush against a pillar', () {
       final w = makeWorld(openArena);
       final p = w.addPlayer();
