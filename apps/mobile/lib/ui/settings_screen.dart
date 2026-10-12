@@ -94,7 +94,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 min: 0.25,
                 max: 4,
                 divisions: 15,
-                display: '${_tiles(s.stickTiles)} tiles',
+                display: _tiles(s.stickTiles),
                 onChanged: (v) => s.update((s) => s.stickTiles = v),
               ),
               Text(
@@ -183,9 +183,11 @@ class _SwitchRow extends StatelessWidget {
   );
 }
 
-/// 0.25, 0.5, 1 ... without trailing zeros.
-String _tiles(double t) =>
-    t.toStringAsFixed(2).replaceFirst(RegExp(r'\.?0+$'), '');
+/// "0.25 tiles", "1 tile", "1.5 tiles".
+String _tiles(double t) {
+  final n = t.toStringAsFixed(2).replaceFirst(RegExp(r'\.?0+$'), '');
+  return t == 1 ? '1 tile' : '$n tiles';
+}
 
 class _SliderRow extends StatelessWidget {
   const _SliderRow({
@@ -227,7 +229,7 @@ class _SliderRow extends StatelessWidget {
         ),
       ),
       SizedBox(
-        width: 56,
+        width: 104,
         child: Text(display, style: Px.label(13), textAlign: TextAlign.end),
       ),
     ],
