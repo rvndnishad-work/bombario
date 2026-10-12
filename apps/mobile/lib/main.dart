@@ -12,8 +12,10 @@ import 'net/analytics.dart';
 import 'progress/achievements.dart';
 import 'settings/settings.dart';
 import 'ui/home_screen.dart';
+import 'ui/kit/motion.dart';
 import 'ui/kit/pixel_theme.dart';
 import 'ui/player_name.dart';
+import 'ui/title_screen.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -74,6 +76,7 @@ class BombarioApp extends StatelessWidget {
     this.settings,
     this.achievements,
     this.account,
+    this.showTitle,
   });
 
   final AppSettings? settings;
@@ -81,6 +84,10 @@ class BombarioApp extends StatelessWidget {
 
   /// Null in tests: Settings then shows sign-in as not set up.
   final Account? account;
+
+  /// Opens on the arcade title instead of straight on Home. Defaults to on,
+  /// except under `flutter test`.
+  final bool? showTitle;
 
   @override
   Widget build(BuildContext context) {
@@ -93,7 +100,9 @@ class BombarioApp extends StatelessWidget {
             title: 'Bombario',
             debugShowCheckedModeBanner: false,
             theme: Px.theme(),
-            home: const HomeScreen(),
+            home: (showTitle ?? Motion.ambient)
+                ? const TitleScreen()
+                : const HomeScreen(),
           ),
         ),
       ),

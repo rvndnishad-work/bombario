@@ -177,10 +177,32 @@ class GameMessages extends ChangeNotifier {
   }
 }
 
-/// Text on the card shown before a stage starts.
+/// The card shown before a stage starts: which stage, and what you bring
+/// to it (lives, score and power-ups).
 class StageIntro {
-  const StageIntro({required this.title, required this.subtitle});
+  const StageIntro({
+    required this.title,
+    required this.subtitle,
+    this.lives,
+    this.score = 0,
+    this.bombs = 1,
+    this.fire = 1,
+    this.speed = 0,
+    this.skin = 'none',
+  });
 
   final String title;
   final String subtitle;
+
+  /// Lives left, counting the one about to be played; null hides the row.
+  final int? lives;
+  final int score;
+  final int bombs;
+  final int fire;
+
+  /// Speed-ups collected, 0 at base speed.
+  final int speed;
+
+  /// The hat the player wears, for the lives row.
+  final String skin;
 }

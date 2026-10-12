@@ -28,7 +28,7 @@ class NetworkGame extends FlameGame {
   NetworkGame(this.session, {AppSettings? settings, Achievements? achievements})
     : settings = settings ?? AppSettings.memory(),
       achievements = achievements ?? Achievements.memory() {
-    // A tap walks a quarter tile whatever the speed.
+    // A tap walks an eighth of a tile whatever the speed.
     input.tilesPerTick = () =>
         (session.me?.speed ?? core.Player.baseSpeed) * core.World.tickDt;
   }

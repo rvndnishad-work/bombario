@@ -1,4 +1,5 @@
 import 'package:bombario/game/blast_game.dart';
+import 'package:bombario/game/input_controller.dart';
 import 'package:bombario/game/sprite_atlas.dart';
 import 'package:bombario/ui/game_screen.dart';
 import 'package:bombario/ui/keyboard_controls.dart';
@@ -35,15 +36,13 @@ void main() {
     await tester.pump(const Duration(milliseconds: 300));
     expect(game.input.moving, Direction.none);
 
-    // An instant press+release (a tap, or the start of a held key on the
-    // emulator) keeps walking through the host's repeat delay, then stops.
+    // An instant press+release (the emulator's keyboard) is a tap: it
+    // lets go at once and walks only a tap's distance.
     await tester.sendKeyEvent(LogicalKeyboardKey.arrowLeft);
-    expect(game.input.held, Direction.left);
-    await tester.pump(const Duration(milliseconds: 500));
-    expect(game.input.held, Direction.left);
-    await tester.pump(const Duration(milliseconds: 100));
     expect(game.input.held, Direction.none);
-    await tester.pump(const Duration(milliseconds: 700));
+    expect(game.input.moving, Direction.left);
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(game.input.moving, Direction.none);
 
     // Held on the emulator: a pair, the repeat delay, then a stream of
     // pairs. The player walks through the repeats and stops soon after
@@ -53,8 +52,8 @@ void main() {
     for (var i = 0; i < 5; i++) {
       await tester.sendKeyEvent(LogicalKeyboardKey.arrowLeft);
       await tester.pump(const Duration(milliseconds: 33));
-      expect(game.input.held, Direction.left);
     }
+    expect(game.input.held, Direction.left);
     await tester.pump(const Duration(milliseconds: 200));
     expect(game.input.held, Direction.none);
 
@@ -67,17 +66,13 @@ void main() {
     expect(game.overlays.isActive(Overlays.pause), isTrue);
   });
 
-  testWidgets('learns the host repeat delay from a held key', (tester) async {
+  testWidgets('emulator taps walk an eighth of a tile each', (tester) async {
     tester.view.physicalSize = const Size(1600, 800);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);
     var now = DateTime(2026, 10, 3);
     KeyboardControls.clock = () => now;
-    KeyboardControls.hostRepeatDelay = const Duration(milliseconds: 500);
-    addTearDown(() {
-      KeyboardControls.clock = DateTime.now;
-      KeyboardControls.hostRepeatDelay = const Duration(milliseconds: 500);
-    });
+    addTearDown(() => KeyboardControls.clock = DateTime.now);
     Future<void> advance(int ms) async {
       now = now.add(Duration(milliseconds: ms));
       await tester.pump(Duration(milliseconds: ms));
@@ -90,48 +85,64 @@ void main() {
         (tester.state(find.byType(GameScreen)) as dynamic).game as BlastGame;
     game.skipIntro();
 
-    // A host with a short (300 ms) repeat delay: pair, 300 ms, then pairs
-    // every 33 ms. The second repeat confirms the delay.
-    await tester.sendKeyEvent(LogicalKeyboardKey.arrowLeft);
-    await advance(300);
-    await tester.sendKeyEvent(LogicalKeyboardKey.arrowLeft);
-    await advance(33);
-    await tester.sendKeyEvent(LogicalKeyboardKey.arrowLeft);
-    expect(KeyboardControls.hostRepeatDelay.inMilliseconds, 300);
-    await advance(33);
-    await tester.sendKeyEvent(LogicalKeyboardKey.arrowLeft);
-    expect(game.input.held, Direction.left);
-    await advance(200);
-    expect(game.input.held, Direction.none);
-    await advance(1200);
-
-    // A lone tap now walks only through the shorter delay.
+    // Two taps a person makes 300 ms apart stay two separate taps: neither
+    // is mistaken for an auto-repeat and walked on.
     await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+    expect(game.input.held, Direction.none);
     await advance(300);
-    expect(game.input.held, Direction.right);
+    expect(game.input.moving, Direction.none);
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+    expect(game.input.held, Direction.none);
+    await advance(300);
+    expect(game.input.moving, Direction.none);
+
+    // Repeats 33 ms apart walk on, and stop soon after the last.
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowUp);
+    await advance(33);
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowUp);
+    expect(game.input.held, Direction.up);
+    await advance(33);
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowUp);
+    await advance(100);
+    expect(game.input.held, Direction.up);
     await advance(100);
     expect(game.input.held, Direction.none);
-    await advance(1200);
+  });
+  testWidgets('a lone emulator pair is a tap; repeats walk at full speed', (
+    tester,
+  ) async {
+    var now = DateTime(2026, 10, 3);
+    KeyboardControls.clock = () => now;
+    addTearDown(() => KeyboardControls.clock = DateTime.now);
+    final input = InputController();
+    await tester.pumpWidget(
+      MaterialApp(
+        home: KeyboardControls(input: input, child: const SizedBox.expand()),
+      ),
+    );
+    const per = Player.baseSpeed * World.tickDt;
+    double walk(int ticks) {
+      var tiles = 0.0;
+      for (var i = 0; i < ticks; i++) {
+        final step = input.consume();
+        if (step.direction != Direction.none) tiles += step.walk * per;
+      }
+      return tiles;
+    }
 
-    // A long (900 ms) delay pauses once, then is learned too.
     await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
-    await advance(500);
-    expect(game.input.held, Direction.none);
-    await advance(400);
-    await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
-    await advance(33);
-    await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
-    expect(KeyboardControls.hostRepeatDelay.inMilliseconds, 900);
-    await advance(200);
+    expect(walk(5), closeTo(1 / 8, 1e-9));
 
-    // Two human taps 400 ms apart are not a repeat burst: nothing learned.
-    await advance(1200);
-    await tester.sendKeyEvent(LogicalKeyboardKey.arrowUp);
-    await advance(400);
-    await tester.sendKeyEvent(LogicalKeyboardKey.arrowUp);
-    await advance(400);
-    await tester.sendKeyEvent(LogicalKeyboardKey.arrowUp);
-    expect(KeyboardControls.hostRepeatDelay.inMilliseconds, 900);
-    await advance(1200);
+    // Held: the host repeats after its delay, then every 33 ms. The
+    // repeats carry the hold on at full speed, with no slow start.
+    now = now.add(const Duration(milliseconds: 500));
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+    now = now.add(const Duration(milliseconds: 33));
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+    final step = input.consume();
+    expect(step.direction, Direction.right);
+    expect(step.walk, 1);
+    await tester.pump(const Duration(milliseconds: 200));
+    expect(input.held, Direction.none);
   });
 }

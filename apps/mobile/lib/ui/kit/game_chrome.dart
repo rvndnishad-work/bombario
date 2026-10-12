@@ -3,6 +3,8 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../../game/game_hud.dart';
+import '../locker_screen.dart' show PlayerPreview;
+import 'motion.dart';
 import 'pixel_theme.dart';
 import 'sprite_icon.dart';
 
@@ -348,12 +350,16 @@ class MenuCard extends StatelessWidget {
 }
 
 /// The black "Stage N" card that covers the board before play starts, like
-/// the original's stage screen. Tapping it skips straight to play.
+/// the original's stage screen: the stage drops in, then a row of your
+/// lives pops in one by one, with your score and power-ups underneath.
+/// Tapping it skips straight to play.
 class StageIntroCard extends StatelessWidget {
   const StageIntroCard({super.key, required this.intro, required this.onSkip});
 
   final ValueListenable<StageIntro?> intro;
   final VoidCallback onSkip;
+
+  static const _lifeStep = Duration(milliseconds: 140);
 
   @override
   Widget build(BuildContext context) {
@@ -370,17 +376,12 @@ class StageIntroCard extends StatelessWidget {
                 child: ColoredBox(
                   color: Px.ink,
                   child: Center(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(card.title, style: Px.title(22)),
-                        const SizedBox(height: 14),
-                        Text(
-                          card.subtitle,
-                          style: Px.title(10, color: Px.fuse),
-                          textAlign: TextAlign.center,
-                        ),
-                      ],
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: Padding(
+                        padding: const EdgeInsets.all(24),
+                        child: _body(card),
+                      ),
                     ),
                   ),
                 ),
@@ -388,4 +389,99 @@ class StageIntroCard extends StatelessWidget {
       ),
     );
   }
+
+  Widget _body(StageIntro card) {
+    final lives = card.lives;
+    final livesAt = const Duration(milliseconds: 450);
+    final statsAt =
+        livesAt + _lifeStep * (lives ?? 0) + const Duration(milliseconds: 150);
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Entrance(
+          offset: const Offset(0, -40),
+          child: Text(card.title, style: Px.title(22)),
+        ),
+        const SizedBox(height: 14),
+        Entrance(
+          delay: const Duration(milliseconds: 180),
+          offset: Offset.zero,
+          child: Text(
+            card.subtitle,
+            style: Px.title(10, color: Px.fuse),
+            textAlign: TextAlign.center,
+          ),
+        ),
+        if (lives != null) ...[
+          const SizedBox(height: 30),
+          Row(
+            key: const Key('intro-lives'),
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              for (var i = 0; i < lives; i++)
+                Entrance(
+                  delay: livesAt + _lifeStep * i,
+                  offset: const Offset(0, 18),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 3),
+                    child: Ambient(
+                      phase: i / lives,
+                      period: const Duration(milliseconds: 900),
+                      child: PlayerPreview(skin: card.skin, size: 44),
+                    ),
+                  ),
+                ),
+              const SizedBox(width: 12),
+              Entrance(
+                delay: livesAt + _lifeStep * lives,
+                offset: const Offset(16, 0),
+                child: Text(
+                  lives == 1 ? 'LAST LIFE' : 'x $lives',
+                  style: Px.title(14, color: lives == 1 ? Px.danger : Px.paper),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 22),
+          Entrance(
+            delay: statsAt,
+            offset: const Offset(0, 12),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                _IntroStat('bomb', card.bombs),
+                _IntroStat('pu-fire', card.fire),
+                _IntroStat('pu-speed', card.speed),
+                const SizedBox(width: 18),
+                Text(
+                  'SCORE ${card.score.toString().padLeft(6, '0')}',
+                  style: Px.title(11, color: Px.muted),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+class _IntroStat extends StatelessWidget {
+  const _IntroStat(this.sprite, this.value);
+
+  final String sprite;
+  final int value;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.only(right: 12),
+    child: Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        SpriteIcon(sprite, size: 22),
+        const SizedBox(width: 4),
+        Text('$value', style: Px.title(11)),
+      ],
+    ),
+  );
 }

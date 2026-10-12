@@ -59,7 +59,7 @@ class LocalPredictor {
   /// frozen stand still, the dead don't move.
   void _step(Player b, PlayerInput input) {
     if (b.ghost) {
-      _movement.move(b, input.direction, World.tickDt);
+      _movement.move(b, input.direction, World.tickDt * input.walk);
       return;
     }
     if (!b.alive) return;
@@ -76,6 +76,7 @@ class LocalPredictor {
       World.tickDt,
       grid: snap?.grid,
       wind: snap?.wind ?? Direction.none,
+      walk: input.walk,
     );
   }
 

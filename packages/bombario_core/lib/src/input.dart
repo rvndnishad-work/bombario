@@ -9,6 +9,7 @@ class PlayerInput {
     this.placeBomb = false,
     this.action = false,
     this.ping = PingKind.none,
+    this.walk = 1,
   });
 
   static const idle = PlayerInput();
@@ -24,17 +25,23 @@ class PlayerInput {
   /// A quick-chat ping sent this frame, shown at the player's position.
   final PingKind ping;
 
+  /// How much of a full tick's walk [direction] covers, 0 to 1: a tap
+  /// ends part way through a tick so it walks an exact distance.
+  final double walk;
+
   PlayerInput copyWith({
     Direction? direction,
     bool? placeBomb,
     bool? action,
     PingKind? ping,
+    double? walk,
   }) {
     return PlayerInput(
       direction: direction ?? this.direction,
       placeBomb: placeBomb ?? this.placeBomb,
       action: action ?? this.action,
       ping: ping ?? this.ping,
+      walk: walk ?? this.walk,
     );
   }
 }
