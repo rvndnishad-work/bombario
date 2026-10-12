@@ -29,12 +29,16 @@ class LockerScreen extends StatelessWidget {
               child: Center(child: PlayerPreview(skin: equipped, size: 128)),
             ),
             Expanded(
-              child: GridView.extent(
-                maxCrossAxisExtent: 150,
-                childAspectRatio: 0.95,
+              child: GridView(
+                // A fixed tile height: tied to the width, narrow tiles
+                // had no room for a two-line unlock hint.
+                gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+                  maxCrossAxisExtent: 150,
+                  mainAxisExtent: 150,
+                  mainAxisSpacing: 10,
+                  crossAxisSpacing: 10,
+                ),
                 padding: const EdgeInsets.all(16),
-                mainAxisSpacing: 10,
-                crossAxisSpacing: 10,
                 children: [
                   for (final skin in Cosmetics.skins)
                     _SkinTile(

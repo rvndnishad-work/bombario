@@ -6,6 +6,7 @@
     <application
         android:label="bombario"
         android:name="${applicationName}"
+        android:appCategory="game"
         android:icon="@mipmap/ic_launcher">
         <activity
             android:name=".MainActivity"
