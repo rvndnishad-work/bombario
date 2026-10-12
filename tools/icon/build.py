@@ -10,7 +10,10 @@ Sources, each a 108x108 canvas (Android's adaptive-icon grid):
 
 Needs Google Chrome or Chromium: renders them at every size headless. It
 looks in the usual places on Windows, macOS and Linux and on PATH; set
-CHROME to the browser's path otherwise. Writes:
+CHROME to the browser's path otherwise (on Linux, to a chrome-headless-shell
+binary, such as the one Playwright installs: Chrome's own new headless mode
+leaves the bottom of the page unpainted there, and the build stops if it
+sees that). Writes:
 
   Android  res/mipmap-*/ic_launcher.png             legacy square icons
            res/mipmap-*/ic_launcher_background.png  adaptive layers
@@ -19,7 +22,7 @@ CHROME to the browser's path otherwise. Writes:
            res/mipmap-anydpi-v26/ic_launcher.xml     adaptive icon
   iOS      Runner/Assets.xcassets/AppIcon.appiconset/*.png (no alpha)
 
-Legacy and iOS icons show the middle 88x88 of the canvas, so the art has
+Legacy and iOS icons show the middle 84x84 of the canvas, so the art has
 room inside rounded corners. Otherwise pure standard library.
 """
 import json
@@ -40,7 +43,7 @@ IOS_SET = os.path.join(
 DENSITIES = {'mdpi': 1, 'hdpi': 1.5, 'xhdpi': 2, 'xxhdpi': 3, 'xxxhdpi': 4}
 
 # The part of the 108 canvas a legacy or iOS icon shows.
-VISIBLE = 88
+VISIBLE = 84
 
 CHROME_PATHS = [
     r'C:\Program Files\Google\Chrome\Application\chrome.exe',
@@ -85,8 +88,10 @@ class Renderer:
             f'overflow:hidden;width:{size}px;height:{size}px;position:relative">'
             f'{imgs}</body></html>')
         shot = os.path.join(self.tmp, 'shot.png')
+        # Chrome's sandbox refuses to run as root, as in a container.
+        root = ['--no-sandbox'] if getattr(os, 'geteuid', lambda: 1)() == 0 else []
         subprocess.run([
-            self.chrome, '--headless=new', '--disable-gpu', '--hide-scrollbars',
+            self.chrome, '--headless=new', '--disable-gpu', '--hide-scrollbars', *root,
             f'--user-data-dir={os.path.join(self.tmp, "profile")}',
             '--default-background-color=00000000',
             f'--window-size={size},{size}', f'--screenshot={shot}',
@@ -99,12 +104,13 @@ class Renderer:
         shutil.rmtree(self.tmp, ignore_errors=True)
 
 
-def strip_alpha(path):
-    """Rewrites an 8-bit RGBA PNG as RGB: App Store icons can't have alpha."""
+def read_rgba(path):
+    """An 8-bit RGBA PNG as (width, height, rows of bytes), or None if the
+    file is some other kind of PNG."""
     data = open(path, 'rb').read()
     width, height, depth, colour = struct.unpack('>IIBB', data[16:26])
     if (depth, colour) != (8, 6):
-        return
+        return None
     idat, pos = b'', 8
     while pos < len(data):
         length, kind = struct.unpack('>I4s', data[pos:pos + 8])
@@ -132,6 +138,30 @@ def strip_alpha(path):
                 line[i] = (line[i] + pred) & 255
         rows.append(line)
         prev = line
+    return width, height, rows
+
+
+def check_painted(path):
+    """Stops if Chrome left part of the page unpainted. Its new headless
+    mode on Linux has lost the bottom of the window to browser chrome;
+    the headless shell (chrome-headless-shell, what Playwright installs)
+    renders the whole page."""
+    decoded = read_rgba(path)
+    if decoded is None:  # written without alpha: nothing was left clear
+        return
+    width, height, rows = decoded
+    if any(a != 255 for row in rows for a in row[3::4]):
+        raise SystemExit(f'{os.path.relpath(path, ROOT)} is partly unpainted; '
+                         'set CHROME to a chrome-headless-shell binary and retry.')
+
+
+def strip_alpha(path):
+    """Rewrites an 8-bit RGBA PNG as RGB: App Store icons can't have alpha."""
+    decoded = read_rgba(path)
+    if not decoded:
+        return
+    width, height, rows = decoded
+    stride = width * 4
     rgb = b''.join(b'\x00' + bytes(r[i] for i in range(stride) if i % 4 != 3)
                    for r in rows)
 
@@ -154,6 +184,8 @@ def android(r):
         for part in ('background', 'foreground', 'monochrome'):
             r.render(os.path.join(folder, f'ic_launcher_{part}.png'), layer,
                      [f'{part}.svg'])
+        if name == 'mdpi':
+            check_painted(os.path.join(folder, 'ic_launcher_background.png'))
     anydpi = os.path.join(RES, 'mipmap-anydpi-v26')
     os.makedirs(anydpi, exist_ok=True)
     open(os.path.join(anydpi, 'ic_launcher.xml'), 'w', newline='\n').write(
