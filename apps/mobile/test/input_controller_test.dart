@@ -38,11 +38,25 @@ void main() {
     expect(input.consume().direction, Direction.right);
     input.lift();
     expect(input.held, Direction.none);
-    // 0.1 tile walked held; the lift makes up the last 0.025.
+    // A third of the tap walked easing in; the lift makes up the rest.
     final step = input.consume();
     expect(step.direction, Direction.right);
-    expect(step.walk * base, closeTo(1 / 8 - base, 1e-9));
+    expect(step.walk * base, closeTo(1 / 8 - 1 / 24, 1e-9));
     expect(input.consume().direction, Direction.none);
+  });
+
+  test('a normal tap walks exactly an eighth however long it lasted', () {
+    for (final speed in [Player.baseSpeed, Player.maxSpeed]) {
+      final per = speed * World.tickDt;
+      for (var ticks = 0; ticks <= InputController.easeTicks; ticks++) {
+        final input = InputController()..tilesPerTick = () => per;
+        input.setDirection(Direction.left);
+        var tiles = walked(input, ticks, per);
+        input.lift();
+        tiles += walked(input, 5, per);
+        expect(tiles, closeTo(1 / 8, 1e-9), reason: '$ticks ticks at $speed');
+      }
+    }
   });
 
   test('a press lifted before any tick walks a whole tap', () {
@@ -78,11 +92,27 @@ void main() {
     expect(input.consume().direction, Direction.none);
   });
 
-  test('held movement always walks whole ticks', () {
+  test('a press from standstill eases in over a tap, then walks whole '
+      'ticks', () {
     final input = InputController();
     input.setDirection(Direction.right);
+    for (var i = 0; i < InputController.easeTicks; i++) {
+      expect(input.consume().walk * base, closeTo(1 / 24, 1e-9));
+    }
     for (var i = 0; i < 3; i++) {
       expect(input.consume().walk, 1);
     }
+  });
+
+  test('turning while walking, and auto-repeats, start at full speed', () {
+    final input = InputController();
+    input.setDirection(Direction.right);
+    walked(input, 5, base);
+    input.setDirection(Direction.up);
+    expect(input.consume().walk, 1);
+
+    input.release();
+    input.setDirection(Direction.left, ease: false);
+    expect(input.consume().walk, 1);
   });
 }

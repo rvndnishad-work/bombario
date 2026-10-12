@@ -108,9 +108,14 @@ class _KeyboardControlsState extends State<KeyboardControls> {
     _steer(lifted: lifted);
   }
 
-  void _steer({bool lifted = false}) {
+  /// [ease] false for an auto-repeat, which carries on a hold rather than
+  /// starting a press.
+  void _steer({bool lifted = false, bool ease = true}) {
     if (_held.isNotEmpty) {
-      widget.input.setDirection(KeyboardControls.directions[_held.last]!);
+      widget.input.setDirection(
+        KeyboardControls.directions[_held.last]!,
+        ease: ease,
+      );
     } else if (lifted) {
       widget.input.lift();
     } else {
@@ -145,7 +150,7 @@ class _KeyboardControlsState extends State<KeyboardControls> {
         _held
           ..remove(key)
           ..add(key);
-        _steer();
+        _steer(ease: !_repeating.contains(key));
       } else if (event is KeyUpEvent) {
         final now = KeyboardControls.clock();
         final heldFor = now.difference(_downAt[key] ?? DateTime(0));

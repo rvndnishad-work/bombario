@@ -1,4 +1,5 @@
 import 'package:bombario/game/blast_game.dart';
+import 'package:bombario/game/input_controller.dart';
 import 'package:bombario/game/sprite_atlas.dart';
 import 'package:bombario/ui/game_screen.dart';
 import 'package:bombario/ui/keyboard_controls.dart';
@@ -106,5 +107,42 @@ void main() {
     expect(game.input.held, Direction.up);
     await advance(100);
     expect(game.input.held, Direction.none);
+  });
+  testWidgets('a lone emulator pair is a tap; repeats walk at full speed', (
+    tester,
+  ) async {
+    var now = DateTime(2026, 10, 3);
+    KeyboardControls.clock = () => now;
+    addTearDown(() => KeyboardControls.clock = DateTime.now);
+    final input = InputController();
+    await tester.pumpWidget(
+      MaterialApp(
+        home: KeyboardControls(input: input, child: const SizedBox.expand()),
+      ),
+    );
+    const per = Player.baseSpeed * World.tickDt;
+    double walk(int ticks) {
+      var tiles = 0.0;
+      for (var i = 0; i < ticks; i++) {
+        final step = input.consume();
+        if (step.direction != Direction.none) tiles += step.walk * per;
+      }
+      return tiles;
+    }
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+    expect(walk(5), closeTo(1 / 8, 1e-9));
+
+    // Held: the host repeats after its delay, then every 33 ms. The
+    // repeats carry the hold on at full speed, with no slow start.
+    now = now.add(const Duration(milliseconds: 500));
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+    now = now.add(const Duration(milliseconds: 33));
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+    final step = input.consume();
+    expect(step.direction, Direction.right);
+    expect(step.walk, 1);
+    await tester.pump(const Duration(milliseconds: 200));
+    expect(input.held, Direction.none);
   });
 }
