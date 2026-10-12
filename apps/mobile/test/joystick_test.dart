@@ -105,4 +105,24 @@ void main() {
     expect(input.held, Direction.none);
     expect(input.consume().direction, Direction.none);
   });
+
+  testWidgets('a press at the screen edge pins the whole ring on screen, '
+      'and landing walks nothing', (tester) async {
+    final (input, rest) = await pumpStick(tester);
+    final area = tester.getRect(find.byKey(const Key('joystick-area')));
+    final g = await tester.startGesture(Offset(area.left + 4, rest.dy - 60));
+    await tester.pump();
+    expect(input.moving, Direction.none);
+    final ring = tester.getRect(find.byKey(const Key('stick-ring')));
+    expect(ring.left, greaterThanOrEqualTo(area.left));
+    expect(ring.bottom, lessThanOrEqualTo(area.bottom));
+    // The base stays put while the thumb drags past the rim.
+    await g.moveBy(const Offset(0, -200));
+    await tester.pump();
+    expect(tester.getRect(find.byKey(const Key('stick-ring'))), ring);
+    expect(input.held, Direction.up);
+    await g.up();
+    await tester.pump();
+    expect(input.held, Direction.none);
+  });
 }
