@@ -115,4 +115,46 @@ void main() {
     input.setDirection(Direction.left, ease: false);
     expect(input.consume().walk, 1);
   });
+
+  group('walk (the joystick)', () {
+    test('accumulates, and the last tick walks only what is left', () {
+      final input = InputController();
+      input.walk(Direction.right, 0.12);
+      input.walk(Direction.right, 0.13);
+      final first = input.consume();
+      expect(first.direction, Direction.right);
+      expect(first.walk, 1);
+      expect(input.consume().walk, 1);
+      final last = input.consume();
+      expect(last.direction, Direction.right);
+      expect(last.walk * base, closeTo(0.05, 1e-9));
+      expect(input.consume().direction, Direction.none);
+    });
+
+    test('caps the budget at one tile', () {
+      final input = InputController();
+      input.walk(Direction.down, 0.8);
+      input.walk(Direction.down, 0.8);
+      expect(
+        walked(input, 30, base),
+        closeTo(InputController.maxWalkTiles, 1e-9),
+      );
+    });
+
+    test('a new direction replaces the budget', () {
+      final input = InputController();
+      input.walk(Direction.left, 0.5);
+      input.walk(Direction.up, 0.2);
+      expect(input.moving, Direction.up);
+      expect(walked(input, 30, base), closeTo(0.2, 1e-9));
+    });
+
+    test('holding a direction drops the budget', () {
+      final input = InputController();
+      input.walk(Direction.left, 0.5);
+      input.setDirection(Direction.left, ease: false);
+      input.release();
+      expect(input.consume().direction, Direction.none);
+    });
+  });
 }
