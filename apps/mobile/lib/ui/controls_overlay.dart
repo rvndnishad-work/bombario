@@ -162,6 +162,9 @@ class _ControlsOverlayState extends State<ControlsOverlay> {
   /// How far the knob reaches from the centre.
   double get _rim => _stickRadius * 0.85;
 
+  /// The knob's radius as a share of the ring's.
+  static const double _knobSize = 0.4;
+
   void _updateStick(Offset delta) {
     final input = widget.input;
     final knob = delta.distance > _rim ? delta / delta.distance * _rim : delta;
@@ -238,7 +241,9 @@ class _ControlsOverlayState extends State<ControlsOverlay> {
                       ? _StickVisual(
                           key: const Key('stick-ring'),
                           radius: _stickRadius,
-                          knob: _knob,
+                          // At the rim the knob touches the ring's edge
+                          // from inside rather than poking out of it.
+                          knob: _knob / _rim * (_stickRadius * (1 - _knobSize)),
                           active: _padPointer != null,
                           atRim: _atRim,
                           opacity: o,
@@ -426,7 +431,7 @@ class _StickVisual extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final knobRadius = radius * 0.4;
+    final knobRadius = radius * _ControlsOverlayState._knobSize;
     Widget chevron(String sprite, Alignment alignment) => Align(
       alignment: alignment,
       child: Padding(

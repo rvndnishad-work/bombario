@@ -134,4 +134,18 @@ void main() {
     expect(input.held, Direction.none);
     expect(input.consume().direction, Direction.none);
   });
+
+  testWidgets('the knob stays inside the ring at the rim', (tester) async {
+    final (_, rest) = await pumpStick(tester);
+    final ring = tester.getRect(find.byKey(const Key('stick-ring')));
+    final g = await tester.startGesture(rest + const Offset(0, -200));
+    await tester.pump();
+    final knob = tester.getRect(find.byKey(const Key('stick-knob')));
+    expect(knob.top, greaterThanOrEqualTo(ring.top - 0.01));
+    expect(
+      (knob.center - ring.center).distance + knob.width / 2,
+      lessThanOrEqualTo(ring.width / 2 + 0.01),
+    );
+    await g.up();
+  });
 }
