@@ -4,7 +4,7 @@
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.CHANGE_WIFI_MULTICAST_STATE" />
     <application
-        android:label="bombario"
+        android:label="Bombario"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity
@@ -57,7 +57,7 @@
         <activity
             android:name="com.facebook.FacebookActivity"
             android:configChanges="keyboard|keyboardHidden|screenLayout|screenSize|orientation"
-            android:label="bombario" />
+            android:label="Bombario" />
         <activity
             android:name="com.facebook.CustomTabActivity"
             android:exported="true">

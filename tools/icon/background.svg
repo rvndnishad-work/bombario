@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 108 108">
+  <!-- Adaptive icon background: 108x108 canvas, fully covered. -->
+  <defs>
+    <radialGradient id="bg" cx="0.42" cy="0.36" r="0.75">
+      <stop offset="0" stop-color="#fff3a6"/>
+      <stop offset="0.45" stop-color="#ffd23f"/>
+      <stop offset="1" stop-color="#ff8a1a"/>
+    </radialGradient>
+  </defs>
+  <rect width="108" height="108" fill="url(#bg)"/>
+  <g fill="#ffffff" opacity="0.16" transform="translate(54 54)">
+    <path d="M0 0 L-8 -80 L8 -80 Z"/>
+    <path d="M0 0 L-8 -80 L8 -80 Z" transform="rotate(45)"/>
+    <path d="M0 0 L-8 -80 L8 -80 Z" transform="rotate(90)"/>
+    <path d="M0 0 L-8 -80 L8 -80 Z" transform="rotate(135)"/>
+    <path d="M0 0 L-8 -80 L8 -80 Z" transform="rotate(180)"/>
+    <path d="M0 0 L-8 -80 L8 -80 Z" transform="rotate(225)"/>
+    <path d="M0 0 L-8 -80 L8 -80 Z" transform="rotate(270)"/>
+    <path d="M0 0 L-8 -80 L8 -80 Z" transform="rotate(315)"/>
+  </g>
+</svg>
