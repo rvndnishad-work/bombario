@@ -40,6 +40,14 @@ class AppSettings extends ChangeNotifier {
   double controlsScale = 1;
   bool leftHanded = false;
 
+  /// A round joystick; off shows the four-arrow pad instead.
+  bool joystick = true;
+
+  /// Joystick sensitivity: tiles the player walks for a drag from the
+  /// stick's centre to its rim (0.25 to 4); holding it at the rim keeps
+  /// walking.
+  double stickTiles = 1;
+
   // ---- Accessibility
   bool reduceShake = true;
   bool highContrastFlames = false;
@@ -68,6 +76,8 @@ class AppSettings extends ChangeNotifier {
     opacity: 'controlsOpacity',
     scale: 'controlsScale',
     leftHanded: 'leftHanded',
+    joystick: 'joystick',
+    stickTiles: 'stickTiles',
     // Renamed when shake became off by default, so installs that saved the
     // old default pick up the new one.
     shake: 'reduceShake2',
@@ -86,6 +96,8 @@ class AppSettings extends ChangeNotifier {
     controlsOpacity = p.getDouble(_keys.opacity) ?? controlsOpacity;
     controlsScale = p.getDouble(_keys.scale) ?? controlsScale;
     leftHanded = p.getBool(_keys.leftHanded) ?? leftHanded;
+    joystick = p.getBool(_keys.joystick) ?? joystick;
+    stickTiles = p.getDouble(_keys.stickTiles) ?? stickTiles;
     reduceShake = p.getBool(_keys.shake) ?? reduceShake;
     highContrastFlames = p.getBool(_keys.flames) ?? highContrastFlames;
     soloSpeed = p.getDouble(_keys.speed) ?? soloSpeed;
@@ -100,6 +112,7 @@ class AppSettings extends ChangeNotifier {
     change(this);
     controlsOpacity = controlsOpacity.clamp(0.3, 1);
     controlsScale = controlsScale.clamp(0.8, 1.3);
+    stickTiles = stickTiles.clamp(0.25, 4);
     soloSpeed = soloSpeed.clamp(0.5, 1);
     notifyListeners();
     final p = _prefs;
@@ -110,6 +123,8 @@ class AppSettings extends ChangeNotifier {
     p.setDouble(_keys.opacity, controlsOpacity);
     p.setDouble(_keys.scale, controlsScale);
     p.setBool(_keys.leftHanded, leftHanded);
+    p.setBool(_keys.joystick, joystick);
+    p.setDouble(_keys.stickTiles, stickTiles);
     p.setBool(_keys.shake, reduceShake);
     p.setBool(_keys.flames, highContrastFlames);
     p.setDouble(_keys.speed, soloSpeed);

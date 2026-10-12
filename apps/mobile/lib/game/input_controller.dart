@@ -81,6 +81,19 @@ class InputController {
     _tapLeft = max(_tapLeft, tapTiles);
   }
 
+  /// Most a [walk] budget holds, so the player never runs on long after
+  /// the thumb stops.
+  static const double maxWalkTiles = 1;
+
+  /// Walks [tiles] more in [d] once nothing is held, on top of what is
+  /// still queued that way (up to [maxWalkTiles]): the joystick turning a
+  /// drag into distance. A new direction replaces the budget.
+  void walk(Direction d, double tiles) {
+    if (d != _tap) _tapLeft = 0;
+    _tap = d;
+    _tapLeft = min(maxWalkTiles, _tapLeft + tiles);
+  }
+
   void pressBomb() => _bombPressed = true;
   void pressAction() => _actionPressed = true;
   void pressPing(PingKind kind) => _ping = kind;

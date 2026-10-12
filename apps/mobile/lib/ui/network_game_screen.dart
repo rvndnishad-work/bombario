@@ -101,6 +101,8 @@ class _NetworkGameScreenState extends State<NetworkGameScreen> {
                                 opacity: settings.controlsOpacity,
                                 scale: settings.controlsScale,
                                 leftHanded: settings.leftHanded,
+                                joystick: settings.joystick,
+                                stickTiles: settings.stickTiles,
                                 haptics: settings.haptics,
                               ),
                         },

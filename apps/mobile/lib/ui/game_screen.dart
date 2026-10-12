@@ -98,6 +98,8 @@ class _GameScreenState extends State<GameScreen> {
                                 opacity: settings.controlsOpacity,
                                 scale: settings.controlsScale,
                                 leftHanded: settings.leftHanded,
+                                joystick: settings.joystick,
+                                stickTiles: settings.stickTiles,
                                 haptics: settings.haptics,
                               ),
                           Overlays.pause: (context, BlastGame game) => MenuCard(
