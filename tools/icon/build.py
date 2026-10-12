@@ -1,0 +1,169 @@
+"""Builds the app's launcher icons from the game's own sprites.
+
+    python3 tools/icon/build.py
+
+Draws the blue player beside a lit bomb on the title's yellow, each with a
+dark outline, on a 28x28 pixel canvas, and scales it up with hard pixel
+edges. Writes:
+
+  Android  res/mipmap-*/ic_launcher.png            legacy square icons
+           res/mipmap-*/ic_launcher_foreground.png  adaptive foreground,
+                                                    art inside the 66dp
+                                                    safe zone of 108dp
+           res/mipmap-*/ic_launcher_monochrome.png  themed-icon silhouette
+           res/mipmap-anydpi-v26/ic_launcher.xml    adaptive icon
+           res/values/ic_launcher_background.xml    its background colour
+  iOS      Runner/Assets.xcassets/AppIcon.appiconset/*.png (opaque)
+
+Reads the sprites through tools/sprites/build.py, so rerun this after
+changing the player or bomb there. Pure standard library.
+"""
+import importlib.util
+import json
+import os
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+ROOT = os.path.normpath(os.path.join(HERE, '..', '..'))
+
+# Loaded by path: both tools are called build.py.
+_spec = importlib.util.spec_from_file_location(
+    'sprites_build', os.path.join(ROOT, 'tools', 'sprites', 'build.py'))
+sprites_build = importlib.util.module_from_spec(_spec)
+_spec.loader.exec_module(sprites_build)
+
+RES = os.path.join(ROOT, 'apps/mobile/android/app/src/main/res')
+IOS_SET = os.path.join(
+    ROOT, 'apps/mobile/ios/Runner/Assets.xcassets/AppIcon.appiconset')
+
+ART = 28
+BACKGROUND = (0xff, 0xd2, 0x3f, 255)  # the title logo's yellow
+OUTLINE = (0x1e, 0x22, 0x30, 255)
+CLEAR = (0, 0, 0, 0)
+WHITE = (255, 255, 255, 255)
+
+# Android densities: legacy icon is 48dp, adaptive layers are 108dp.
+DENSITIES = {'mdpi': 1, 'hdpi': 1.5, 'xhdpi': 2, 'xxhdpi': 3, 'xxxhdpi': 4}
+
+
+def load_sprites():
+    sprites, order = {}, []
+    for name in ('mockup.txt', 'extra.txt'):
+        sprites_build.parse(
+            os.path.join(sprites_build.HERE, name), sprites, order)
+    return sprites
+
+
+def outlined(grid):
+    """[grid] with a one-pixel outline round its opaque pixels."""
+    n = len(grid)
+    out = [row[:] for row in grid]
+    for y in range(n):
+        for x in range(n):
+            if grid[y][x][3]:
+                continue
+            for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+                if 0 <= x + dx < n and 0 <= y + dy < n and grid[y + dy][x + dx][3]:
+                    out[y][x] = OUTLINE
+                    break
+    return out
+
+
+def blit(canvas, grid, ox, oy):
+    for y, row in enumerate(grid):
+        for x, p in enumerate(row):
+            if p[3] and 0 <= oy + y < ART and 0 <= ox + x < ART:
+                canvas[oy + y][ox + x] = p
+
+
+def art():
+    """The 28x28 icon art on a clear background."""
+    s = load_sprites()
+    pad = lambda g: [[CLEAR] * 18] + [[CLEAR] + r + [CLEAR] for r in g] + [[CLEAR] * 18]
+    canvas = [[CLEAR] * ART for _ in range(ART)]
+    blit(canvas, outlined(pad(s['bomb'])), 12, 7)
+    blit(canvas, outlined(pad(s['p1'])), 0, 4)
+    return canvas
+
+
+def render(art_px, size, extent, background):
+    """[size]x[size] image with the art [extent] pixels wide, centred.
+
+    Scales by a whole number when the art is at least that big, so pixels
+    stay square; smaller icons sample the art nearest-neighbour."""
+    if extent >= ART:
+        extent = extent // ART * ART
+    off = (size - extent) / 2
+    out = []
+    for y in range(size):
+        row = []
+        for x in range(size):
+            ax = int((x - off) * ART // extent) if x >= off else -1
+            ay = int((y - off) * ART // extent) if y >= off else -1
+            p = art_px[ay][ax] if 0 <= ax < ART and 0 <= ay < ART else CLEAR
+            row.append(p if p[3] else background)
+        out.append(row)
+    return out
+
+
+def write(path, image):
+    sprites_build.write_png(path, len(image), len(image), image)
+
+
+def android(art_px):
+    # Themed icons tint one shape: cut the outlines and eyes out of it so
+    # the player and bomb still read.
+    mono = [[WHITE if p[3] and p != OUTLINE and sum(p[:3]) > 60 else CLEAR
+             for p in row] for row in art_px]
+    for name, k in DENSITIES.items():
+        folder = os.path.join(RES, f'mipmap-{name}')
+        legacy = round(48 * k)
+        write(os.path.join(folder, 'ic_launcher.png'),
+              render(art_px, legacy, round(44 * k), BACKGROUND))
+        layer, safe = round(108 * k), round(66 * k)
+        write(os.path.join(folder, 'ic_launcher_foreground.png'),
+              render(art_px, layer, safe, CLEAR))
+        write(os.path.join(folder, 'ic_launcher_monochrome.png'),
+              render(mono, layer, safe, CLEAR))
+    anydpi = os.path.join(RES, 'mipmap-anydpi-v26')
+    os.makedirs(anydpi, exist_ok=True)
+    open(os.path.join(anydpi, 'ic_launcher.xml'), 'w').write(
+        '<?xml version="1.0" encoding="utf-8"?>\n'
+        '<!-- GENERATED by tools/icon/build.py. Do not edit by hand. -->\n'
+        '<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">\n'
+        '    <background android:drawable="@color/ic_launcher_background" />\n'
+        '    <foreground android:drawable="@mipmap/ic_launcher_foreground" />\n'
+        '    <monochrome android:drawable="@mipmap/ic_launcher_monochrome" />\n'
+        '</adaptive-icon>\n')
+    colour = '#{:02x}{:02x}{:02x}'.format(*BACKGROUND[:3])
+    open(os.path.join(RES, 'values', 'ic_launcher_background.xml'), 'w').write(
+        '<?xml version="1.0" encoding="utf-8"?>\n'
+        '<!-- GENERATED by tools/icon/build.py. Do not edit by hand. -->\n'
+        '<resources>\n'
+        f'    <color name="ic_launcher_background">{colour}</color>\n'
+        '</resources>\n')
+
+
+def ios(art_px):
+    images = json.load(open(os.path.join(IOS_SET, 'Contents.json')))['images']
+    done = set()
+    for entry in images:
+        name = entry['filename']
+        if name in done:
+            continue
+        done.add(name)
+        points = float(entry['size'].split('x')[0])
+        size = round(points * int(entry['scale'][0]))
+        # iOS rounds the corners itself; keep the art clear of them.
+        write(os.path.join(IOS_SET, name),
+              render(art_px, size, round(size * 0.86), BACKGROUND))
+
+
+def main():
+    art_px = art()
+    android(art_px)
+    ios(art_px)
+    print('icons -> android mipmaps, adaptive icon, iOS AppIcon set')
+
+
+if __name__ == '__main__':
+    main()
