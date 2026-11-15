@@ -34,7 +34,7 @@ void main() {
     expect(duo, contains(ItemType.tether));
   });
 
-  test('no regular stage sends a Hunter Coin', () {
+  test('no regular stage sends a Ringer', () {
     for (final stage in Campaign.stages) {
       expect(
           stage.enemies.map((e) => e.$1), isNot(contains(EnemyKind.hunterCoin)),

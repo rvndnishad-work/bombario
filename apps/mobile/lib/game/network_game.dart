@@ -310,6 +310,16 @@ class NetworkGame extends FlameGame {
     if (!_bonus && before.timeLeft > 0 && now.timeLeft <= 0 && !now.cleared) {
       audio.play(Sfx.timeUp);
       _shake = 0.3;
+      if (session.mode == GameMode.versus) {
+        messages.show(
+          GameMessage(
+            title: 'Sudden death!',
+            body: 'The walls are closing in. Stay off the edge!',
+            sprite: 'wall',
+            seconds: 3,
+          ),
+        );
+      }
     }
     if (now.bombs.length > before.bombs.length) {
       // Ours if we pressed Bomb just before this snapshot.

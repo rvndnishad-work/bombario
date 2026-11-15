@@ -429,7 +429,7 @@ void main() {
   });
 
   group('bosses', () {
-    test('King Puffball bounces inside the arena and splits at half HP', () {
+    test('King Mallow bounces inside the arena and splits at half HP', () {
       final stage = Campaign.byId('1-10')!;
       final w = World(stage.level(seed: 3, players: 1),
           seed: 3, config: stage.config(players: 1));

@@ -559,7 +559,7 @@ class Room {
           ItemType.speedUp,
           ItemType.remote,
         ],
-        timeLimit: 120,
+        timeLimit: 90,
       );
     } else {
       level = stage.level(seed: seed, players: clients.length);

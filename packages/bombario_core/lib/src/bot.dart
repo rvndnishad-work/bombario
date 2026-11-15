@@ -444,7 +444,7 @@ class Bot {
   }
 
   /// Walkers that keep going straight and turn back at walls (Pebbles,
-  /// and Puffballs most of the time) are easy to predict: will this one be
+  /// and Mallows most of the time) are easy to predict: will this one be
   /// in [blast] when a bomb dropped at [bombAt] now goes off?
   bool _walksInto(Enemy e, Set<int> blast, int bombAt) {
     final style = e.kind.style;

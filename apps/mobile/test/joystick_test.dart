@@ -4,13 +4,13 @@ import 'package:bombario_core/bombario_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-/// Tiles [input] walks before it stops, at the base 0.1 tile a tick.
+/// Tiles [input] walks before it stops, at the base speed.
 double walkedOut(InputController input) {
   var tiles = 0.0;
   for (var i = 0; i < 100; i++) {
     final step = input.consume();
     if (step.direction == Direction.none) break;
-    tiles += step.walk * 0.1;
+    tiles += step.walk * Player.baseSpeed * World.tickDt;
   }
   return tiles;
 }

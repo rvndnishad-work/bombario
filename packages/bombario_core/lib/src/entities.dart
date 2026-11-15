@@ -179,7 +179,10 @@ class Player extends Entity {
   int bombsPlaced = 0;
   int score = 0;
 
-  static const double baseSpeed = 3.0;
+  /// A touch faster than the 3.5 tiles/s enemies minus one Speed Up, so a
+  /// single Speed Up lets you outrun them (the genre's feel: you start
+  /// quicker than the slow tiers and earn the edge on the fast ones).
+  static const double baseSpeed = 3.25;
   static const double speedStep = 0.5;
   static const double maxSpeed = 6.0;
   static const int maxBombCap = 8;
@@ -388,7 +391,7 @@ class FloorItem {
 
 /// How an enemy moves. Composed into [EnemyKind] definitions.
 enum MoveStyle {
-  /// Picks a random open direction at junctions. Puffball/Ballom.
+  /// Picks a random open direction at junctions. Mallow/Ballom.
   wander,
 
   /// Walks a straight line and turns back when blocked. Pebble.
@@ -400,7 +403,7 @@ enum MoveStyle {
   /// Chase, moving through soft bricks and avoiding bomb blast zones.
   phaseChase,
 
-  /// Floats diagonally and bounces off walls, ignoring lanes. King Puffball.
+  /// Floats diagonally and bounces off walls, ignoring lanes. King Mallow.
   bounce,
 
   /// Travels underground and surfaces near players. Rockjaw Worm.
@@ -430,7 +433,7 @@ enum EnemyAbility {
   /// the side or back, to kill it. Shellback.
   armoured,
 
-  /// Boss: splits off four Puffballs at half health. King Puffball.
+  /// Boss: splits off four Mallows at half health. King Mallow.
   spawnAtHalf,
 
   /// Sits still looking like a power-up; bites anyone who steps next to
@@ -468,7 +471,7 @@ enum EnemyAbility {
   witch,
 
   /// Boss: copies the team's power-ups, cycles earlier bosses' attacks,
-  /// shrinks the arena in the last phase. Overlord Pontan.
+  /// shrinks the arena in the last phase. Clockwork Overlord.
   overlord,
 }
 
@@ -543,37 +546,39 @@ class EnemyKind {
   /// Touching it doesn't hurt (Herder, nests, curse orbs).
   final bool harmless;
 
-  // ---- The NES roster (§6.2), renamed.
+  // ---- The genre's classic tier ladder (§6.2): the same speeds, smarts and
+  // points, step by step, but our own creatures (2026-11 redesign). The
+  // Dart names are the old ones so level files and tests keep working.
   static const puffball = EnemyKind(
-    name: 'Puffball',
+    name: 'Mallow',
     speed: 1.5,
     style: MoveStyle.wander,
     points: 100,
     turnChance: 0.15,
   );
   static const blueDrop = EnemyKind(
-    name: 'Blue Drop',
+    name: 'Snapclam',
     speed: 2.5,
     style: MoveStyle.chase,
     sightRange: 4,
     points: 200,
   );
   static const barrelhop = EnemyKind(
-    name: 'Barrelhop',
+    name: 'Windup',
     speed: 2.5,
     style: MoveStyle.wander,
     points: 400,
     turnChance: 0.5,
   );
   static const grinface = EnemyKind(
-    name: 'Grinface',
+    name: 'Zipbug',
     speed: 3.5,
     style: MoveStyle.chase,
     sightRange: 4,
     points: 800,
   );
   static const slimeSage = EnemyKind(
-    name: 'Slime Sage',
+    name: 'Gnawbit',
     speed: 1.5,
     style: MoveStyle.phaseChase,
     sightRange: 6,
@@ -582,7 +587,7 @@ class EnemyKind {
     points: 1000,
   );
   static const wisp = EnemyKind(
-    name: 'Wisp',
+    name: 'Dustmoth',
     speed: 2.5,
     style: MoveStyle.wander,
     wallPass: true,
@@ -591,7 +596,7 @@ class EnemyKind {
 
   /// Hunters that flood the stage when the timer runs out.
   static const hunterCoin = EnemyKind(
-    name: 'Hunter Coin',
+    name: 'Ringer',
     speed: 4.5,
     style: MoveStyle.phaseChase,
     sightRange: 99,
@@ -748,7 +753,7 @@ class EnemyKind {
 
   // ---- Bosses (§7). HP scales +60% per extra player at stage build.
   static const kingPuffball = EnemyKind(
-    name: 'King Puffball',
+    name: 'King Mallow',
     speed: 2,
     style: MoveStyle.bounce,
     points: 10000,
@@ -787,7 +792,7 @@ class EnemyKind {
     boss: true,
   );
   static const overlordPontan = EnemyKind(
-    name: 'Overlord Pontan',
+    name: 'Clockwork Overlord',
     speed: 2,
     style: MoveStyle.bounce,
     points: 30000,
@@ -831,6 +836,17 @@ class EnemyKind {
 
   static final byName = <String, EnemyKind>{
     for (final k in all) k.name: k,
+    // Names before the 2026-11 redesign, so older level files and saved
+    // snapshots still resolve.
+    'Puffball': puffball,
+    'Blue Drop': blueDrop,
+    'Barrelhop': barrelhop,
+    'Grinface': grinface,
+    'Slime Sage': slimeSage,
+    'Wisp': wisp,
+    'Hunter Coin': hunterCoin,
+    'King Puffball': kingPuffball,
+    'Overlord Pontan': overlordPontan,
     // Short keys used by level files.
     'puffball': puffball,
     'blueDrop': blueDrop,
@@ -902,7 +918,7 @@ class Enemy extends Entity {
   /// Splitlings vanish when this reaches zero.
   double lifeLeft;
 
-  /// King Puffball has already split off its Puffballs.
+  /// King Mallow has already split off its Mallows.
   bool splitDone = false;
 
   /// What a disguised Mimic looks like.

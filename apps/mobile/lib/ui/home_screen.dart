@@ -494,7 +494,7 @@ class _Bar extends StatelessWidget {
   );
 }
 
-/// The Start tile's art: the bomber running from a Puffball, a bomb
+/// The Start tile's art: the bomber running from a Mallow, a bomb
 /// fizzing between them.
 class _ChaseScene extends StatelessWidget {
   const _ChaseScene();

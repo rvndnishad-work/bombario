@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:bombario/audio/game_audio.dart';
+import 'package:bombario_core/bombario_core.dart' show ItemType;
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -32,6 +33,14 @@ void main() {
     expect(GameAudio.musicFile(2, hurry: true), 'music_w2_fast.wav');
     expect(GameAudio.sfxFile(Sfx.bombPlaceOther), 'bomb_place_other.wav');
     expect(GameAudio.sfxFile(Sfx.timeLow), 'time_low.wav');
+  });
+
+  test('each power-up family has its own pickup sound', () {
+    expect(GameAudio.pickupFor(ItemType.fireUp), Sfx.pickup);
+    expect(GameAudio.pickupFor(ItemType.kick), Sfx.pickupMove);
+    expect(GameAudio.pickupFor(ItemType.heart), Sfx.pickupSpecial);
+    expect(GameAudio.pickupFor(ItemType.extraLife), Sfx.pickupLife);
+    expect(GameAudio.sfxFile(Sfx.pickupMove), 'pickup_move.wav');
   });
 
   test('every Sfx and music track has an asset file', () {

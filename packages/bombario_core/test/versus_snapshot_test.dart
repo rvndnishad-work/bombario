@@ -81,7 +81,7 @@ void main() {
       expect(decoded.player(a.id)!.facing, Direction.right);
       expect(decoded.bombs.single.remote, isTrue);
       expect(decoded.enemies.length, 3);
-      expect(decoded.enemies.first.kind, 'Puffball');
+      expect(decoded.enemies.first.kind, 'Mallow');
       for (final p in w.grid.positions) {
         expect(decoded.grid.atPos(p), w.grid.atPos(p));
       }

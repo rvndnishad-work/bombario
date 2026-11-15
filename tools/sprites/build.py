@@ -2,8 +2,10 @@
 
     python3 tools/sprites/build.py
 
-Reads mockup.txt (sprites imported from the UI mockups) and then extra.txt
-(sprites drawn for the game that the mockups don't cover), and writes:
+Reads mockup.txt (sprites imported from the UI mockups), then extra.txt
+(sprites drawn for the game that the mockups don't cover), then crew.txt (the
+2026-11 redesign of the hero, the core enemies and the power-ups, which
+replaces any older drawing of the same name), and writes:
 
   apps/mobile/assets/images/sprites.png    16x16 cells, 16 per row
   apps/mobile/lib/game/sprite_atlas.g.dart cell index for every sprite name
@@ -185,7 +187,7 @@ def write_png(path, width, height, pixels):
 
 def main():
     sprites, order = {}, []
-    for name in ('mockup.txt', 'extra.txt'):
+    for name in ('mockup.txt', 'extra.txt', 'crew.txt'):
         parse(os.path.join(HERE, name), sprites, order)
     rows = (len(order) + COLUMNS - 1) // COLUMNS
     width, height = COLUMNS * CELL, rows * CELL

@@ -235,9 +235,10 @@ def make_sfx():
         delay(noise_burst(0.4, vol=0.7, decay=0.18, lp=0.15, lp_end=0.03, rate=8), 0.06),
         sweep(0.2, 90, 35, kind="sine", vol=0.9, curve=0.4, decay=0.08),
     ), 1.4), 0.5)
-    # Power-up pickup: a click and a 12.5 % duty C6-C7 run, the top note doubled.
-    # Power-up pickup: a click and a two-octave 12.5 % duty run up to a
-    # warbling top note, doubled and echoed.
+    # Power-up pickups, one sound per token family (2026-11), so the ear
+    # learns what was grabbed before the eye checks the HUD.
+    # Red "grow" tokens (bomb, fire, speed): a click and a two-octave 12.5 %
+    # duty run up to a warbling top note, doubled and echoed.
     run = [(72, 0.032), (76, 0.032), (79, 0.032), (84, 0.032), (88, 0.032), (91, 0.032),
            (96, 0.2)]
     up = notes_seq(run, duty=0.125, vol=0.7, gate=0.85, decay=0.12, vib=0.0)
@@ -247,6 +248,33 @@ def make_sfx():
         notes_seq([(None, 0.192), (96, 0.2)], duty=0.5, vol=0.22, decay=0.08, vib=0.02),
         delay([v * 0.35 for v in up], 0.09),
     ), 0.8)
+    # Blue "move" tokens (passes, kick, remote): an airy whoosh under a quick
+    # up-swoop, then two bright notes a fourth apart.
+    s["pickup_move"] = (mix(
+        noise_burst(0.18, vol=0.35, decay=0.08, lp=0.15, lp_end=0.8, hp=True),
+        sweep(0.12, 300, 1200, duty=0.25, vol=0.5, curve=1.4, r=0.02),
+        delay(notes_seq([(86, 0.06), (91, 0.2)], duty=0.5, vol=0.55, gate=0.9, decay=0.1), 0.11),
+        delay(notes_seq([(None, 0.06), (98, 0.2)], kind="tri", vol=0.4, decay=0.1), 0.11),
+    ), 0.8)
+    # Purple "special" tokens: a sparkle, triangle and pulse arpeggios
+    # crossing each other, with a long shimmer.
+    sparkle = [(84, 0.04), (91, 0.04), (88, 0.04), (95, 0.04), (91, 0.04), (100, 0.22)]
+    s["pickup_special"] = (mix(
+        noise_burst(0.01, vol=0.3, decay=0.003, hp=True, short=True),
+        notes_seq(sparkle, kind="tri", vol=0.8, gate=0.9, decay=0.1),
+        notes_seq(sparkle, duty=0.125, vol=0.25, gate=0.6, decay=0.06, vib=0.015),
+        delay(noise_burst(0.35, vol=0.1, decay=0.15, hp=True, short=True), 0.15),
+        delay(notes_seq(sparkle, kind="tri", vol=0.25, decay=0.08), 0.12),
+    ), 0.75)
+    # Gold 1UP token: a short bouncy fanfare of our own over a triangle bass.
+    q = 0.075
+    s["pickup_life"] = (pad(mix(
+        notes_seq([(79, q), (84, q), (88, q), (84, q), (88, q), (91, q * 3)],
+                  duty=0.5, vol=0.55, gate=0.7, decay=0.12),
+        notes_seq([(76, q), (79, q), (84, q), (79, q), (84, q), (88, q * 3)],
+                  duty=0.25, vol=0.22, gate=0.7, decay=0.12),
+        notes_seq([(48, q * 2), (55, q * 2), (60, q * 4)], kind="tri", vol=0.8, gate=0.8),
+    ), 0.75), 0.8)
     # Death: a hit, a two-voice stepwise fall, a drooping last note with a
     # wobble, a low thud, then silence (fits inside the 1.5 s respawn delay).
     hit = mix(noise_burst(0.05, vol=0.8, decay=0.015, lp=0.9),
@@ -368,12 +396,13 @@ def make_sfx():
     # downbeats, a fast run and a final chord on a crash and a sub thud.
     q = 0.09
     slide = sweep(0.05, 392, 523, duty=0.5, vol=0.5, curve=0.7, r=0.01)
-    lead = notes_seq([(72, q), (72, q), (72, q), (None, q), (76, q), (79, q), (None, q), (84, q),
-                      (None, q), (81, q)], duty=0.5, vol=0.5, gate=0.6, decay=0.12) + \
+    # The lead states the Blast Crew motif (see MOTIF below) as a fanfare.
+    lead = notes_seq([(72, q), (72, q), (79, 2 * q), (84, 2 * q), (88, q), (84, q),
+                      (None, 2 * q)], duty=0.5, vol=0.5, gate=0.6, decay=0.12) + \
         notes_seq([(76, 0.03), (79, 0.03), (83, 0.03)], duty=0.125, vol=0.45)
     lead_final = delay(notes_seq([(84, 0.7)], duty=0.5, vol=0.55, gate=1.0, decay=0.3), 0.99)
-    harm = notes_seq([(67, q), (67, q), (67, q), (None, q), (72, q), (76, q), (None, q), (79, q),
-                      (None, q), (77, q)], duty=0.25, vol=0.24, gate=0.6, decay=0.12)
+    harm = notes_seq([(67, q), (67, q), (76, 2 * q), (79, 2 * q), (84, q), (79, q),
+                      (None, 2 * q)], duty=0.25, vol=0.24, gate=0.6, decay=0.12)
     harm_final = delay(notes_seq([(88, 0.7)], duty=0.25, vol=0.22, gate=1.0, decay=0.3), 0.99)
     bass = pump_bass([r for r in (48, 48, 48, 48, 52, 52, 52, 55, 55, 53) for _ in range(2)],
                      q / 2, vol=0.85)
@@ -410,18 +439,26 @@ def make_sfx():
         sweep(0.025, 2200, 1600, duty=0.125, vol=0.6, curve=0.5, a=0.001, r=0.008),
         noise_burst(0.006, vol=0.5, decay=0.002, lp=1.0),
     ), 0.6)
-    # Timer: time's up; snare roll, descending stabs, siren drop and a sub
-    # thud announce the hunter swarm.
-    roll = hits(noise_burst(0.03, vol=0.45, decay=0.01, lp=0.85), [k * 0.04 for k in range(8)])
-    stabs = notes_seq([(88, 0.08), (84, 0.08), (81, 0.08), (76, 0.08)] * 2,
-                      duty=0.5, vol=0.55, gate=0.7, decay=0.08)
-    stabs_lo = notes_seq([(76, 0.08), (72, 0.08), (69, 0.08), (64, 0.08)] * 2,
-                         duty=0.125, vol=0.25, gate=0.7, decay=0.08)
-    siren = delay(sweep(0.3, 660, 110, duty=0.5, vol=0.6, curve=0.7, vib=0.1, vib_rate=25, r=0.05),
-                  0.64)
+    # Timer: time's up. The Ringers are coming, so it is their alarm clock:
+    # a hammered bell trill (two detuned pitches swapped 24 times a second,
+    # each strike decaying), a falling siren and a sub thud.
+    n = int(0.9 * SR)
+    bell = []
+    ph1 = ph2 = 0.0
+    for i in range(n):
+        t = i / SR
+        strike = (t * 24) % 1.0
+        f1, f2 = (2093.0, 2637.0) if int(t * 24) % 2 else (2217.0, 2794.0)
+        ph1 += f1 / SR
+        ph2 += f2 / SR
+        e = math.exp(-strike * 4.0) * (1.0 - t / 0.9) ** 0.5
+        bell.append((pulse(ph1, 0.25) * 0.5 + tri(ph2) * 0.6) * e * 0.7)
+    roll = hits(noise_burst(0.03, vol=0.45, decay=0.01, lp=0.85), [k * 0.04 for k in range(6)])
+    siren = delay(sweep(0.3, 660, 110, duty=0.5, vol=0.5, curve=0.7, vib=0.1, vib_rate=25, r=0.05),
+                  0.62)
     thud = delay(mix(sweep(0.2, 100, 38, kind="sine", vol=0.9, decay=0.08),
-                     noise_burst(0.3, vol=0.6, decay=0.1, lp=0.3, rate=6)), 0.64)
-    s["time_up"] = (pad(squash(mix(roll, stabs, stabs_lo, siren, thud), 1.5), 0.95), 0.9)
+                     noise_burst(0.3, vol=0.6, decay=0.1, lp=0.3, rate=6)), 0.62)
+    s["time_up"] = (pad(squash(mix(roll, bell, siren, thud), 1.5), 0.95), 0.9)
     for name, (samples, peak) in s.items():
         write_wav(name, samples, peak)
     return list(s)
@@ -474,27 +511,34 @@ def parse_melody(text):
 # stated in the first bar of every song, pumping 16th-note octave bass,
 # staccato chip-chord stabs on every 8th, a dotted-8th echo on the lead and
 # busy 16th hats. Every song ends its loop on a reprise of its hook.
-FOUND_A = """0:0.5! 2:0.5 4:0.5 7:0.5 9:2 7:1 4:1 7:1 9:1 |
+# The Blast Crew motif (2026-11): one hook in scale degrees that opens the
+# menu, every world's loop and the "found" loop. Written in degrees, it takes
+# on each world's mode (major meadow, dorian caves, lydian factory, harmonic
+# minor manor, phrygian sky), so the game has one tune heard five ways.
+MOTIF = "0:0.5! 0:0.5 4:1 7:1. 9:0.5 7:0.5 4:1 2:1 0:1! r:1"
+MOTIF3 = "0:0.5! 0:0.5 4:1 7:1. 9:0.5 7:0.5 4:1 2:1"   # 3/4 bar (World 4)
+
+FOUND_A = """""" + MOTIF + """ |
              8:1! 7:0.5 8:0.5 6:1 4:1 2:2 4:1 6:1 |
              9:1! 9:0.5. 9:0.5. 11:1 9:1 7:1 5:1 7:1 9:1 |
              8:1! 7:1 5:1 3:1 4:1. 5:1. 6:1. 7:1."""
 
-MENU_A = """4:1.5! 4:1.5 2:1 4:1 7:1! r:1 7:1 | 5:1.5! 5:1.5 4:1 2:1 0:1 2:2 |
+MENU_A = """""" + MOTIF + """ | 5:1.5! 5:1.5 4:1 2:1 0:1 2:2 |
             3:1.5! 3:1.5 5:1 7:1 7:1! r:1 7:1 | 6:1! 6:0.5. 6:0.5. 6:1 4:1 1:1 2:1 4:2"""
 
-W1_A = """0:1! 2:1 4:1 7:1! r:0.5 7:0.5 6:1 7:1 4:1 | 5:1.5! 5:1.5 3:1 5:1 7:1 8:1 7:1 |
+W1_A = """""" + MOTIF + """ | 5:1.5! 5:1.5 3:1 5:1 7:1 8:1 7:1 |
           6:1.5! 6:1.5 4:1 6:1 8:1 9:0.5 8:0.5 6:1 | 7:1! 4:0.5 7:0.5 9:1! 7:1 4:1. 2:1. 0:2"""
 
-W2_A = """0:1! 0:0.5. 0:0.5. 2:1 4:1 6:1! 4:1 2:1 4:1 | 6:1! 6:0.5. 6:0.5. 4:1 6:1 8:1! 6:1 4:1 1:1 |
+W2_A = """""" + MOTIF + """ | 6:1! 6:0.5. 6:0.5. 4:1 6:1 8:1! 6:1 4:1 1:1 |
           3:1.5! 5:1.5 7:1 5:1 3:1 5:0.5 6:0.5 7:1 | 9:1! 7:1 4:1 2:1 0:2_ r:2"""
 
-W3_A = """4:1! 7:1 4:1 2:1 0:1 2:1 4:2 | 3:1! 5:1 3:1 1:1 5:1.5 3:1.5 1:1 |
+W3_A = """""" + MOTIF + """ | 3:1! 5:1 3:1 1:1 5:1.5 3:1.5 1:1 |
           4:1! 7:1 9:1 7:1 4:1 7:1 11:2 | 10:1! 8:1 5:1 3:1 1:2_ r:2"""
 
-W4_A = """0:1! 2:0.5 4:0.5 7:1 4:1 2:1 4:1 | 7:1! 6:0.5 7:0.5 9:1 7:1 6:1 4:1 |
+W4_A = """""" + MOTIF3 + """ | 7:1! 6:0.5 7:0.5 9:1 7:1 6:1 4:1 |
           5:1! 3:0.5 5:0.5 8:1 5:1 3:1 5:1 | 6:1! 6:0.5. 6:0.5. 8:1 6:1 4:2_"""
 
-W5_A = """0:0.5! 0:0.5 7:1 0:0.5 0:0.5 6:1 0:0.5 0:0.5 5:1 4:1 3:1 |
+W5_A = """""" + MOTIF + """ |
           0:0.5! 0:0.5 7:1 0:0.5 0:0.5 6:1 8:2_ 7:1 6:1 |
           1:0.5! 1:0.5 8:1 1:0.5 1:0.5 7:1 1:0.5 1:0.5 6:1 5:1 3:1 |
           4:1! 3:1 1:1 0:1 -1:1 0:3_"""
