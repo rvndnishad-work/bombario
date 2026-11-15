@@ -538,7 +538,7 @@ class BlastGame extends FlameGame {
           );
         case core.ItemPicked(:final playerId, :final type)
             when playerId == player.id:
-          audio.play(Sfx.pickup);
+          audio.play(GameAudio.pickupFor(type));
           _buzz(HapticFeedback.selectionClick);
           if (type == core.ItemType.extraLife) {
             final gained = gainLives(1);

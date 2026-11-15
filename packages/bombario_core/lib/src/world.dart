@@ -610,6 +610,11 @@ class World {
       }
       return;
     }
+    if (timeUp && config.versusMode) {
+      // Sudden death: the arena closes in a spiral from the edge.
+      _tickShrink(dt, batch: 1, every: versusShrinkEvery);
+      return;
+    }
     if (timeUp) {
       _hunterTimer += dt;
       if (_hunterTimer >= config.hunterInterval) {
@@ -623,7 +628,13 @@ class World {
       timeLeft = 0;
       timeUp = true;
       events.add(const TimeUp());
-      // First wave arrives immediately, like the NES Pontans.
+      if (config.versusMode) {
+        // The genre's battle ending instead of Hunters: blocks drop in a
+        // spiral from the edge until someone is left standing.
+        _shrinkQueue = _shrinkRings(grid.width);
+        return;
+      }
+      // First wave arrives immediately, like the genre's time-up swarm.
       _sendHunter();
     }
   }
@@ -2168,7 +2179,7 @@ class World {
     if (e.hp * 3 <= e.maxHp && _shrinkQueue == null) {
       _shrinkQueue = _shrinkRings(2);
     }
-    _tickShrink(dt, e);
+    _tickShrink(dt);
     switch (e.state) {
       case EnemyStateKind.underground:
         if (_telegraphDone(e, dt)) {
@@ -2274,13 +2285,18 @@ class World {
   static const int shrinkBatch = 4;
   static const double shrinkEvery = 1;
 
-  void _tickShrink(double dt, Enemy boss) {
+  /// Versus sudden death closes one tile this often (each with the usual
+  /// one-second warning), so a 15 x 13 arena takes about 30 s to fill.
+  static const double versusShrinkEvery = 0.25;
+
+  void _tickShrink(double dt,
+      {int batch = shrinkBatch, double every = shrinkEvery}) {
     final queue = _shrinkQueue;
     if (queue == null || queue.isEmpty) return;
     _shrinkTimer += dt;
-    if (_shrinkTimer < shrinkEvery) return;
+    if (_shrinkTimer < every) return;
     _shrinkTimer = 0;
-    for (var i = 0; i < shrinkBatch && queue.isNotEmpty; i++) {
+    for (var i = 0; i < batch && queue.isNotEmpty; i++) {
       final t = queue.removeAt(0);
       if (grid.atPos(t) == TileType.pillar) continue;
       hazards.add(Hazard(t.x, t.y, 1, kind: HazardKind.wall));

@@ -13,7 +13,7 @@ double walked(InputController input, int ticks, double per) {
 }
 
 void main() {
-  const base = Player.baseSpeed * World.tickDt; // 0.1 tile a tick
+  const base = Player.baseSpeed * World.tickDt; // about 0.11 tile a tick
 
   test('a tap walks exactly an eighth of a tile at any speed', () {
     final input = InputController();
@@ -23,7 +23,8 @@ void main() {
     expect(first.walk, closeTo(1, 1e-9));
     final last = input.consume();
     expect(last.direction, Direction.right);
-    expect(last.walk, closeTo(0.25, 1e-9)); // the last 0.025 tile
+    // The rest of the eighth of a tile.
+    expect(last.walk, closeTo((1 / 8 - base) / base, 1e-9));
     expect(input.consume().direction, Direction.none);
 
     const fast = Player.maxSpeed * World.tickDt; // 0.2 tile a tick
@@ -127,7 +128,7 @@ void main() {
       expect(input.consume().walk, 1);
       final last = input.consume();
       expect(last.direction, Direction.right);
-      expect(last.walk * base, closeTo(0.05, 1e-9));
+      expect(last.walk * base, closeTo(0.25 - 2 * base, 1e-9));
       expect(input.consume().direction, Direction.none);
     });
 

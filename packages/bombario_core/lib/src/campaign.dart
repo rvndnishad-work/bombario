@@ -165,12 +165,33 @@ class StageDef {
 
   /// The stage's item list as [players] players get it: solo skips the
   /// items that only help teammates. Each player gets one, in this order.
-  List<ItemType> itemsFor(int players) => players > 1
-      ? items
-      : [
-          for (final i in items)
-            if (!coopOnlyItems.contains(i)) i,
-        ];
+  List<ItemType> itemsFor(int players) {
+    if (players > 1) return items;
+    final solo = [
+      for (final i in items)
+        if (!coopOnlyItems.contains(i)) i,
+    ];
+    final pick = soloGrowth[id];
+    return pick == null ? solo : [pick, ...solo.where((i) => i != pick)];
+  }
+
+  /// The power-up a solo player finds, where it differs from the stage's
+  /// first item. Solo finds one per stage, so this table is the solo growth
+  /// curve: bombs and fire climb together (about one each per two stages,
+  /// both at 8 by the end of World 4) and a Speed Up comes in each of the
+  /// first four worlds' early stages, as in the genre's classic run. Before
+  /// this, solo ended World 4 with 7 fire but 3 bombs and one Speed Up.
+  static const soloGrowth = {
+    '1-2': ItemType.bombUp,
+    '2-3': ItemType.bombUp,
+    '3-6': ItemType.bombUp,
+    '4-1': ItemType.speedUp,
+    '4-3': ItemType.bombUp,
+    '4-8': ItemType.fireUp,
+    '5-2': ItemType.speedUp,
+    '5-6': ItemType.mystery,
+    '5-8': ItemType.bombPass,
+  };
 
   /// One stage in this many (by seed) hides a 1-Up under a brick.
   static const int extraLifeOdds = 4;

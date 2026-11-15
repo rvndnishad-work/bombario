@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io' show Platform;
 
+import 'package:bombario_core/bombario_core.dart' show ItemType;
 import 'package:flame_audio/flame_audio.dart';
 import 'package:flutter/foundation.dart';
 
@@ -12,6 +13,9 @@ enum Sfx {
   explode,
   explodeFar,
   pickup,
+  pickupMove,
+  pickupSpecial,
+  pickupLife,
   death,
   revive,
   ping,
@@ -55,6 +59,19 @@ class GameAudio {
 
   /// File name (relative to `assets/audio/`) of a sound effect.
   static String sfxFile(Sfx s) => '${_snake(s.name)}.wav';
+
+  /// The pickup sound for an item, by its token family (the colour of its
+  /// icon): red grow, blue move, purple special, gold 1UP.
+  static Sfx pickupFor(ItemType t) => switch (t) {
+    ItemType.bombUp || ItemType.fireUp || ItemType.speedUp => Sfx.pickup,
+    ItemType.wallPass ||
+    ItemType.bombPass ||
+    ItemType.flamePass ||
+    ItemType.kick ||
+    ItemType.remote => Sfx.pickupMove,
+    ItemType.extraLife => Sfx.pickupLife,
+    _ => Sfx.pickupSpecial,
+  };
 
   /// File name of the music loop for [world] (1..5, clamped; 0 = menu).
   /// [found] is the loop that takes over once the stage's power-up is

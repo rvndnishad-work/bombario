@@ -179,7 +179,10 @@ class Player extends Entity {
   int bombsPlaced = 0;
   int score = 0;
 
-  static const double baseSpeed = 3.0;
+  /// A touch faster than the 3.5 tiles/s enemies minus one Speed Up, so a
+  /// single Speed Up lets you outrun them (the genre's feel: you start
+  /// quicker than the slow tiers and earn the edge on the fast ones).
+  static const double baseSpeed = 3.25;
   static const double speedStep = 0.5;
   static const double maxSpeed = 6.0;
   static const int maxBombCap = 8;
