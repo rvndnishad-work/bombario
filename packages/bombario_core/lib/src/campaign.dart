@@ -500,7 +500,7 @@ abstract final class Campaign {
       enemies: [(EnemyKind.puffball, 5), (EnemyKind.blueDrop, 2)],
       items: [ItemType.speedUp],
       brickDensity: 0.38,
-      tip: 'Blue Drops chase you when they see you.',
+      tip: 'Snapclams chase you when they see you.',
     ),
     StageDef(
       id: '1-4',
@@ -525,7 +525,7 @@ abstract final class Campaign {
       ],
       brickDensity: 0.3,
       timeLimit: 60,
-      tip: 'Bonus! Pop as many Puffballs as you can in 60 seconds.',
+      tip: 'Bonus! Pop as many Mallows as you can in 60 seconds.',
     ),
     StageDef(
       id: '1-6',
@@ -565,7 +565,7 @@ abstract final class Campaign {
     ),
     StageDef(
       id: '1-10',
-      name: 'King Puffball',
+      name: 'King Mallow',
       boss: EnemyKind.kingPuffball,
       timeLimit: 180,
       tip: 'He splits when he is hurt. Keep moving!',
@@ -1095,7 +1095,7 @@ abstract final class Campaign {
     StageDef(
       id: '5-8',
       name: "Hunter's Moon",
-      // No regular Hunter Coin: at 4.5 tiles/s through walls no player can
+      // No regular Ringer: at 4.5 tiles/s through walls no player can
       // outrun it. Time-up still sends them.
       enemies: [
         (EnemyKind.tigerclaw, 1),
@@ -1128,7 +1128,7 @@ abstract final class Campaign {
     ),
     StageDef(
       id: '5-10',
-      name: 'Overlord Pontan',
+      name: 'Clockwork Overlord',
       boss: EnemyKind.overlordPontan,
       items: [ItemType.bombUp, ItemType.fireUp],
       timeLimit: 180,

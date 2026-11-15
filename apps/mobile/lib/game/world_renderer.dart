@@ -75,20 +75,20 @@ class WorldRenderer extends PositionComponent {
 
   /// Sprite per enemy kind name.
   static const enemySprites = <String, String>{
-    'Puffball': 'puff',
-    'Blue Drop': 'drop',
-    'Barrelhop': 'barrelhop',
-    'Grinface': 'grinface',
-    'Slime Sage': 'slimeSage',
-    'Wisp': 'wisp',
-    'Hunter Coin': 'hunterCoin',
+    'Mallow': 'puff',
+    'Snapclam': 'drop',
+    'Windup': 'barrelhop',
+    'Zipbug': 'grinface',
+    'Gnawbit': 'slimeSage',
+    'Dustmoth': 'wisp',
+    'Ringer': 'hunterCoin',
     'Door Warden': 'doorWarden',
     'Pebble': 'pebble',
     'Hopper': 'hopper',
     'Splitter': 'splitter',
     'Splitling': 'splitling',
     'Shellback': 'shellback',
-    'King Puffball': 'kingPuffball',
+    'King Mallow': 'kingPuffball',
     'Rockjaw Worm': 'rockjaw',
     'Bomb Goblin': 'goblin',
     'Tigerclaw': 'tigerclaw',
@@ -103,7 +103,7 @@ class WorldRenderer extends PositionComponent {
     'Curse Orb': 'curseOrb',
     'Bomb-O-Tron': 'bombOTron',
     'Lantern Witch': 'lanternWitch',
-    'Overlord Pontan': 'overlordPontan',
+    'Clockwork Overlord': 'overlordPontan',
   };
 
   static String? featureSprite(core.TileFeature f) => switch (f) {

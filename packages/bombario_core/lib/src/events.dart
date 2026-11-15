@@ -302,7 +302,7 @@ class CurseLifted extends GameEvent {
   final int playerId;
 }
 
-/// Overlord Pontan's arena closed in on this tile.
+/// Clockwork Overlord's arena closed in on this tile.
 class ArenaShrank extends GameEvent {
   const ArenaShrank(this.x, this.y);
   final int x;

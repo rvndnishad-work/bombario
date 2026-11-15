@@ -50,96 +50,6 @@ z #1a1410
 
 # ---------------------------------------------------------------- enemies
 
-sprite barrelhop mirror
-........
-...KKKKK
-..KLLLLL
-..KBBbBB
-..KBBbBB
-..KLLLLL
-..KBBWWB
-..KBBWxB
-..KBBbBB
-..KBBbKK
-..KLLLLL
-..KBBbBB
-..KBBbBB
-...KKKKK
-....KvK.
-....KKK.
-
-sprite grinface mirror
-.KK.....
-.KyK....
-.KyyK...
-..KyyKKK
-..KKYYYY
-.KYYYYYY
-.KYYKKKY
-.KYYKWxY
-.KYYYWWY
-.KYYYYYY
-.KYKKKKK
-.KYKWCWC
-.KYKKKKK
-..KYYYYY
-...KKYYY
-.....KKK
-
-sprite slimeSage mirror
-.......K
-......Ks
-......Ks
-.....Kss
-.....Kss
-....Ksss
-..KKKKKK
-..KHHHHH
-.KHHKKKH
-.KHHHWxH
-.KHHHHHH
-.KHHHwww
-.KhHHwww
-..KhHHww
-..KhhHHK
-...KK.KK
-
-sprite wisp mirror
-.....KKK
-...KKUUU
-..KUUUUU
-..KUUUUU
-.KUUmmUU
-.KUUmmUU
-.KUUUUUU
-.KUUUUff
-.KUUfffK
-.KUfffff
-.Kffffff
-.Kffffff
-.Kffffff
-.KfKffKf
-.KK.KK.K
-........
-
-sprite hunterCoin mirror
-.......K
-......KC
-.K...KCC
-.KK.KCcC
-..KKCCCC
-..KCKKKC
-.KCCCWxC
-.KCCCCCC
-.KCKKKKK
-.KCKWKWK
-.KCKKKKK
-..KKCCCC
-.KK.KCcC
-.K...KCC
-......KC
-.......K
-
 sprite doorWarden mirror
 .......K
 ......K2
@@ -211,24 +121,6 @@ sprite shellback
 ....KKK..KKK....
 ................
 ................
-
-sprite kingPuffball mirror
-..K.K..K
-..KYKYKY
-..KYYYYY
-..KYCYYY
-...KKKKK
-..KZZPPP
-.KZPPPPP
-.KPPKKPP
-.KPPKWPP
-.KPPPPPP
-.KPpPPPP
-.KPPPKKK
-..KPPPPP
-...KPPPP
-...KppKK
-...KKKK.
 
 sprite rockjaw mirror
 ........
@@ -363,120 +255,6 @@ recolor fd-frost = fd #ff5a1f:#2f6fd0 #ffb21f:#7fd8ff #fff3a6:#e8f8ff
 # --------------------------------------------------------------- power-ups
 # Icons are drawn bare and composed onto the yellow pick-me-up panel.
 
-sprite icon-kick
-................
-................
-................
-.....KKKK.......
-.....KOOK.......
-.....KOOK.......
-..k..KOOK.......
-.....KOOKKKK....
-.k...KOOOOOOK...
-.....KOOOOOOOK..
-..k..KKKKKKKKK..
-................
-................
-................
-................
-................
-
-sprite icon-teamboost
-................
-................
-................
-......KKKK......
-......KHHK......
-......KHHK......
-...KKKKHHKKKK...
-...KHHHHHHHHK...
-...KHHHHHHHHK...
-...KKKKHHKKKK...
-......KHHK......
-......KHHK......
-......KKKK......
-................
-................
-................
-
-sprite icon-tether
-................
-................
-................
-...KKKK.........
-..KLLLLK........
-..KL..KLK.......
-..KL...KLKKKK...
-..KLK...KLLLLK..
-...KLKKKLK..LK..
-....KKKLLK..LK..
-.......KLK..LK..
-........KLLLLK..
-.........KKKK...
-................
-................
-................
-
-sprite icon-bombpass
-................
-................
-..........Y.....
-.........y......
-......KKKK......
-....KKNNNNKK....
-...KNSNNNNNNK...
-.AAAAAAAAAAA....
-.AAAAAAAAAAAA...
-.AAAAAAAAAAA....
-...KNNNNNNNNK...
-....KKNNNNKK....
-......KKKK......
-................
-................
-................
-
-sprite icon-flamepass
-................
-................
-...KKKKKKKKKK...
-...KAAAAAAAAK...
-...KAAAAOAAAK...
-...KAAAOOAAAK...
-...KAAOOOOAAK...
-...KAAOEEOAAK...
-...KAAOEEOAAK...
-....KAAOOAAK....
-....KAAAAAAK....
-.....KAAAAK.....
-......KAAK......
-.......KK.......
-................
-................
-
-sprite icon-mystery
-................
-................
-.....iiiiii.....
-....ii....ii....
-....ii....ii....
-..........ii....
-.........ii.....
-........ii......
-.......ii.......
-.......ii.......
-................
-.......ii.......
-.......ii.......
-................
-................
-................
-
-compose pu-kick = pu + icon-kick
-compose pu-teamboost = pu + icon-teamboost
-compose pu-tether = pu + icon-tether
-compose pu-bombpass = pu + icon-bombpass
-compose pu-flamepass = pu + icon-flamepass
-compose pu-mystery = pu + icon-mystery
 
 # ------------------------------------------------------------------ pings
 
@@ -732,24 +510,6 @@ sprite lanternWitch mirror
 .KiiYiii
 Kiiiiiii
 KKKKKKKK
-........
-
-sprite overlordPontan mirror
-...K.K.K
-...KYKYK
-...KYYYY
-..KKKKKK
-.KccCCCC
-KcCCCCCC
-KcCKKCCC
-KcCKYKCC
-KcCCCCCC
-KcCCCCCC
-KcCKKKKK
-KcCKWKWK
-.KcCCCCC
-..KcCCCC
-...KKKKK
 ........
 
 sprite cannonball mirror
@@ -1033,166 +793,10 @@ e #8ab4ff
 d #2452c4
 j #ffe9d6
 
-sprite p1
-.......KK.......
-......KPPK......
-.....KKKKKK.....
-....KllllllK....
-...KleelllllK...
-...KllllllllK...
-..KllKKKKKKllK..
-..KlKjxjjxjKlK..
-..KlKjxjjxjKlK..
-..KlKjjjjjjKlK..
-...KlKKKKKKlK...
-.KWWKWWWWWWKWWK.
-.KWWKllllllKWWK.
-..KKKWWWWWWKKK..
-...KddK..KddK...
-...KKKK..KKKK...
-
-sprite p1-up
-.......KK.......
-......KPPK......
-.....KKKKKK.....
-....KllllllK....
-...KleelllllK...
-...KllllllllK...
-..KllllllllllK..
-..KllllllllllK..
-..KllllllllllK..
-..KddddddddddK..
-...KKKKKKKKKK...
-.KWWKWWWWWWKWWK.
-.KWWKllllllKWWK.
-..KKKWWWWWWKKK..
-...KddK..KddK...
-...KKKK..KKKK...
-
-sprite p1-side
-.......KK.......
-......KPPK......
-.....KKKKKKK....
-....KlllllllK...
-...KleellllllK..
-...KlllllllllK..
-..KllllllKKKKKK.
-..KllllllKjjxjK.
-..KllllllKjjxjK.
-..KdddlllKjjjjK.
-...KKKKKKKKKKK..
-....KWWWWWKWWK..
-....KlllllKWWK..
-.....KWWWWKKK...
-.....KdddddK....
-.....KKKKKKK....
-
-sprite p1-side-walk-a
-.......KK.......
-......KPPK......
-.....KKKKKKK....
-....KlllllllK...
-...KleellllllK..
-...KlllllllllK..
-..KllllllKKKKKK.
-..KllllllKjjxjK.
-..KllllllKjjxjK.
-..KdddlllKjjjjK.
-...KKKKKKKKKKK..
-....KWWWWWKWWK..
-....KlllllKWWK..
-.....KWWWWKKK...
-...KddK.KdddK...
-...KKKK.KKKKK...
-
-sprite p1-side-walk-b
-.......KK.......
-......KPPK......
-.....KKKKKKK....
-....KlllllllK...
-...KleellllllK..
-...KlllllllllK..
-..KllllllKKKKKK.
-..KllllllKjjxjK.
-..KllllllKjjxjK.
-..KdddlllKjjjjK.
-...KKKKKKKKKKK..
-....KWWWWWKWWK..
-....KlllllKWWK..
-.....KWWWWKKK...
-....KdddK.KddK..
-....KKKKK.KKKK..
-
 # Walk patches, stamped over the front and back poses: one foot lifts off
 # the ground while the other stays planted ('_' erases).
-sprite step-l
-................
-................
-................
-................
-................
-................
-................
-................
-................
-................
-................
-................
-................
-................
-...KKKK.........
-...____.........
 
-sprite step-r
-................
-................
-................
-................
-................
-................
-................
-................
-................
-................
-................
-................
-................
-................
-.........KKKK...
-.........____...
 
-stamp p1-walk-a = p1 step-l
-stamp p1-walk-b = p1 step-r
-stamp p1-up-walk-a = p1-up step-l
-stamp p1-up-walk-b = p1-up step-r
-
-recolor p2 = p1 #3d7bff:#ff4b4b #8ab4ff:#ff9a9a #2452c4:#b52a2a
-recolor p2-walk-a = p1-walk-a #3d7bff:#ff4b4b #8ab4ff:#ff9a9a #2452c4:#b52a2a
-recolor p2-walk-b = p1-walk-b #3d7bff:#ff4b4b #8ab4ff:#ff9a9a #2452c4:#b52a2a
-recolor p2-up = p1-up #3d7bff:#ff4b4b #8ab4ff:#ff9a9a #2452c4:#b52a2a
-recolor p2-up-walk-a = p1-up-walk-a #3d7bff:#ff4b4b #8ab4ff:#ff9a9a #2452c4:#b52a2a
-recolor p2-up-walk-b = p1-up-walk-b #3d7bff:#ff4b4b #8ab4ff:#ff9a9a #2452c4:#b52a2a
-recolor p2-side = p1-side #3d7bff:#ff4b4b #8ab4ff:#ff9a9a #2452c4:#b52a2a
-recolor p2-side-walk-a = p1-side-walk-a #3d7bff:#ff4b4b #8ab4ff:#ff9a9a #2452c4:#b52a2a
-recolor p2-side-walk-b = p1-side-walk-b #3d7bff:#ff4b4b #8ab4ff:#ff9a9a #2452c4:#b52a2a
-recolor p3 = p1 #3d7bff:#3fc062 #8ab4ff:#9ee8ad #2452c4:#258a43
-recolor p3-walk-a = p1-walk-a #3d7bff:#3fc062 #8ab4ff:#9ee8ad #2452c4:#258a43
-recolor p3-walk-b = p1-walk-b #3d7bff:#3fc062 #8ab4ff:#9ee8ad #2452c4:#258a43
-recolor p3-up = p1-up #3d7bff:#3fc062 #8ab4ff:#9ee8ad #2452c4:#258a43
-recolor p3-up-walk-a = p1-up-walk-a #3d7bff:#3fc062 #8ab4ff:#9ee8ad #2452c4:#258a43
-recolor p3-up-walk-b = p1-up-walk-b #3d7bff:#3fc062 #8ab4ff:#9ee8ad #2452c4:#258a43
-recolor p3-side = p1-side #3d7bff:#3fc062 #8ab4ff:#9ee8ad #2452c4:#258a43
-recolor p3-side-walk-a = p1-side-walk-a #3d7bff:#3fc062 #8ab4ff:#9ee8ad #2452c4:#258a43
-recolor p3-side-walk-b = p1-side-walk-b #3d7bff:#3fc062 #8ab4ff:#9ee8ad #2452c4:#258a43
-recolor p4 = p1 #3d7bff:#ffc23d #8ab4ff:#ffe08a #2452c4:#c98f1c
-recolor p4-walk-a = p1-walk-a #3d7bff:#ffc23d #8ab4ff:#ffe08a #2452c4:#c98f1c
-recolor p4-walk-b = p1-walk-b #3d7bff:#ffc23d #8ab4ff:#ffe08a #2452c4:#c98f1c
-recolor p4-up = p1-up #3d7bff:#ffc23d #8ab4ff:#ffe08a #2452c4:#c98f1c
-recolor p4-up-walk-a = p1-up-walk-a #3d7bff:#ffc23d #8ab4ff:#ffe08a #2452c4:#c98f1c
-recolor p4-up-walk-b = p1-up-walk-b #3d7bff:#ffc23d #8ab4ff:#ffe08a #2452c4:#c98f1c
-recolor p4-side = p1-side #3d7bff:#ffc23d #8ab4ff:#ffe08a #2452c4:#c98f1c
-recolor p4-side-walk-a = p1-side-walk-a #3d7bff:#ffc23d #8ab4ff:#ffe08a #2452c4:#c98f1c
-recolor p4-side-walk-b = p1-side-walk-b #3d7bff:#ffc23d #8ab4ff:#ffe08a #2452c4:#c98f1c
 
 sprite gear mirror
 ........
@@ -1270,42 +874,6 @@ rotate arrow-right = arrow-up 90
 rotate arrow-down = arrow-up 180
 rotate arrow-left = arrow-up 270
 
-sprite puff mirror
-.......K
-......KZ
-.....KZP
-....KKPP
-...KZPPP
-..KZPPPP
-..KPPWWP
-.KPPPWxP
-.KPPPPPP
-.KPPPPPP
-.KPpPKPP
-..KpPPKK
-..KppPPP
-...KKppK
-....KpK.
-....KKK.
-
-sprite drop mirror
-.......K
-......Ka
-......Ka
-.....KaA
-.....KaA
-....KaAA
-....KAAA
-...KAWWA
-..KAAWxA
-..KAAAAA
-.KAAAAAA
-.KAAAAKK
-.KTAAKAA
-.KTTAAAA
-..KTTTTT
-..KK.KK.
-
 sprite pebble mirror
 ........
 ........
@@ -1329,258 +897,6 @@ KKKvvvvv
 # Back ("-up") and right-facing ("-side", mirrored by the game for left) views,
 # derived from each front sprite by moving or hiding the face. Generated by
 # scratch tooling from the front maps; edit by hand from here on.
-
-sprite puff-up
-.......KK.......
-......KZZK......
-.....KZPPZK.....
-....KKPPPPKK....
-...KZPPPPPPZK...
-..KZPPPPPPPPZK..
-..KPPPPPPPPPPK..
-.KPPPPPPPPPPPPK.
-.KPPPPPPPPPPPPK.
-.KPPPPPppPPPPPK.
-.KPpPPPPPPPPpPK.
-..KpPPPPPPPPpK..
-..KppPPPPPPppK..
-...KKppKKppKK...
-....KpK..KpK....
-....KKK..KKK....
-
-sprite puff-side
-.......KK.......
-......KZZK......
-.....KZPPZK.....
-....KKPPPPKK....
-...KZPPPPPPZK...
-..KZPPPPPPPPZK..
-..KPPPPPPPWWPK..
-.KPPPPPPPPWxPPK.
-.KPPPPPPPPPPPPK.
-.KPPPPPPPPPPPPK.
-.KPpPPPPPPKPpPK.
-..KpPPPPKKKKpK..
-..KppPPPPPPppK..
-...KKppKKppKK...
-....KpK..KpK....
-....KKK..KKK....
-
-sprite drop-up
-.......KK.......
-......KaaK......
-......KaaK......
-.....KaAAaK.....
-.....KaAAaK.....
-....KaAAAAaK....
-....KAAAAAAK....
-...KAAAAAAAAK...
-..KAAAAAAAAAAK..
-..KAAAAAAAAAAK..
-.KAAAAAAAAAAAAK.
-.KAAAAAAAAAAAAK.
-.KTAAAAAAAAAATK.
-.KTTAAAAAAAATTK.
-..KTTTTTTTTTTK..
-..KK.KK..KK.KK..
-
-sprite drop-side
-.......KK.......
-......KaaK......
-......KaaK......
-.....KaAAaK.....
-.....KaAAaK.....
-....KaAAAAaK....
-....KAAAAAAK....
-...KAAAAAAWWK...
-..KAAAAAAAWxAK..
-..KAAAAAAAAAAK..
-.KAAAAAAAAAAAAK.
-.KAAAAAAKKKKAAK.
-.KTAAAAAAAKAATK.
-.KTTAAAAAAAATTK.
-..KTTTTTTTTTTK..
-..KK.KK..KK.KK..
-
-sprite barrelhop-up
-................
-...KKKKKKKKKK...
-..KLLLLLLLLLLK..
-..KBBbBBBBbBBK..
-..KBBbBBBBbBBK..
-..KLLLLLLLLLLK..
-..KBBbBBBbWBBK..
-..KBBbBBBbWBBK..
-..KBBbBBBBbBBK..
-..KBBbBBBBbBBK..
-..KLLLLLLLLLLK..
-..KBBbBBBBbBBK..
-..KBBbBBBBbBBK..
-...KKKKKKKKKK...
-....KvK..KvK....
-....KKK..KKK....
-
-sprite barrelhop-side
-................
-...KKKKKKKKKK...
-..KLLLLLLLLLLK..
-..KBBbBBBBbBBK..
-..KBBbBBBBbBBK..
-..KLLLLLLLLLLK..
-..KBBbBBBWWBBK..
-..KBBbBBBWxBBK..
-..KBBbBBBBbBBK..
-..KBBbBBKKKKBK..
-..KLLLLLLLLLLK..
-..KBBbBBBBbBBK..
-..KBBbBBBBbBBK..
-...KKKKKKKKKK...
-....KvK..KvK....
-....KKK..KKK....
-
-sprite grinface-up
-.KK..........KK.
-.KyK........KyK.
-.KyyK......KyyK.
-..KyyKKKKKKyyK..
-..KKYYYYYYYYKK..
-.KYYYYYYYYYYYYK.
-.KYYYYYYYYYYYYK.
-.KYYYYYYYYYYYYK.
-.KYYYYYYYYYYYYK.
-.KYYYYYYYYYYYYK.
-.KYYYYYYYYYYYYK.
-.KYYyyyyyyyyYYK.
-.KYYYYYYYYYYYYK.
-..KYYYYYYYYYYK..
-...KKYYYYYYKK...
-.....KKKKKK.....
-
-sprite grinface-side
-.KK..........KK.
-.KyK........KyK.
-.KyyK......KyyK.
-..KyyKKKKKKyyK..
-..KKYYYYYYYYKK..
-.KYYYYYYYYYYYYK.
-.KYYYYYYYYKKKYK.
-.KYYYYYYYYKWxYK.
-.KYYYYYYYYYWWYK.
-.KYYYYYYYYYYYYK.
-.KYYYYYKKKKKKKK.
-.KYYYYYKWCWCWKK.
-.KYYYYYKKKKKKKK.
-..KYYYYYYYYYYK..
-...KKYYYYYYKK...
-.....KKKKKK.....
-
-sprite slimeSage-up
-.......KK.......
-......KssK......
-......KssK......
-.....KssssK.....
-.....KssssK.....
-....KssssssK....
-..KKKKKKKKKKKK..
-..KHHHHHHHHHHK..
-.KHHHHHHHHHHHHK.
-.KHHHHHHHHHHHHK.
-.KHHHHHHHHHHHHK.
-.KHHHHHHHHHHHHK.
-.KhHHHHHHHHHHhK.
-..KhHHHHHHHHhK..
-..KhhHHKKHHhhK..
-...KK.KKKK.KK...
-
-sprite slimeSage-side
-.......KK.......
-......KssK......
-......KssK......
-.....KssssK.....
-.....KssssK.....
-....KssssssK....
-..KKKKKKKKKKKK..
-..KHHHHHHHHHHK..
-.KHHHHHHHHKKKHK.
-.KHHHHHHHHKWxHK.
-.KHHHHHHHHHHHHK.
-.KHHHHHwwwwwwHK.
-.KhHHHHwwwwwwhK.
-..KhHHHHwwwwhK..
-..KhhHHKKHHhhK..
-...KK.KKKK.KK...
-
-sprite wisp-up
-.....KKKKKK.....
-...KKUUUUUUKK...
-..KUUUUUUUUUUK..
-..KUUUUUUUUUUK..
-.KUUUUUUUUUUUUK.
-.KUUUUUUUUUUUUK.
-.KUUUUUUUUUUUUK.
-.KUUUUffffUUUUK.
-.KUUfffKKfffUUK.
-.KUffffffffffUK.
-.KffffffffffffK.
-.KffffffffffffK.
-.KffffffffffffK.
-.KfKffKffKffKfK.
-.KK.KK.KK.KK.KK.
-................
-
-sprite wisp-side
-.....KKKKKK.....
-...KKUUUUUUKK...
-..KUUUUUUUUUUK..
-..KUUUUUUUUUUK..
-.KUUUUUUUUUmmUK.
-.KUUUUUUUUUmmUK.
-.KUUUUUUUUUUUUK.
-.KUUUUffffUUUUK.
-.KUUfffKKfffUUK.
-.KUffffffffffUK.
-.KffffffffffffK.
-.KffffffffffffK.
-.KffffffffffffK.
-.KfKffKffKffKfK.
-.KK.KK.KK.KK.KK.
-................
-
-sprite hunterCoin-up
-.......KK.......
-......KCCK......
-.K...KCCCCK...K.
-.KK.KCcCCcCK.KK.
-..KKCCCCCCCCKK..
-..KCCCCCCCCCCK..
-.KCCCCCCCCCCCCK.
-.KCCCCCCCCCCCCK.
-.KCCCCCccCCCCCK.
-.KCCCCccccCCCCK.
-.KCCCCCccCCCCCK.
-..KKCCCCCCCCKK..
-.KK.KCcCCcCK.KK.
-.K...KCCCCK...K.
-......KCCK......
-.......KK.......
-
-sprite hunterCoin-side
-.......KK.......
-......KCCK......
-.K...KCCCCK...K.
-.KK.KCcCCcCK.KK.
-..KKCCCCCCCCKK..
-..KCCCCCCCKKKK..
-.KCCCCCCCCKWxCK.
-.KCCCCCCCCCCCCK.
-.KCCCCCKKKKKKCK.
-.KCCCCCKWKWKWCK.
-.KCCCCCKKKKKKCK.
-..KKCCCCCCCCKK..
-.KK.KCcCCcCK.KK.
-.K...KCCCCK...K.
-......KCCK......
-.......KK.......
 
 sprite doorWarden-up
 .......KK.......
@@ -1779,42 +1095,6 @@ sprite shellback-up
 ....KKK..KKK....
 ................
 ................
-
-sprite kingPuffball-up
-..K.K..KK..K.K..
-..KYKYKYYKYKYK..
-..KYYYYYYYYYYK..
-..KYCYYYYYYCYK..
-...KKKKKKKKKK...
-..KZZPPPPPPZZK..
-.KZPPPPPPPPPPZK.
-.KPPPPPPPPPPPPK.
-.KPPPPPPPPPPPPK.
-.KPPPPPPPPPPPPK.
-.KPpPPPPPPPPpPK.
-.KPPPPPPPPPPPPK.
-..KPPPPPPPPPPK..
-...KPPPPPPPPK...
-...KppKKKKppK...
-...KKKK..KKKK...
-
-sprite kingPuffball-side
-..K.K..KK..K.K..
-..KYKYKYYKYKYK..
-..KYYYYYYYYYYK..
-..KYCYYYYYYCYK..
-...KKKKKKKKKK...
-..KZZPPPPPPZZK..
-.KZPPPPPPPPPPZK.
-.KPPPPPPPPPKKPK.
-.KPPPPPPPPPKWPK.
-.KPPPPPPPPPPPPK.
-.KPpPPPPPPPPpPK.
-.KPPPPPKKKKKKPK.
-..KPPPPPPPPPPK..
-...KPPPPPPPPK...
-...KppKKKKppK...
-...KKKK..KKKK...
 
 sprite rockjaw-up
 ................
@@ -2230,42 +1510,6 @@ KiiiiiiiiiiiiiiK
 KKKKKKKKKKKKKKKK
 ................
 
-sprite overlordPontan-up
-...K.K.KK.K.K...
-...KYKYKKYKYK...
-...KYYYYYYYYK...
-..KKKKKKKKKKKK..
-.KccCCCCCCCCccK.
-KcCCCCCCCCCCCCcK
-KcCCCCCCCCCCCCcK
-KcCCCCCCCCCCCCcK
-KcCCCCCCCCCCCCcK
-KcCCCCCCCCCCCCcK
-KcCCCCccccCCCCcK
-KcCCCCCCCCCCCCcK
-.KcCCCCCCCCCCcK.
-..KcCCCCCCCCcK..
-...KKKKKKKKKK...
-................
-
-sprite overlordPontan-side
-...K.K.KK.K.K...
-...KYKYKKYKYK...
-...KYYYYYYYYK...
-..KKKKKKKKKKKK..
-.KccCCCCCCCCccK.
-KcCCCCCCCCCCCCcK
-KcCCCCCCCCCCKKcK
-KcCCCCCCCCCKYKcK
-KcCCCCCCCCCCCCcK
-KcCCCCCCCCCCCCcK
-KcCCCCCKKKKKKCcK
-KcCCCCCKWKWKWKcK
-.KcCCCCCCCCCCcK.
-..KcCCCCCCCCcK..
-...KKKKKKKKKK...
-................
-
 # ------------------------------------------- power-up panels (redraw)
 # A gold bevelled tile with a bold dark glyph, the original's read: one
 # icon per power-up, drawn for bombario. Replaces the cream panels above.
@@ -2285,294 +1529,6 @@ G #3fc062
 B #1f4fbf
 c #bff0ff
 
-sprite pu
-oooooooooooooooo
-oHHHHHHHHHHHHHHo
-oH333333333333do
-oH333333333333do
-oH333333333333do
-oH333333333333do
-oH333333333333do
-oH333333333333do
-oH333333333333do
-oH333333333333do
-oH333333333333do
-oH333333333333do
-oH333333333333do
-oH333333333333do
-oddddddddddddddo
-oooooooooooooooo
-
-sprite pu-bomb
-oooooooooooooooo
-oHHHHHHHHHHHHHHo
-oH333333333r33do
-oH33333333rwr3do
-oH3333333k3r33do
-oH333333k33333do
-oH333kkkkk3333do
-oH33kkkkkkk333do
-oH3kkwwkkkkk33do
-oH3kwkkkkkkk33do
-oH3kkkkkkkkk33do
-oH3kkkkkkkkk33do
-oH33kkkkkkk333do
-oH333kkkkk3333do
-oddddddddddddddo
-oooooooooooooooo
-
-sprite pu-fire
-oooooooooooooooo
-oHHHHHHHHHHHHHHo
-oH333333k33333do
-oH33333kk33333do
-oH33333kkk3333do
-oH3333kkkk3k33do
-oH333kkkkkkk33do
-oH33kkkrkkkk33do
-oH33kkrrkkkkk3do
-oH3kkkrrrkkkk3do
-oH3kkrryrrkkk3do
-oH3kkrryyrrkk3do
-oH33kkryyrkk33do
-oH333kkkkkk333do
-oddddddddddddddo
-oooooooooooooooo
-
-sprite pu-speed
-oooooooooooooooo
-oHHHHHHHHHHHHHHo
-oH333333333333do
-oH333kkkk33333do
-oH333kwkk33333do
-oH333kkkk33333do
-oHk33kkkk33333do
-oH333kkkk33333do
-oHkk3kkkkkkk33do
-oH333kkkkkkkk3do
-oHk33kkkkkkkkkdo
-oH33kkkkkkkkkkdo
-oH333333333333do
-oH333kk333kk33do
-oddddddddddddddo
-oooooooooooooooo
-
-sprite pu-wall
-oooooooooooooooo
-oHHHHHHHHHHHHHHo
-oH333333333333do
-oHkkkkkkkkkkkkdo
-oHk33333k3333kdo
-oHkkkkkkkkkkkkdo
-oHk33k333r333kdo
-oHk33k333rr33kdo
-oHrrrrrrrrrr3kdo
-oHk33k333rr33kdo
-oHk33k333r333kdo
-oHkkkkkkkkkkkkdo
-oHk33333k3333kdo
-oHkkkkkkkkkkkkdo
-oddddddddddddddo
-oooooooooooooooo
-
-sprite pu-remote
-oooooooooooooooo
-oHHHHHHHHHHHHHHo
-oH333333333333do
-oH333kkkkkk333do
-oH33333kk33333do
-oH33333kk33333do
-oH33333kk33333do
-oH33kkkkkkkk33do
-oH33kwkkkkkk33do
-oH33kkkkkkkk33do
-oH33kkkkrrkk33do
-oH33kkkkrrkk33do
-oH33kkkkkkkk33do
-oH333333333333do
-oddddddddddddddo
-oooooooooooooooo
-
-sprite pu-bombpass
-oooooooooooooooo
-oHHHHHHHHHHHHHHo
-oH33333333r333do
-oH3333333k3333do
-oH3333kkkkk333do
-oH333kkkkkkk33do
-oH33kkkkkkkbk3do
-oHbbbbbbbbbb33do
-oHbbbbbbbbbbb3do
-oHbbbbbbbbbb33do
-oH33kkkkkkkbk3do
-oH333kkkkkkk33do
-oH3333kkkkk333do
-oH333333333333do
-oddddddddddddddo
-oooooooooooooooo
-
-sprite pu-flamepass
-oooooooooooooooo
-oHHHHHHHHHHHHHHo
-oH3kkkkkkkkkk3do
-oH3k33333333k3do
-oH3k333r3333k3do
-oH3k333rr333k3do
-oH3k33rrr333k3do
-oH3k33ryrr33k3do
-oH3k3rryyr33k3do
-oH3k3rryyrr3k3do
-oH33k3rrrr3k33do
-oH333k3333k333do
-oH3333k33k3333do
-oH33333kk33333do
-oddddddddddddddo
-oooooooooooooooo
-
-sprite pu-mystery
-oooooooooooooooo
-oHHHHHHHHHHHHHHo
-oH333333333333do
-oH333kkkkkk333do
-oH33kkk33kkk33do
-oH33kk3333kk33do
-oH33333333kk33do
-oH3333333kkk33do
-oH33333kkk3333do
-oH33333kk33333do
-oH33333kk33333do
-oH333333333333do
-oH33333kk33333do
-oH33333kk33333do
-oddddddddddddddo
-oooooooooooooooo
-
-sprite pu-kick
-oooooooooooooooo
-oHHHHHHHHHHHHHHo
-oH333333333333do
-oH333333333333do
-oH3kkk33333333do
-oH3kkk33333333do
-oH3kkk333333r3do
-oH3kkk33333k33do
-oH3kkkk33kkkk3do
-oH3kkkkk3kwkkkdo
-oHkkkkkkk3kkkkdo
-oHkkkkkkk3kkkkdo
-oH333333333kk3do
-oH333333333333do
-oddddddddddddddo
-oooooooooooooooo
-
-sprite pu-heart
-oooooooooooooooo
-oHHHHHHHHHHHHHHo
-oH333333333333do
-oH33kkk33kkk33do
-oH3kpppkkpppk3do
-oHkppwpppppppkdo
-oHkpwppppppppkdo
-oHkppppppppppkdo
-oH3kppppppppk3do
-oH33kppppppk33do
-oH333kppppk333do
-oH3333kppk3333do
-oH33333kk33333do
-oH333333333333do
-oddddddddddddddo
-oooooooooooooooo
-
-sprite pu-sonar
-oooooooooooooooo
-oHHHHHHHHHHHHHHo
-oH3333kkkk3333do
-oH33kk3333kk33do
-oH3k33kkkk33k3do
-oH3k3k3333k3k3do
-oHk3k33kk33k3kdo
-oHk3k3kbbk3k3kdo
-oHk3k3kbbk3k3kdo
-oHk3k33kk33k3kdo
-oH3k3k3333k3k3do
-oH3k33kkkk33k3do
-oH33kk3333kk33do
-oH3333kkkk3333do
-oddddddddddddddo
-oooooooooooooooo
-
-sprite pu-teamboost
-oooooooooooooooo
-oHHHHHHHHHHHHHHo
-oH333333333333do
-oH3333kkkk3333do
-oH3333kGGk3333do
-oH3333kGGk3333do
-oHkkkkkGGkkkkkdo
-oHkGGGGGGGGGGkdo
-oHkGGGGGGGGGGkdo
-oHkkkkkGGkkkkkdo
-oH3333kGGk3333do
-oH3333kGGk3333do
-oH3333kkkk3333do
-oH333333333333do
-oddddddddddddddo
-oooooooooooooooo
-
-sprite pu-tether
-oooooooooooooooo
-oHHHHHHHHHHHHHHo
-oH3kkkkk333333do
-oHkkkkkkk33333do
-oHkk333kk33333do
-oHkk333kk33333do
-oHkk333kk33333do
-oHkkkkkkkkkkk3do
-oH3kkkkkkkkkkkdo
-oH33333kk333kkdo
-oH33333kk333kkdo
-oH33333kk333kkdo
-oH33333kkkkkkkdo
-oH333333kkkkk3do
-oddddddddddddddo
-oooooooooooooooo
-
-sprite pu-frost
-oooooooooooooooo
-oHHHHHHHHHHHHHHo
-oH33333BB33333do
-oH33B33BB33B33do
-oH333B3BB3B333do
-oH3333BBBB3333do
-oH33333BB33333do
-oHBBBBBccBBBBBdo
-oHBBBBBccBBBBBdo
-oH33333BB33333do
-oH3333BBBB3333do
-oH333B3BB3B333do
-oH33B33BB33B33do
-oH33333BB33333do
-oddddddddddddddo
-oooooooooooooooo
-
-
-sprite pu-life
-oooooooooooooooo
-oHHHHHHHHHHHHHHo
-oH333333333333do
-oH333333333333do
-oH333333333333do
-oH3GGGGGGGGGG3do
-oHGkGGkGkGkkGGdo
-oHkkGGkGkGkGkGdo
-oHGkGGkGkGkkGGdo
-oHGkGGkGkGkGGGdo
-oHkkkGkkkGkGGGdo
-oH3GGGGGGGGGG3do
-oH333333333333do
-oH333333333333do
-oddddddddddddddo
-oooooooooooooooo
 
 
 # ---- Stage looks: the terrain changes colour every five stages (1-5 keep
@@ -2621,132 +1577,6 @@ c #f58ccb
 s #b0507f
 w #ffd0ea
 
-sprite p1-die-1
-.......KK.......
-......KPPK......
-.....KKKKKK.....
-.KK.KllllllK.KK.
-KWWKleelllllKWWK
-KWWKllllllllKWWK
-.KKllKKKKKKllKK.
-..KlxjxjjxjxlK..
-..KljxjjjjxjlK..
-..KlxjxjjxjxlK..
-...KlKKKKKKlK...
-...KKWWWWWWKK...
-....KllllllK....
-...KKWWWWWWKK...
-..KddK....KddK..
-..KKKK....KKKK..
-
-sprite p1-die-2
-................
-.......KK.......
-......KPPK......
-.....KKKKKK.....
-....KllllllK....
-...KleelllllK...
-..KllKKKKKKllK..
-..KlxjxjjxjxlK..
-..KljxjjjjxjlK..
-.KKlxjxjjxjxlKK.
-KWWKlKKKKKKlKWWK
-KWlWKWlWWlWKWlWK
-KlWllWlWWlWllWlK
-KWlWlWllllWlWlWK
-.KKWlWlWWlWlWKK.
-..KKKKKKKKKKKK..
-
-sprite p1-die-3
-................
-................
-................
-................
-.WW....KK....WW.
-.WW...KPPK...WW.
-.....KKKKKK.....
-...KKKllllKKK...
-..KlWKxjjxKWlK..
-.KlWlKjxxjKlWlK.
-KlWlKKxjjxKKlWlK
-KWl..KKKKKK..lWK
-KlW..........WlK
-.KlWl......lWlK.
-.WWKlWlWWlWlKWW.
-.WW.KKKKKKKK.WW.
-
-sprite p1-die-4
-................
-................
-.WW..........WW.
-.WW..eWllWe..WW.
-....lWl..lWl....
-...eW......We...
-..lW........Wl..
-..Wl........lW..
-..lW........Wl..
-..We........eW..
-...lW......Wl...
-....lWe..eWl....
-.....eWllWe.....
-.WW..........WW.
-.WW..........WW.
-................
-
-sprite p1-die-5
-................
-.W............W.
-WW............WW
-......e..W......
-....W......e....
-................
-..e..........W..
-................
-.W............e.
-................
-..W..........e..
-................
-....e......W....
-WW....W..e....WW
-.W............W.
-................
-
-sprite p1-die-6
-................
-................
-W..............W
-................
-................
-................
-................
-................
-................
-................
-................
-................
-................
-................
-W..............W
-................
-
-recolor p2-die-1 = p1-die-1 #3d7bff:#ff4b4b #8ab4ff:#ff9a9a #2452c4:#b52a2a
-recolor p2-die-2 = p1-die-2 #3d7bff:#ff4b4b #8ab4ff:#ff9a9a #2452c4:#b52a2a
-recolor p2-die-3 = p1-die-3 #3d7bff:#ff4b4b #8ab4ff:#ff9a9a #2452c4:#b52a2a
-recolor p2-die-4 = p1-die-4 #3d7bff:#ff4b4b #8ab4ff:#ff9a9a #2452c4:#b52a2a
-recolor p2-die-5 = p1-die-5 #3d7bff:#ff4b4b #8ab4ff:#ff9a9a #2452c4:#b52a2a
-recolor p2-die-6 = p1-die-6 #3d7bff:#ff4b4b #8ab4ff:#ff9a9a #2452c4:#b52a2a
-recolor p3-die-1 = p1-die-1 #3d7bff:#3fc062 #8ab4ff:#9ee8ad #2452c4:#258a43
-recolor p3-die-2 = p1-die-2 #3d7bff:#3fc062 #8ab4ff:#9ee8ad #2452c4:#258a43
-recolor p3-die-3 = p1-die-3 #3d7bff:#3fc062 #8ab4ff:#9ee8ad #2452c4:#258a43
-recolor p3-die-4 = p1-die-4 #3d7bff:#3fc062 #8ab4ff:#9ee8ad #2452c4:#258a43
-recolor p3-die-5 = p1-die-5 #3d7bff:#3fc062 #8ab4ff:#9ee8ad #2452c4:#258a43
-recolor p3-die-6 = p1-die-6 #3d7bff:#3fc062 #8ab4ff:#9ee8ad #2452c4:#258a43
-recolor p4-die-1 = p1-die-1 #3d7bff:#ffc23d #8ab4ff:#ffe08a #2452c4:#c98f1c
-recolor p4-die-2 = p1-die-2 #3d7bff:#ffc23d #8ab4ff:#ffe08a #2452c4:#c98f1c
-recolor p4-die-3 = p1-die-3 #3d7bff:#ffc23d #8ab4ff:#ffe08a #2452c4:#c98f1c
-recolor p4-die-4 = p1-die-4 #3d7bff:#ffc23d #8ab4ff:#ffe08a #2452c4:#c98f1c
-recolor p4-die-5 = p1-die-5 #3d7bff:#ffc23d #8ab4ff:#ffe08a #2452c4:#c98f1c
-recolor p4-die-6 = p1-die-6 #3d7bff:#ffc23d #8ab4ff:#ffe08a #2452c4:#c98f1c
 
 sprite edie-1
 ................
@@ -2820,20 +1650,20 @@ c..............c
 .s............s.
 s..............s
 
-recolor puff-die-1 = edie-1 #f58ccb:#f58ccb #b0507f:#8e547e #ffd0ea:#facbe8
-recolor drop-die-1 = edie-1 #f58ccb:#4b7bff #b0507f:#304b9b #ffd0ea:#aec4ff
-recolor barrelhop-die-1 = edie-1 #f58ccb:#8a5a2c #b0507f:#533927 #ffd0ea:#cab5a0
+recolor puff-die-1 = edie-1 #f58ccb:#f2dcc4 #b0507f:#a8784a #ffd0ea:#fff3e6
+recolor drop-die-1 = edie-1 #f58ccb:#4fb3ff #b0507f:#2a78c8 #ffd0ea:#c4ebff
+recolor barrelhop-die-1 = edie-1 #f58ccb:#e8553e #b0507f:#9c2f22 #ffd0ea:#f7b0a4
 recolor grinface-die-1 = edie-1 #f58ccb:#ffd23f #b0507f:#937b31 #ffd0ea:#ffeba9
-recolor slimeSage-die-1 = edie-1 #f58ccb:#7ad63f #b0507f:#4a7d31 #ffd0ea:#c3eda9
-recolor wisp-die-1 = edie-1 #f58ccb:#dff0ff #b0507f:#828b9b #ffd0ea:#f1f8ff
-recolor hunterCoin-die-1 = edie-1 #f58ccb:#e04040 #b0507f:#822a32 #ffd0ea:#f1a9a9
+recolor slimeSage-die-1 = edie-1 #f58ccb:#f0a24a #b0507f:#a8662a #ffd0ea:#fbd8a8
+recolor wisp-die-1 = edie-1 #f58ccb:#dccbff #b0507f:#9b84d8 #ffd0ea:#f6f1ff
+recolor hunterCoin-die-1 = edie-1 #f58ccb:#e5383b #b0507f:#9e1f24 #ffd0ea:#f6a9aa
 recolor doorWarden-die-1 = edie-1 #f58ccb:#5e35b1 #b0507f:#3b2470 #ffd0ea:#b7a4dc
 recolor pebble-die-1 = edie-1 #f58ccb:#8a7a6a #b0507f:#534a49 #ffd0ea:#cac3bc
 recolor hopper-die-1 = edie-1 #f58ccb:#7ad63f #b0507f:#4a7d31 #ffd0ea:#c3eda9
 recolor splitter-die-1 = edie-1 #f58ccb:#9b59d0 #b0507f:#5c3881 #ffd0ea:#d2b4ea
 recolor splitling-die-1 = edie-1 #f58ccb:#9b59d0 #b0507f:#5c3881 #ffd0ea:#d2b4ea
 recolor shellback-die-1 = edie-1 #f58ccb:#7ad63f #b0507f:#4a7d31 #ffd0ea:#c3eda9
-recolor kingPuffball-die-1 = edie-1 #f58ccb:#f58ccb #b0507f:#8e547e #ffd0ea:#facbe8
+recolor kingPuffball-die-1 = edie-1 #f58ccb:#f2dcc4 #b0507f:#a8784a #ffd0ea:#fff3e6
 recolor rockjaw-die-1 = edie-1 #f58ccb:#8a7a6a #b0507f:#534a49 #ffd0ea:#cac3bc
 recolor goblin-die-1 = edie-1 #f58ccb:#9ad648 #b0507f:#5c7d36 #ffd0ea:#d2edad
 recolor tigerclaw-die-1 = edie-1 #f58ccb:#ff7a1a #b0507f:#934a1d #ffd0ea:#ffc398
@@ -2848,21 +1678,21 @@ recolor herder-die-1 = edie-1 #f58ccb:#8a7a6a #b0507f:#534a49 #ffd0ea:#cac3bc
 recolor curseOrb-die-1 = edie-1 #f58ccb:#5a4a8a #b0507f:#39305a #ffd0ea:#b5aeca
 recolor bombOTron-die-1 = edie-1 #f58ccb:#6f7890 #b0507f:#44495e #ffd0ea:#bec2cd
 recolor lanternWitch-die-1 = edie-1 #f58ccb:#5a3a7a #b0507f:#392752 #ffd0ea:#b5a6c3
-recolor overlordPontan-die-1 = edie-1 #f58ccb:#e04040 #b0507f:#822a32 #ffd0ea:#f1a9a9
-recolor puff-die-2 = edie-2 #f58ccb:#f58ccb #b0507f:#8e547e #ffd0ea:#facbe8
-recolor drop-die-2 = edie-2 #f58ccb:#4b7bff #b0507f:#304b9b #ffd0ea:#aec4ff
-recolor barrelhop-die-2 = edie-2 #f58ccb:#8a5a2c #b0507f:#533927 #ffd0ea:#cab5a0
+recolor overlordPontan-die-1 = edie-1 #f58ccb:#e5383b #b0507f:#9e1f24 #ffd0ea:#f6a9aa
+recolor puff-die-2 = edie-2 #f58ccb:#f2dcc4 #b0507f:#a8784a #ffd0ea:#fff3e6
+recolor drop-die-2 = edie-2 #f58ccb:#4fb3ff #b0507f:#2a78c8 #ffd0ea:#c4ebff
+recolor barrelhop-die-2 = edie-2 #f58ccb:#e8553e #b0507f:#9c2f22 #ffd0ea:#f7b0a4
 recolor grinface-die-2 = edie-2 #f58ccb:#ffd23f #b0507f:#937b31 #ffd0ea:#ffeba9
-recolor slimeSage-die-2 = edie-2 #f58ccb:#7ad63f #b0507f:#4a7d31 #ffd0ea:#c3eda9
-recolor wisp-die-2 = edie-2 #f58ccb:#dff0ff #b0507f:#828b9b #ffd0ea:#f1f8ff
-recolor hunterCoin-die-2 = edie-2 #f58ccb:#e04040 #b0507f:#822a32 #ffd0ea:#f1a9a9
+recolor slimeSage-die-2 = edie-2 #f58ccb:#f0a24a #b0507f:#a8662a #ffd0ea:#fbd8a8
+recolor wisp-die-2 = edie-2 #f58ccb:#dccbff #b0507f:#9b84d8 #ffd0ea:#f6f1ff
+recolor hunterCoin-die-2 = edie-2 #f58ccb:#e5383b #b0507f:#9e1f24 #ffd0ea:#f6a9aa
 recolor doorWarden-die-2 = edie-2 #f58ccb:#5e35b1 #b0507f:#3b2470 #ffd0ea:#b7a4dc
 recolor pebble-die-2 = edie-2 #f58ccb:#8a7a6a #b0507f:#534a49 #ffd0ea:#cac3bc
 recolor hopper-die-2 = edie-2 #f58ccb:#7ad63f #b0507f:#4a7d31 #ffd0ea:#c3eda9
 recolor splitter-die-2 = edie-2 #f58ccb:#9b59d0 #b0507f:#5c3881 #ffd0ea:#d2b4ea
 recolor splitling-die-2 = edie-2 #f58ccb:#9b59d0 #b0507f:#5c3881 #ffd0ea:#d2b4ea
 recolor shellback-die-2 = edie-2 #f58ccb:#7ad63f #b0507f:#4a7d31 #ffd0ea:#c3eda9
-recolor kingPuffball-die-2 = edie-2 #f58ccb:#f58ccb #b0507f:#8e547e #ffd0ea:#facbe8
+recolor kingPuffball-die-2 = edie-2 #f58ccb:#f2dcc4 #b0507f:#a8784a #ffd0ea:#fff3e6
 recolor rockjaw-die-2 = edie-2 #f58ccb:#8a7a6a #b0507f:#534a49 #ffd0ea:#cac3bc
 recolor goblin-die-2 = edie-2 #f58ccb:#9ad648 #b0507f:#5c7d36 #ffd0ea:#d2edad
 recolor tigerclaw-die-2 = edie-2 #f58ccb:#ff7a1a #b0507f:#934a1d #ffd0ea:#ffc398
@@ -2877,21 +1707,21 @@ recolor herder-die-2 = edie-2 #f58ccb:#8a7a6a #b0507f:#534a49 #ffd0ea:#cac3bc
 recolor curseOrb-die-2 = edie-2 #f58ccb:#5a4a8a #b0507f:#39305a #ffd0ea:#b5aeca
 recolor bombOTron-die-2 = edie-2 #f58ccb:#6f7890 #b0507f:#44495e #ffd0ea:#bec2cd
 recolor lanternWitch-die-2 = edie-2 #f58ccb:#5a3a7a #b0507f:#392752 #ffd0ea:#b5a6c3
-recolor overlordPontan-die-2 = edie-2 #f58ccb:#e04040 #b0507f:#822a32 #ffd0ea:#f1a9a9
-recolor puff-die-3 = edie-3 #f58ccb:#f58ccb #b0507f:#8e547e #ffd0ea:#facbe8
-recolor drop-die-3 = edie-3 #f58ccb:#4b7bff #b0507f:#304b9b #ffd0ea:#aec4ff
-recolor barrelhop-die-3 = edie-3 #f58ccb:#8a5a2c #b0507f:#533927 #ffd0ea:#cab5a0
+recolor overlordPontan-die-2 = edie-2 #f58ccb:#e5383b #b0507f:#9e1f24 #ffd0ea:#f6a9aa
+recolor puff-die-3 = edie-3 #f58ccb:#f2dcc4 #b0507f:#a8784a #ffd0ea:#fff3e6
+recolor drop-die-3 = edie-3 #f58ccb:#4fb3ff #b0507f:#2a78c8 #ffd0ea:#c4ebff
+recolor barrelhop-die-3 = edie-3 #f58ccb:#e8553e #b0507f:#9c2f22 #ffd0ea:#f7b0a4
 recolor grinface-die-3 = edie-3 #f58ccb:#ffd23f #b0507f:#937b31 #ffd0ea:#ffeba9
-recolor slimeSage-die-3 = edie-3 #f58ccb:#7ad63f #b0507f:#4a7d31 #ffd0ea:#c3eda9
-recolor wisp-die-3 = edie-3 #f58ccb:#dff0ff #b0507f:#828b9b #ffd0ea:#f1f8ff
-recolor hunterCoin-die-3 = edie-3 #f58ccb:#e04040 #b0507f:#822a32 #ffd0ea:#f1a9a9
+recolor slimeSage-die-3 = edie-3 #f58ccb:#f0a24a #b0507f:#a8662a #ffd0ea:#fbd8a8
+recolor wisp-die-3 = edie-3 #f58ccb:#dccbff #b0507f:#9b84d8 #ffd0ea:#f6f1ff
+recolor hunterCoin-die-3 = edie-3 #f58ccb:#e5383b #b0507f:#9e1f24 #ffd0ea:#f6a9aa
 recolor doorWarden-die-3 = edie-3 #f58ccb:#5e35b1 #b0507f:#3b2470 #ffd0ea:#b7a4dc
 recolor pebble-die-3 = edie-3 #f58ccb:#8a7a6a #b0507f:#534a49 #ffd0ea:#cac3bc
 recolor hopper-die-3 = edie-3 #f58ccb:#7ad63f #b0507f:#4a7d31 #ffd0ea:#c3eda9
 recolor splitter-die-3 = edie-3 #f58ccb:#9b59d0 #b0507f:#5c3881 #ffd0ea:#d2b4ea
 recolor splitling-die-3 = edie-3 #f58ccb:#9b59d0 #b0507f:#5c3881 #ffd0ea:#d2b4ea
 recolor shellback-die-3 = edie-3 #f58ccb:#7ad63f #b0507f:#4a7d31 #ffd0ea:#c3eda9
-recolor kingPuffball-die-3 = edie-3 #f58ccb:#f58ccb #b0507f:#8e547e #ffd0ea:#facbe8
+recolor kingPuffball-die-3 = edie-3 #f58ccb:#f2dcc4 #b0507f:#a8784a #ffd0ea:#fff3e6
 recolor rockjaw-die-3 = edie-3 #f58ccb:#8a7a6a #b0507f:#534a49 #ffd0ea:#cac3bc
 recolor goblin-die-3 = edie-3 #f58ccb:#9ad648 #b0507f:#5c7d36 #ffd0ea:#d2edad
 recolor tigerclaw-die-3 = edie-3 #f58ccb:#ff7a1a #b0507f:#934a1d #ffd0ea:#ffc398
@@ -2906,21 +1736,21 @@ recolor herder-die-3 = edie-3 #f58ccb:#8a7a6a #b0507f:#534a49 #ffd0ea:#cac3bc
 recolor curseOrb-die-3 = edie-3 #f58ccb:#5a4a8a #b0507f:#39305a #ffd0ea:#b5aeca
 recolor bombOTron-die-3 = edie-3 #f58ccb:#6f7890 #b0507f:#44495e #ffd0ea:#bec2cd
 recolor lanternWitch-die-3 = edie-3 #f58ccb:#5a3a7a #b0507f:#392752 #ffd0ea:#b5a6c3
-recolor overlordPontan-die-3 = edie-3 #f58ccb:#e04040 #b0507f:#822a32 #ffd0ea:#f1a9a9
-recolor puff-die-4 = edie-4 #f58ccb:#f58ccb #b0507f:#8e547e #ffd0ea:#facbe8
-recolor drop-die-4 = edie-4 #f58ccb:#4b7bff #b0507f:#304b9b #ffd0ea:#aec4ff
-recolor barrelhop-die-4 = edie-4 #f58ccb:#8a5a2c #b0507f:#533927 #ffd0ea:#cab5a0
+recolor overlordPontan-die-3 = edie-3 #f58ccb:#e5383b #b0507f:#9e1f24 #ffd0ea:#f6a9aa
+recolor puff-die-4 = edie-4 #f58ccb:#f2dcc4 #b0507f:#a8784a #ffd0ea:#fff3e6
+recolor drop-die-4 = edie-4 #f58ccb:#4fb3ff #b0507f:#2a78c8 #ffd0ea:#c4ebff
+recolor barrelhop-die-4 = edie-4 #f58ccb:#e8553e #b0507f:#9c2f22 #ffd0ea:#f7b0a4
 recolor grinface-die-4 = edie-4 #f58ccb:#ffd23f #b0507f:#937b31 #ffd0ea:#ffeba9
-recolor slimeSage-die-4 = edie-4 #f58ccb:#7ad63f #b0507f:#4a7d31 #ffd0ea:#c3eda9
-recolor wisp-die-4 = edie-4 #f58ccb:#dff0ff #b0507f:#828b9b #ffd0ea:#f1f8ff
-recolor hunterCoin-die-4 = edie-4 #f58ccb:#e04040 #b0507f:#822a32 #ffd0ea:#f1a9a9
+recolor slimeSage-die-4 = edie-4 #f58ccb:#f0a24a #b0507f:#a8662a #ffd0ea:#fbd8a8
+recolor wisp-die-4 = edie-4 #f58ccb:#dccbff #b0507f:#9b84d8 #ffd0ea:#f6f1ff
+recolor hunterCoin-die-4 = edie-4 #f58ccb:#e5383b #b0507f:#9e1f24 #ffd0ea:#f6a9aa
 recolor doorWarden-die-4 = edie-4 #f58ccb:#5e35b1 #b0507f:#3b2470 #ffd0ea:#b7a4dc
 recolor pebble-die-4 = edie-4 #f58ccb:#8a7a6a #b0507f:#534a49 #ffd0ea:#cac3bc
 recolor hopper-die-4 = edie-4 #f58ccb:#7ad63f #b0507f:#4a7d31 #ffd0ea:#c3eda9
 recolor splitter-die-4 = edie-4 #f58ccb:#9b59d0 #b0507f:#5c3881 #ffd0ea:#d2b4ea
 recolor splitling-die-4 = edie-4 #f58ccb:#9b59d0 #b0507f:#5c3881 #ffd0ea:#d2b4ea
 recolor shellback-die-4 = edie-4 #f58ccb:#7ad63f #b0507f:#4a7d31 #ffd0ea:#c3eda9
-recolor kingPuffball-die-4 = edie-4 #f58ccb:#f58ccb #b0507f:#8e547e #ffd0ea:#facbe8
+recolor kingPuffball-die-4 = edie-4 #f58ccb:#f2dcc4 #b0507f:#a8784a #ffd0ea:#fff3e6
 recolor rockjaw-die-4 = edie-4 #f58ccb:#8a7a6a #b0507f:#534a49 #ffd0ea:#cac3bc
 recolor goblin-die-4 = edie-4 #f58ccb:#9ad648 #b0507f:#5c7d36 #ffd0ea:#d2edad
 recolor tigerclaw-die-4 = edie-4 #f58ccb:#ff7a1a #b0507f:#934a1d #ffd0ea:#ffc398
@@ -2935,4 +1765,4 @@ recolor herder-die-4 = edie-4 #f58ccb:#8a7a6a #b0507f:#534a49 #ffd0ea:#cac3bc
 recolor curseOrb-die-4 = edie-4 #f58ccb:#5a4a8a #b0507f:#39305a #ffd0ea:#b5aeca
 recolor bombOTron-die-4 = edie-4 #f58ccb:#6f7890 #b0507f:#44495e #ffd0ea:#bec2cd
 recolor lanternWitch-die-4 = edie-4 #f58ccb:#5a3a7a #b0507f:#392752 #ffd0ea:#b5a6c3
-recolor overlordPontan-die-4 = edie-4 #f58ccb:#e04040 #b0507f:#822a32 #ffd0ea:#f1a9a9
+recolor overlordPontan-die-4 = edie-4 #f58ccb:#e5383b #b0507f:#9e1f24 #ffd0ea:#f6a9aa

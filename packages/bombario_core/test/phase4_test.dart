@@ -560,7 +560,7 @@ void main() {
       expect(events.whereType<StageCleared>(), hasLength(1));
     });
 
-    test('Overlord Pontan copies power-ups and cycles boss attacks', () {
+    test('Clockwork Overlord copies power-ups and cycles boss attacks', () {
       final w = boss('5-10');
       final p = w.addPlayer()..invincibleFor = 999;
       for (var i = 0; i < 4; i++) {
@@ -573,7 +573,7 @@ void main() {
       if (ring.isNotEmpty) expect(ring.first.range, 3);
     });
 
-    test('Overlord Pontan closes the arena in his last phase', () {
+    test('Clockwork Overlord closes the arena in his last phase', () {
       final w = boss('5-10');
       w.addPlayer().invincibleFor = 999;
       final pontan = w.enemies.single..hp = 4;
@@ -584,7 +584,7 @@ void main() {
       expect(pontan.alive, isTrue);
     });
 
-    test('Overlord Pontan can be defeated', () {
+    test('Clockwork Overlord can be defeated', () {
       final w = boss('5-10');
       final p = w.addPlayer()..remote = true;
       final events = fight(w, p);

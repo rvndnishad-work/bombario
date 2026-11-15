@@ -200,7 +200,7 @@ enum HazardKind {
   cannonLeft,
   cannonRight,
 
-  /// Overlord Pontan's arena closes this tile into a pillar.
+  /// Clockwork Overlord's arena closes this tile into a pillar.
   wall,
 }
 
@@ -397,7 +397,7 @@ class World {
       if (grid.featureAt(p.x, p.y) == TileFeature.vent) p,
   ];
 
-  /// Overlord Pontan's last phase: ring tiles still to close, in order.
+  /// Clockwork Overlord's last phase: ring tiles still to close, in order.
   List<GridPos>? _shrinkQueue;
   double _shrinkTimer = 0;
   final Map<int, double> _pingCooldowns = {};
@@ -2142,7 +2142,7 @@ class World {
     events.add(CurseLifted(p.id));
   }
 
-  /// Overlord Pontan's speed copies the fastest player.
+  /// Clockwork Overlord's speed copies the fastest player.
   double _copiedSpeed() {
     var fastest = Player.baseSpeed;
     for (final p in alivePlayers) {
@@ -2151,7 +2151,7 @@ class World {
     return 1 + (fastest - Player.baseSpeed) / Player.baseSpeed;
   }
 
-  /// Overlord Pontan's bombs copy the team's best Fire Up (at most 3).
+  /// Clockwork Overlord's bombs copy the team's best Fire Up (at most 3).
   int _copiedRange() {
     var best = 1;
     for (final p in alivePlayers) {
@@ -2160,7 +2160,7 @@ class World {
     return min(best, 3);
   }
 
-  /// Overlord Pontan: bounces like King Puffball and cycles through the
+  /// Clockwork Overlord: bounces like King Mallow and cycles through the
   /// earlier bosses' attacks (split, bomb ring, Shades, dive), each with a
   /// 1 s tell. Below a third of his health the arena starts closing in.
   /// Returns true while he is not bouncing.
@@ -2386,7 +2386,7 @@ class World {
     return null;
   }
 
-  /// King Puffball: floats diagonally and bounces off pillars and bricks.
+  /// King Mallow: floats diagonally and bounces off pillars and bricks.
   void _moveBounce(Enemy e, double dist) {
     final step = dist / sqrt2;
     bool fits(double x, double y) {

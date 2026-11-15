@@ -155,7 +155,7 @@ void main() {
     expect(b.stageId, '1-3');
     expect(b.stageName, 'Drip Drop');
     expect(b.stageTip, isNotEmpty);
-    expect(b.snapshot!.enemies, hasLength(7)); // 5 Puffballs + 2 Blue Drops
+    expect(b.snapshot!.enemies, hasLength(7)); // 5 Mallows + 2 Snapclams
     expect(b.snapshot!.grid.width, 31);
     expect(b.snapshot!.livesLeft, 5); // 3 + one per player
     await a.close();

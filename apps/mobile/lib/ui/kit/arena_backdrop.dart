@@ -7,14 +7,14 @@ import 'motion.dart';
 import 'pixel_theme.dart';
 
 /// The menus' living background: a dim maze drifting sideways, with a
-/// bomber chased by a Puffball across the bottom now and then. Still (one
+/// bomber chased by a Mallow across the bottom now and then. Still (one
 /// frame of the same scene) when looping motion is off.
 class ArenaBackdrop extends StatefulWidget {
   const ArenaBackdrop({super.key, required this.child, this.chase = true});
 
   final Widget child;
 
-  /// Whether the bomber-and-Puffball chase runs along the bottom.
+  /// Whether the bomber-and-Mallow chase runs along the bottom.
   final bool chase;
 
   @override
@@ -124,7 +124,7 @@ class _ArenaPainter extends CustomPainter {
     final y = size.height - s - 6;
     final step = (t.value * 160).floor().isEven;
     final hero = step ? 'p1-side-walk-a' : 'p1-side-walk-b';
-    // The Puffball floats behind, bobbing.
+    // The Mallow floats behind, bobbing.
     final bob = math.sin(t.value * math.pi * 24) * 3;
     final glow = SpriteAtlas.faded(0.9);
     atlas.draw(canvas, hero, Rect.fromLTWH(x, y, s, s), paint: glow);
